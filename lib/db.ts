@@ -32,11 +32,23 @@ db.exec(`
     target TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS app_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
-const email = process.env.ORBIT_ADMIN_EMAIL || "admin@orbit.local";
-const password = process.env.ORBIT_ADMIN_PASSWORD || "change-me-now";
-db.prepare("INSERT OR IGNORE INTO users (name,email,password_hash,role,status) VALUES (?,?,?,?,?)")
-  .run("Orbit Administrator", email, hashSync(password, 12), "Admin", "Active");
+const email = process.env.ORBIT_ADMIN_EMAIL || "admin";
+const password = process.env.ORBIT_ADMIN_PASSWORD || "password";
+db.transaction(() => {
+  const claimed = db.prepare("INSERT OR IGNORE INTO app_meta (key,value) VALUES ('clean_slate_v1',CURRENT_TIMESTAMP)").run();
+  if (claimed.changes === 1) {
+    db.prepare("DELETE FROM sessions").run();
+    db.prepare("DELETE FROM audit_log").run();
+    db.prepare("DELETE FROM users").run();
+    db.prepare("INSERT INTO users (name,email,password_hash,role,status) VALUES (?,?,?,?,?)")
+      .run("Administrator", email, hashSync(password, 12), "Admin", "Active");
+  }
+})();
 
 export default db;

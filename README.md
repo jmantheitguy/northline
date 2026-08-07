@@ -86,14 +86,14 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-For local development without environment configuration, Orbit creates a development administrator:
+The initial bootstrap administrator is:
 
 ```text
-Email: admin@orbit.local
-Password: change-me-now
+Username: admin
+Password: password
 ```
 
-Do not use those credentials for a deployed installation.
+These credentials are intended only for a private first launch. Override them through environment variables before exposing Orbit to a network.
 
 ## Production configuration
 
