@@ -18,7 +18,7 @@ services:
     networks: [mail]
 
   webmail:
-    image: ghcr.io/the-djmaze/snappymail:2.38.2
+    image: ghcr.io/the-djmaze/snappymail:v2.38.2
     container_name: orbit-webmail
     restart: unless-stopped
     ports:
