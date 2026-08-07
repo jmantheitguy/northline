@@ -38,6 +38,12 @@ db.exec(`
   );
 `);
 
+const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;
+if (!userColumns.some((column) => column.name === "oidc_subject")) {
+  db.exec("ALTER TABLE users ADD COLUMN oidc_subject TEXT");
+}
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
+
 const email = process.env.ORBIT_ADMIN_EMAIL || "admin";
 const password = process.env.ORBIT_ADMIN_PASSWORD || "password";
 db.transaction(() => {

@@ -15,6 +15,6 @@ export async function createSession(userId:number) {
   const token=randomBytes(32).toString("base64url");
   db.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')").run();
   db.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES (?,?,datetime('now','+7 days'))").run(digest(token),userId);
-  (await cookies()).set("orbit_session",token,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:604800});
+  (await cookies()).set("orbit_session",token,{httpOnly:true,sameSite:"lax",secure:process.env.ORBIT_COOKIE_SECURE==="true",path:"/",maxAge:604800});
 }
 export async function destroySession() { const jar=await cookies(); const token=jar.get("orbit_session")?.value; if(token) db.prepare("DELETE FROM sessions WHERE token_hash=?").run(digest(token)); jar.delete("orbit_session"); }
