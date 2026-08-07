@@ -16,10 +16,10 @@ export async function GET(request:NextRequest) {
   const verifier=jar.get("orbit_oidc_verifier")?.value;
   if(!code || !state || !expectedState || state!==expectedState || !verifier) return NextResponse.redirect(new URL("/?auth_error=invalid_state",request.url));
 
-  const tokenResponse=await fetch(`${config.issuer}/token/`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:`${config.publicUrl}/api/auth/oidc/callback`,client_id:config.clientId,client_secret:config.clientSecret,code_verifier:verifier})});
+  const tokenResponse=await fetch(`${config.origin}/application/o/token/`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:`${config.publicUrl}/api/auth/oidc/callback`,client_id:config.clientId,client_secret:config.clientSecret,code_verifier:verifier})});
   if(!tokenResponse.ok) return NextResponse.redirect(new URL("/?auth_error=token_exchange",request.url));
   const token=await tokenResponse.json() as {access_token:string};
-  const userResponse=await fetch(`${config.issuer}/userinfo/`,{headers:{Authorization:`Bearer ${token.access_token}`}});
+  const userResponse=await fetch(`${config.origin}/application/o/userinfo/`,{headers:{Authorization:`Bearer ${token.access_token}`}});
   if(!userResponse.ok) return NextResponse.redirect(new URL("/?auth_error=userinfo",request.url));
   const profile=await userResponse.json() as UserInfo;
   const groups=Array.isArray(profile.groups)?profile.groups:[];

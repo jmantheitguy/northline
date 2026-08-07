@@ -6,7 +6,7 @@ export async function GET() {
   if (!config) return NextResponse.json({error:"Authentik sign-in is not configured"},{status:503});
   const state=randomUrlToken();
   const verifier=randomUrlToken(48);
-  const authorize=new URL(`${config.issuer}/authorize/`);
+  const authorize=new URL("/application/o/authorize/",config.origin);
   authorize.searchParams.set("client_id",config.clientId);
   authorize.searchParams.set("redirect_uri",`${config.publicUrl}/api/auth/oidc/callback`);
   authorize.searchParams.set("response_type","code");

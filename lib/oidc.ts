@@ -6,7 +6,7 @@ export const oidcConfig = () => {
   const clientSecret = process.env.ORBIT_OIDC_CLIENT_SECRET;
   const publicUrl = process.env.ORBIT_PUBLIC_URL?.replace(/\/$/, "");
   if (!issuer || !clientId || !clientSecret || !publicUrl) return null;
-  return { issuer, clientId, clientSecret, publicUrl };
+  return { issuer, origin:new URL(issuer).origin, clientId, clientSecret, publicUrl };
 };
 
 export const randomUrlToken = (bytes = 32) => randomBytes(bytes).toString("base64url");
