@@ -78,15 +78,26 @@ db.exec(`
 `);
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;
+const addUserColumn = (name: string, definition: string) => {
+  if (userColumns.some((column) => column.name === name)) return;
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN ${definition}`);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
+  }
+};
 if (!userColumns.some((column) => column.name === "oidc_subject")) {
-  db.exec("ALTER TABLE users ADD COLUMN oidc_subject TEXT");
+  addUserColumn("oidc_subject", "oidc_subject TEXT");
 }
-if (!userColumns.some((column) => column.name === "auth_source")) db.exec("ALTER TABLE users ADD COLUMN auth_source TEXT NOT NULL DEFAULT 'local'");
-if (!userColumns.some((column) => column.name === "identity_synced_at")) db.exec("ALTER TABLE users ADD COLUMN identity_synced_at TEXT");
+addUserColumn("auth_source", "auth_source TEXT NOT NULL DEFAULT 'local'");
+addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
 
-const email = process.env.ORBIT_ADMIN_EMAIL || "admin";
-const password = process.env.ORBIT_ADMIN_PASSWORD || "password";
+const email = process.env.ORBIT_ADMIN_EMAIL;
+const password = process.env.ORBIT_ADMIN_PASSWORD;
+if (!email || !password) {
+  throw new Error("ORBIT_ADMIN_EMAIL and ORBIT_ADMIN_PASSWORD must be configured before Orbit starts");
+}
 db.transaction(() => {
   const claimed = db.prepare("INSERT OR IGNORE INTO app_meta (key,value) VALUES ('clean_slate_v1',CURRENT_TIMESTAMP)").run();
   if (claimed.changes === 1) {

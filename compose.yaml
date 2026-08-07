@@ -8,8 +8,8 @@ services:
     environment:
       - NODE_ENV=production
       - ORBIT_DATA_DIR=/app/data
-      - ORBIT_ADMIN_EMAIL=${ORBIT_ADMIN_EMAIL:-admin}
-      - ORBIT_ADMIN_PASSWORD=${ORBIT_ADMIN_PASSWORD:-password}
+      - ORBIT_ADMIN_EMAIL=${ORBIT_ADMIN_EMAIL:?initial administrator email required}
+      - ORBIT_ADMIN_PASSWORD=${ORBIT_ADMIN_PASSWORD:?initial administrator password required}
       - ORBIT_PUBLIC_URL=${ORBIT_PUBLIC_URL:-http://localhost:3000}
       - ORBIT_COOKIE_SECURE=${ORBIT_COOKIE_SECURE:-false}
       - ORBIT_OIDC_ISSUER=${ORBIT_OIDC_ISSUER:-}

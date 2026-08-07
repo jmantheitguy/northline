@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ORBIT_VERSION } from "@/lib/version";
 
 type Status = "ideas" | "ready" | "progress" | "hold" | "done";
 type Task = { id: number; title: string; description:string; status: Status; ownerId:number|null; ownerName:string|null; due: string|null; tag: string; priority: "Low" | "Medium" | "High"; comments: number };
@@ -51,11 +52,11 @@ export function OrbitApp() {
   const moveTask=async(taskId:number,status:Status)=>{if(!boardData?.canEdit)return;setBoardData({...boardData,tasks:boardData.tasks.map(t=>t.id===taskId?{...t,status}:t)});const r=await fetch(`/api/tasks/${taskId}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});if(!r.ok){notify("Could not move task");await loadBoard(boardData.board.id)}};
   const createBoard=async(name:string)=>{const r=await fetch("/api/boards",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});if(!r.ok){notify("Could not create board");return}const{id}=await r.json();setModal(null);await loadBoards();setActiveBoardId(id);notify("Board created")};
 
-  if(authLoading)return <div className="auth-screen"><div className="auth-card"><div className="auth-brand"><div className="brand-mark">O</div>orbit</div><p>Opening your workspace…</p></div></div>;
+  if(authLoading)return <div className="auth-screen"><div className="auth-card"><div className="auth-brand"><div className="brand-mark">O</div>orbit</div><p>Opening your workspace…</p><small>{ORBIT_VERSION}</small></div></div>;
   if(!authUser)return <Login onLogin={setAuthUser}/>;
   return <div className="app-shell">
     <aside className={sidebar ? "sidebar" : "sidebar collapsed"}>
-      <div className="brand"><div className="brand-mark">O</div><span>orbit</span><button className="icon-button close-side" onClick={() => setSidebar(false)}>‹</button></div>
+      <div className="brand"><div className="brand-mark">O</div><span>orbit</span><small>{ORBIT_VERSION}</small><button className="icon-button close-side" onClick={() => setSidebar(false)}>‹</button></div>
       <button className="workspace"><span className="workspace-icon">W</span><span><b>My Workspace</b><small>Private workspace</small></span><i>⌄</i></button>
       <nav>
         <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}><span>⌂</span> Home</button>

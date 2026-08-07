@@ -4,8 +4,15 @@ interface Env {
   INGRESS_TOKEN: string;
 }
 
+interface IncomingEmailMessage {
+  from: string;
+  to: string;
+  raw: ReadableStream<Uint8Array>;
+  setReject(reason: string): void;
+}
+
 export default {
-  async email(message, env): Promise<void> {
+  async email(message: IncomingEmailMessage, env: Env): Promise<void> {
     const recipient = message.to.toLowerCase();
     if (!recipient.endsWith(`@${env.MAIL_DOMAIN.toLowerCase()}`)) {
       message.setReject("Recipient domain is not served here");
@@ -23,5 +30,4 @@ export default {
     });
     if (!response.ok) throw new Error(`Private mail delivery returned ${response.status}`);
   },
-} satisfies ExportedHandler<Env>;
-
+} satisfies { email(message: IncomingEmailMessage, env: Env): Promise<void> };
