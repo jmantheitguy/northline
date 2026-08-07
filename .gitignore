@@ -40,3 +40,8 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+
+# Authentik runtime state and secrets
+/infra/authentik/data/
+/infra/authentik/certs/
+/infra/authentik/custom-templates/

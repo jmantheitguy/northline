@@ -142,6 +142,10 @@ docker compose up -d --build
 
 The container uses `restart: unless-stopped`, so it will return after a VM reboot.
 
+## Central identity provider
+
+The repository includes a companion [Authentik deployment](infra/authentik/README.md) for central accounts and application-specific access groups. Authentik runs independently from Orbit on ports `9000` and `9443`; Orbit authentication will be connected through OpenID Connect in a subsequent integration step.
+
 ## Data and backups
 
 The SQLite database is stored in the `orbit-data` Docker volume. Back it up regularly to storage outside the VM. A Synology or other NAS is suitable for encrypted backups and attachments, but the live SQLite database should remain on the VM's local disk rather than an NFS or SMB share.
