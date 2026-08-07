@@ -1,10 +1,10 @@
 # Orbit Project Hub
 
-Current release: **Alpha v0.1.1**
+Current release: **Alpha v0.1.2 — Enable production inbound email delivery**
 
 Orbit is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.1.1 documents the deployed VTuber Offices mail stack, including Authentik single sign-on, public JMAP access through Cloudflare Tunnel, and the cross-origin configuration required by Bulwark Webmail.
+Alpha v0.1.2 enables production inbound email delivery for the three VTuber Offices mailboxes. It adds Cloudflare Email Routing with exact-recipient Worker rules, authenticated delivery through Cloudflare Tunnel, DMARC monitoring, a Stalwart-compatible SMTP greeting, and a verified end-to-end delivery path into Bulwark Webmail.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 

@@ -11,7 +11,7 @@ Cloudflare Email Routing invokes the Worker for inbound mail. The Worker sends t
 | Origin | Tunnel hostname | Purpose |
 | --- | --- | --- |
 | `http://192.168.0.62:8888` | `webmail.vtuberoffices.com` | User webmail |
-| `http://192.168.0.62:8088` | `mail-admin.vtuberoffices.com` | Stalwart setup and administration |
+| `http://192.168.0.62:8088` | `mail.vtuberoffices.com` | Public JMAP endpoint used by Bulwark |
 | `http://192.168.0.62:8788` | `mail-ingress.vtuberoffices.com` | Worker delivery endpoint; do not expose to users |
 
 Bulwark's public JMAP URL is `https://mail.vtuberoffices.com`. The Cloudflare Tunnel route for that hostname must target Stalwart at `http://192.168.0.62:8088`.
@@ -26,9 +26,10 @@ All host bindings use loopback by default. If `cloudflared` runs on a different 
 4. Configure Bulwark with Stalwart's JMAP endpoint and the dedicated Authentik OIDC provider.
 5. In Stalwart, enable **Settings > Network > HTTP > Security > Permissive CORS policy** so Bulwark can access JMAP from the separate `webmail.vtuberoffices.com` origin.
 6. Add the three accounts in Stalwart before enabling routing.
-7. Add the Tunnel hostnames above plus `mail.vtuberoffices.com` for public JMAP access.
-8. In `worker`, run `npm install`, set the shared secret with `npx wrangler secret put INGRESS_TOKEN`, and run `npm run deploy`.
-9. Enable Cloudflare Email Routing and create a Worker routing rule for each mailbox.
+7. Add the three Tunnel hostnames above.
+8. In `worker`, run `npm install`, set the shared secret with `npx wrangler secret put INGRESS_TOKEN --config wrangler.jsonc`, and run `npm run deploy -- --config wrangler.jsonc`.
+9. Enable Cloudflare Email Routing and create an exact-recipient Worker rule for each mailbox.
+10. Publish DMARC in monitoring mode before moving to quarantine or rejection after reports confirm SPF and DKIM alignment.
 
 Do not enable a catch-all rule. Unknown recipients should be rejected rather than accepted and later bounced.
 
@@ -39,3 +40,5 @@ Configure Stalwart to use a conventional authenticated SMTP relay for user corre
 ## Backups
 
 Back up all three named volumes. Stalwart configuration and message data must be restored together. Keep at least one encrypted copy outside the VM.
+
+Keep the live Stalwart database, queues, and message blobs on the VM's local disk. A NAS is appropriate as an encrypted backup destination, but network-attached storage—especially older hardware—should not be the primary live mail datastore.

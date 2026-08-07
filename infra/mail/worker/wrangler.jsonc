@@ -3,10 +3,11 @@
   "name": "vtuber-offices-mail-gateway",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-07",
+  "workers_dev": false,
+  "preview_urls": false,
   "observability": { "enabled": true },
   "vars": {
     "DELIVERY_URL": "https://mail-ingress.vtuberoffices.com/v1/deliver",
     "MAIL_DOMAIN": "vtuberoffices.com"
   }
 }
-

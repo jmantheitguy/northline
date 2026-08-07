@@ -19,7 +19,7 @@ function smtpDeliver(from, to, raw) {
     const socket = connect(smtpPort, smtpHost);
     let buffer = "", stage = 0;
     const commands = [
-      `EHLO cloudflare-email-worker\r\n`,
+      `EHLO mail-ingress.vtuberoffices.com\r\n`,
       `MAIL FROM:<${from}>\r\n`,
       `RCPT TO:<${to}>\r\n`,
       "DATA\r\n",
@@ -80,4 +80,3 @@ createServer(async (request, response) => {
     response.writeHead(502).end("Delivery failed");
   }
 }).listen(8788, "0.0.0.0", () => console.log("Mail ingress listening on :8788"));
-
