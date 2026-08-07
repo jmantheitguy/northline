@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       STALWART_PUBLIC_URL: ${MAIL_PUBLIC_URL}
+      BREVO_SMTP_KEY: ${BREVO_SMTP_KEY}
     ports:
       - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8088:8080"
     expose:

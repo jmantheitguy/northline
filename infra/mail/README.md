@@ -20,7 +20,7 @@ All host bindings use loopback by default. If `cloudflared` runs on a different 
 
 ## Deployment
 
-1. Copy `.env.example` to `.env` and generate `MAIL_INGRESS_TOKEN` with at least 32 random bytes.
+1. Copy `.env.example` to `.env`, generate `MAIL_INGRESS_TOKEN` with at least 32 random bytes, and set `BREVO_SMTP_KEY` to a dedicated Brevo SMTP key.
 2. Run `docker compose up -d`.
 3. Complete Stalwart's initial wizard at the private administration URL using `vtuberoffices.com` as the default domain.
 4. Configure Bulwark with Stalwart's JMAP endpoint and the dedicated Authentik OIDC provider.
@@ -35,7 +35,11 @@ Do not enable a catch-all rule. Unknown recipients should be rejected rather tha
 
 ## Outbound mail
 
-Configure Stalwart to use a conventional authenticated SMTP relay for user correspondence. Cloudflare Email Sending is currently intended for transactional mail and should not be treated as the primary personal-mail relay.
+Stalwart uses a relay route named `brevo` for recipients outside the local domain. The route connects to `smtp-relay.brevo.com:587` with STARTTLS and reads its authentication secret from the `BREVO_SMTP_KEY` container environment variable. Local recipients continue to use Stalwart's `local` route.
+
+Authenticate `vtuberoffices.com` in Brevo with its verification and DKIM records. Preserve Cloudflare Email Routing's SPF record and the domain's existing DMARC record; do not replace either with a second SPF or DMARC record.
+
+Keep the generated SMTP key only in the server-side `.env`. Never commit the live key, paste it into Stalwart's stored configuration, or expose it in command output. Restart the Stalwart service after rotating the key so the new environment value is loaded.
 
 ## Backups
 
