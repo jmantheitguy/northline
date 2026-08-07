@@ -1,0 +1,16 @@
+services:
+  orbit:
+    build: .
+    container_name: orbit-project-hub
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - ORBIT_DATA_DIR=/app/data
+      - ORBIT_ADMIN_EMAIL=${ORBIT_ADMIN_EMAIL:-admin@orbit.local}
+      - ORBIT_ADMIN_PASSWORD=${ORBIT_ADMIN_PASSWORD:?Set ORBIT_ADMIN_PASSWORD in .env}
+    volumes:
+      - orbit-data:/app/data
+volumes:
+  orbit-data:

@@ -11,8 +11,12 @@ Orbit is a self-hosted, Discord-ready project management workspace for creator t
 - Searchable workspace member directory
 - Discord connection and channel-reminder interfaces
 - Responsive desktop and mobile layout
+- Server-backed local accounts with encrypted passwords
+- HTTP-only authenticated sessions
+- Server-enforced administrator permissions
+- SQLite persistence and audit records
 
-> This repository currently contains the functional product prototype. Secure multi-user authentication, database-backed permissions, Discord OAuth, and live bot delivery are the next backend milestones.
+> Discord OAuth and live bot delivery remain upcoming integration milestones.
 
 ## Run locally
 
@@ -30,6 +34,27 @@ Open [http://localhost:3000](http://localhost:3000).
 ```bash
 npm run build
 npm start
+```
+
+## Linux VM deployment with Docker
+
+On a Linux VM with Docker installed:
+
+```bash
+git clone https://github.com/jmantheitguy/orbit-project-hub.git
+cd orbit-project-hub
+docker compose up -d --build
+```
+
+Before starting, copy `.env.example` to `.env` and set a long, unique `ORBIT_ADMIN_PASSWORD`. The first launch creates the initial administrator using those credentials.
+
+Orbit will be available at `http://YOUR_VM_IP:3000`. The container restarts automatically after a VM reboot.
+
+To update it later:
+
+```bash
+git pull
+docker compose up -d --build
 ```
 
 ## Technology
