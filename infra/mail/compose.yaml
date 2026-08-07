@@ -1,0 +1,52 @@
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:v0.16
+    container_name: orbit-stalwart
+    restart: unless-stopped
+    environment:
+      STALWART_PUBLIC_URL: ${MAIL_PUBLIC_URL}
+    ports:
+      - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8088:8080"
+    expose:
+      - "25"
+      - "143"
+      - "587"
+      - "993"
+    volumes:
+      - stalwart-config:/etc/stalwart
+      - stalwart-data:/var/lib/stalwart
+    networks: [mail]
+
+  webmail:
+    image: ghcr.io/the-djmaze/snappymail:2.38.2
+    container_name: orbit-webmail
+    restart: unless-stopped
+    ports:
+      - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8888:8888"
+    volumes:
+      - snappymail-data:/var/lib/snappymail
+    networks: [mail]
+    depends_on: [stalwart]
+
+  mail-ingress:
+    build: ./ingress
+    container_name: orbit-mail-ingress
+    restart: unless-stopped
+    environment:
+      INGRESS_TOKEN: ${MAIL_INGRESS_TOKEN}
+      SMTP_HOST: stalwart
+      SMTP_PORT: 25
+      MAIL_DOMAIN: ${MAIL_DOMAIN}
+    ports:
+      - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8788:8788"
+    networks: [mail]
+    depends_on: [stalwart]
+
+networks:
+  mail:
+    name: orbit-mail
+
+volumes:
+  stalwart-config:
+  stalwart-data:
+  snappymail-data:
