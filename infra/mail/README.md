@@ -4,7 +4,7 @@ This stack provides independent `@vtuberoffices.com` mailboxes without exposing 
 
 ## Data flow
 
-Cloudflare Email Routing invokes the Worker for inbound mail. The Worker sends the original RFC 822 message through Cloudflare Tunnel to the authenticated ingress service. The ingress service validates the recipient domain and submits the message to Stalwart on its private Docker network. SnappyMail connects to Stalwart for browser-based mail access.
+Cloudflare Email Routing invokes the Worker for inbound mail. The Worker sends the original RFC 822 message through Cloudflare Tunnel to the authenticated ingress service. The ingress service validates the recipient domain and submits the message to Stalwart on its private Docker network. Bulwark Webmail connects to Stalwart over JMAP and supports Authentik OIDC sign-in.
 
 ## Private services
 
@@ -21,7 +21,7 @@ All host bindings use loopback by default. If `cloudflared` runs on a different 
 1. Copy `.env.example` to `.env` and generate `MAIL_INGRESS_TOKEN` with at least 32 random bytes.
 2. Run `docker compose up -d`.
 3. Complete Stalwart's initial wizard at the private administration URL using `vtuberoffices.com` as the default domain.
-4. Configure SnappyMail's domain with `stalwart:143` for IMAP and `stalwart:587` for SMTP submission.
+4. Configure Bulwark with Stalwart's JMAP endpoint and the dedicated Authentik OIDC provider.
 5. Add the three accounts in Stalwart before enabling routing.
 6. Add the three Tunnel hostnames above.
 7. In `worker`, run `npm install`, set the shared secret with `npx wrangler secret put INGRESS_TOKEN`, and run `npm run deploy`.
@@ -36,4 +36,3 @@ Configure Stalwart to use a conventional authenticated SMTP relay for user corre
 ## Backups
 
 Back up all three named volumes. Stalwart configuration and message data must be restored together. Keep at least one encrypted copy outside the VM.
-

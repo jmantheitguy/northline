@@ -18,13 +18,14 @@ services:
     networks: [mail]
 
   webmail:
-    image: ghcr.io/the-djmaze/snappymail:v2.38.2
+    image: ghcr.io/bulwarkmail/webmail:latest
     container_name: orbit-webmail
     restart: unless-stopped
     ports:
-      - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8888:8888"
+      - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8888:3000"
     volumes:
-      - snappymail-data:/var/lib/snappymail
+      - bulwark-config:/app/data/admin
+      - bulwark-state:/app/data/admin-state
     networks: [mail]
     depends_on: [stalwart]
 
@@ -49,4 +50,5 @@ networks:
 volumes:
   stalwart-config:
   stalwart-data:
-  snappymail-data:
+  bulwark-config:
+  bulwark-state:
