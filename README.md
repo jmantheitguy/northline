@@ -1,26 +1,83 @@
 # Orbit Project Hub
 
-Orbit is a self-hosted, Discord-ready project management workspace for creator teams and online communities. It provides a Monday-style Kanban experience with board sharing, a searchable member directory, and Discord reminder workflows.
+Orbit is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-## Current features
+The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
-- Kanban columns for Ideas, Ready, In Progress, On Hold, and Done
+## Product capabilities
+
+### Project planning
+
+- Kanban boards with Ideas, Ready, In Progress, On Hold, and Done workflows
 - Drag-and-drop task movement
-- Task creation and local browser persistence
-- Board sharing and access-management interface
-- Searchable workspace member directory
-- Discord connection and channel-reminder interfaces
-- Responsive desktop and mobile layout
-- Server-backed local accounts with encrypted passwords
-- HTTP-only authenticated sessions
-- Server-enforced administrator permissions
-- SQLite persistence and audit records
+- Task creation, priorities, categories, due dates, owners, and comments
+- Board, list, timeline, and calendar navigation concepts
+- Board-level progress indicators, filtering, and sorting controls
+- Private boards and boards shared with selected workspace members
 
-> Discord OAuth and live bot delivery remain upcoming integration milestones.
+### Members and access
+
+- Searchable workspace member directory
+- Local email-and-password authentication
+- Password hashing with bcrypt
+- Random server-side sessions stored as SHA-256 token digests
+- Secure, HTTP-only, same-site session cookies
+- Admin, Member, and Guest roles
+- Server-enforced administrator authorization
+- User creation, role assignment, suspension, and reactivation
+- Protection against an administrator suspending their own active account
+
+### Administration
+
+- Dedicated administration console visible only to administrators
+- Workspace membership and role metrics
+- User search and account-management tools
+- Board ownership and access overview
+- Administrative audit records
+- Invite-only registration policy controls
+- Discord connection and session-policy settings
+
+### Discord direction
+
+- Discord account-linking interface
+- Discord bot and channel configuration interface
+- Task-reminder scheduling workflow
+- Channel selection and reminder-message composition
+
+Discord OAuth, Discord Gateway connectivity, and live reminder delivery are planned integrations; the current interface establishes their intended product workflow.
+
+## Architecture
+
+Orbit currently uses:
+
+- Next.js 16 with the App Router
+- React 19 and TypeScript
+- Tailwind CSS
+- SQLite through `better-sqlite3`
+- bcrypt password hashing
+- Server-side API routes for authentication and administration
+- Docker and Docker Compose for Linux deployment
+
+SQLite runs in WAL mode with foreign-key enforcement. The database contains users, authenticated sessions, and administrative audit events. Docker stores it in a persistent named volume mounted at `/app/data`.
+
+Board tasks are currently persisted in browser storage while the relational board, task, membership, and reminder schema is developed. Authentication and administrative user records are already server-backed.
+
+## Roles
+
+| Role | Intended access |
+| --- | --- |
+| Admin | Manage users, roles, boards, integrations, security settings, and workspace-wide access |
+| Member | Create and manage permitted boards, tasks, and collaborations |
+| Guest | Access only boards that have been explicitly shared with the account |
+
+Authorization for administrative APIs is checked on the server. Hiding an interface element is never treated as the security boundary.
 
 ## Run locally
 
-Requirements: Node.js 22.13 or newer.
+Requirements:
+
+- Node.js 22.13 or newer
+- npm
 
 ```bash
 npm install
@@ -29,45 +86,88 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Production build
+For local development without environment configuration, Orbit creates a development administrator:
 
-```bash
-npm run build
-npm start
+```text
+Email: admin@orbit.local
+Password: change-me-now
 ```
 
-## Linux VM deployment with Docker
+Do not use those credentials for a deployed installation.
 
-On a Linux VM with Docker installed:
+## Production configuration
+
+Copy the example environment file and replace every placeholder:
+
+```bash
+cp .env.example .env
+```
+
+```dotenv
+ORBIT_ADMIN_EMAIL=admin@example.com
+ORBIT_ADMIN_PASSWORD=replace-with-a-long-random-password
+ORBIT_DATA_DIR=/app/data
+```
+
+The first application start creates the initial administrator. Subsequent users can only be created from the authenticated administration console.
+
+## Linux VM deployment
+
+Recommended starting allocation for a small community:
+
+- 2 vCPU
+- 2 GB RAM
+- 12–20 GB local disk
+- Ubuntu Server or Debian
+- Docker Engine with Docker Compose
+
+Deploy with:
 
 ```bash
 git clone https://github.com/jmantheitguy/orbit-project-hub.git
 cd orbit-project-hub
+cp .env.example .env
+# Edit .env before continuing.
 docker compose up -d --build
 ```
 
-Before starting, copy `.env.example` to `.env` and set a long, unique `ORBIT_ADMIN_PASSWORD`. The first launch creates the initial administrator using those credentials.
+Orbit will listen on port `3000`. Place Caddy, Nginx, or another trusted reverse proxy in front of it to provide HTTPS before exposing it outside the local network.
 
-Orbit will be available at `http://YOUR_VM_IP:3000`. The container restarts automatically after a VM reboot.
-
-To update it later:
+Update the installation with:
 
 ```bash
 git pull
 docker compose up -d --build
 ```
 
-## Technology
+The container uses `restart: unless-stopped`, so it will return after a VM reboot.
 
-- React 19
-- TypeScript
-- Vinext / Vite
-- Tailwind CSS
+## Data and backups
 
-## Privacy and self-hosting
+The SQLite database is stored in the `orbit-data` Docker volume. Back it up regularly to storage outside the VM. A Synology or other NAS is suitable for encrypted backups and attachments, but the live SQLite database should remain on the VM's local disk rather than an NFS or SMB share.
 
-The current prototype stores board tasks in the browser's local storage. No task data is sent to a third-party service. Add Discord credentials only through local environment variables once the server integration is implemented; `.env` files are excluded from Git.
+Environment files, local databases, generated builds, and dependencies are excluded from Git.
+
+## Security notes
+
+- Use a unique administrator password generated by a password manager.
+- Serve Orbit over HTTPS before allowing remote access.
+- Keep the VM, Docker, and application dependencies updated.
+- Restrict direct access to port `3000` with the VM firewall.
+- Back up the database and periodically test restoration.
+- Do not expose obsolete NAS administration interfaces directly to the internet.
+
+## Roadmap
+
+- Relational persistence for boards, tasks, comments, and board memberships
+- Discord OAuth sign-in and account linking
+- Discord bot delivery with durable scheduled reminders
+- Password reset and forced first-login password changes
+- File attachments backed by configurable object or NAS storage
+- Notifications and activity feeds
+- Expanded audit-log filtering and export
+- Automated tests for authentication and permission boundaries
 
 ## License
 
-No license has been selected yet. All rights reserved by the repository owner.
+No open-source license has been selected. All rights are reserved by the repository owner.
