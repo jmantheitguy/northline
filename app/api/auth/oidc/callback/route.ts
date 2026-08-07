@@ -30,8 +30,8 @@ export async function GET(request:NextRequest) {
   if(!email || !profile.sub) return NextResponse.redirect(new URL("/?auth_error=incomplete_profile",request.url));
   const name=profile.name || profile.preferred_username || email;
   const role=isAdmin?"Admin":"Member";
-  db.prepare(`INSERT INTO users(name,email,password_hash,role,status,oidc_subject,last_active_at) VALUES(?,?,?,?,? ,?,CURRENT_TIMESTAMP)
-    ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,status='Active',oidc_subject=excluded.oidc_subject,last_active_at=CURRENT_TIMESTAMP`).run(name,email,"oidc-managed-account",role,"Active",profile.sub);
+  db.prepare(`INSERT INTO users(name,email,password_hash,role,status,oidc_subject,auth_source,identity_synced_at,last_active_at) VALUES(?,?,?,?,?,?,'oidc',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,status='Active',oidc_subject=excluded.oidc_subject,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,last_active_at=CURRENT_TIMESTAMP`).run(name,email,"oidc-managed-account",role,"Active",profile.sub);
   const user=db.prepare("SELECT id FROM users WHERE email=?").get(email) as {id:number};
   await createSession(user.id);
   jar.delete("orbit_oidc_state"); jar.delete("orbit_oidc_verifier");

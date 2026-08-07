@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { currentUser } from "@/lib/auth";
+import db from "@/lib/db";
+import { boardPermission,canEdit } from "@/lib/boards";
+export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const boardId=Number((await params).id);if(!canEdit(boardPermission(user,boardId)))return NextResponse.json({error:"Forbidden"},{status:403});const{title,status="ideas",priority="Medium",tag="General",dueDate=null,assigneeId=null,description=""}=await request.json();if(!String(title||"").trim())return NextResponse.json({error:"Task title is required"},{status:400});const result=db.prepare("INSERT INTO tasks(board_id,title,description,status,priority,tag,due_date,assignee_id,created_by) VALUES(?,?,?,?,?,?,?,?,?)").run(boardId,String(title).trim(),description,status,priority,tag,dueDate,assigneeId,user.id);db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(boardId);return NextResponse.json({id:Number(result.lastInsertRowid)},{status:201});}

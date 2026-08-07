@@ -36,12 +36,53 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS boards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS board_members (
+    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL CHECK(permission IN ('viewer','editor')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(board_id,user_id)
+  );
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'ideas' CHECK(status IN ('ideas','ready','progress','hold','done')),
+    priority TEXT NOT NULL DEFAULT 'Medium' CHECK(priority IN ('Low','Medium','High')),
+    tag TEXT NOT NULL DEFAULT 'General',
+    due_date TEXT,
+    assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    author_id INTEGER NOT NULL REFERENCES users(id),
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS board_members_user_idx ON board_members(user_id);
+  CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
+  CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
 `);
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;
 if (!userColumns.some((column) => column.name === "oidc_subject")) {
   db.exec("ALTER TABLE users ADD COLUMN oidc_subject TEXT");
 }
+if (!userColumns.some((column) => column.name === "auth_source")) db.exec("ALTER TABLE users ADD COLUMN auth_source TEXT NOT NULL DEFAULT 'local'");
+if (!userColumns.some((column) => column.name === "identity_synced_at")) db.exec("ALTER TABLE users ADD COLUMN identity_synced_at TEXT");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
 
 const email = process.env.ORBIT_ADMIN_EMAIL || "admin";

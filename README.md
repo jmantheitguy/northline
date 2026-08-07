@@ -23,7 +23,8 @@ The application combines visual task boards, private collaboration, user adminis
 - Random server-side sessions stored as SHA-256 token digests
 - Secure, HTTP-only, same-site session cookies
 - Admin, Member, and Guest roles
-- Server-enforced administrator authorization
+- Server-enforced administrator and board-level authorization
+- Authentik-managed accounts and group-based access revocation
 - User creation, role assignment, suspension, and reactivation
 - Protection against an administrator suspending their own active account
 
@@ -53,14 +54,12 @@ Orbit currently uses:
 - Next.js 16 with the App Router
 - React 19 and TypeScript
 - Tailwind CSS
-- SQLite through `better-sqlite3`
+- SQLite through `better-sqlite3` for users, boards, tasks, comments, and memberships
 - bcrypt password hashing
 - Server-side API routes for authentication and administration
 - Docker and Docker Compose for Linux deployment
 
-SQLite runs in WAL mode with foreign-key enforcement. The database contains users, authenticated sessions, and administrative audit events. Docker stores it in a persistent named volume mounted at `/app/data`.
-
-Board tasks are currently persisted in browser storage while the relational board, task, membership, and reminder schema is developed. Authentication and administrative user records are already server-backed.
+SQLite runs in WAL mode with foreign-key enforcement. The database contains users, sessions, boards, board memberships, tasks, comments, and administrative audit events. Docker stores it in a persistent named volume mounted at `/app/data`. Every board, task, comment, and sharing API verifies the requesting user's permission on the server.
 
 ## Roles
 
@@ -107,6 +106,8 @@ cp .env.example .env
 ORBIT_ADMIN_EMAIL=admin@example.com
 ORBIT_ADMIN_PASSWORD=replace-with-a-long-random-password
 ORBIT_DATA_DIR=/app/data
+ORBIT_AUTHENTIK_API_URL=http://authentik-host:9000
+ORBIT_AUTHENTIK_API_TOKEN=replace-with-an-authentik-api-token
 ```
 
 The first application start creates the initial administrator. Subsequent users can only be created from the authenticated administration console.
@@ -131,7 +132,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Orbit will listen on port `3000`. Place Caddy, Nginx, or another trusted reverse proxy in front of it to provide HTTPS before exposing it outside the local network.
+Orbit will listen on port `3000`. Publish it through the existing Cloudflare Tunnel and keep the origin port restricted to the private network.
 
 Update the installation with:
 
@@ -144,7 +145,7 @@ The container uses `restart: unless-stopped`, so it will return after a VM reboo
 
 ## Central identity provider
 
-The repository includes a companion [Authentik deployment](infra/authentik/README.md) for central accounts and application-specific access groups. Authentik runs independently from Orbit on ports `9000` and `9443`; Orbit authentication will be connected through OpenID Connect in a subsequent integration step.
+The repository includes a companion [Authentik deployment](infra/authentik/README.md) for central accounts and application-specific access groups. Orbit uses Authentik OpenID Connect for sign-in and synchronizes its searchable directory through the Authentik API. Membership in `Orbit Users` grants normal access; `Orbit Admins` grants administration. Removing both groups suspends the managed Orbit account and invalidates its sessions at the next synchronization.
 
 ## Data and backups
 
@@ -163,7 +164,6 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-- Relational persistence for boards, tasks, comments, and board memberships
 - Discord OAuth sign-in and account linking
 - Discord bot delivery with durable scheduled reminders
 - Password reset and forced first-login password changes
