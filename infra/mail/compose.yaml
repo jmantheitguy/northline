@@ -21,6 +21,9 @@ services:
     image: ghcr.io/bulwarkmail/webmail:latest
     container_name: orbit-webmail
     restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
     ports:
       - "${MAIL_BIND_ADDRESS:-127.0.0.1}:8888:3000"
     volumes:
