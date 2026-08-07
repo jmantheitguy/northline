@@ -14,6 +14,8 @@ Cloudflare Email Routing invokes the Worker for inbound mail. The Worker sends t
 | `http://192.168.0.62:8088` | `mail-admin.vtuberoffices.com` | Stalwart setup and administration |
 | `http://192.168.0.62:8788` | `mail-ingress.vtuberoffices.com` | Worker delivery endpoint; do not expose to users |
 
+Bulwark's public JMAP URL is `https://mail.vtuberoffices.com`. The Cloudflare Tunnel route for that hostname must target Stalwart at `http://192.168.0.62:8088`.
+
 All host bindings use loopback by default. If `cloudflared` runs on a different server, connect the two hosts with the existing private network and bind only the required ports to the VM's private address.
 
 ## Deployment
@@ -22,10 +24,11 @@ All host bindings use loopback by default. If `cloudflared` runs on a different 
 2. Run `docker compose up -d`.
 3. Complete Stalwart's initial wizard at the private administration URL using `vtuberoffices.com` as the default domain.
 4. Configure Bulwark with Stalwart's JMAP endpoint and the dedicated Authentik OIDC provider.
-5. Add the three accounts in Stalwart before enabling routing.
-6. Add the three Tunnel hostnames above.
-7. In `worker`, run `npm install`, set the shared secret with `npx wrangler secret put INGRESS_TOKEN`, and run `npm run deploy`.
-8. Enable Cloudflare Email Routing and create a Worker routing rule for each mailbox.
+5. In Stalwart, enable **Settings > Network > HTTP > Security > Permissive CORS policy** so Bulwark can access JMAP from the separate `webmail.vtuberoffices.com` origin.
+6. Add the three accounts in Stalwart before enabling routing.
+7. Add the Tunnel hostnames above plus `mail.vtuberoffices.com` for public JMAP access.
+8. In `worker`, run `npm install`, set the shared secret with `npx wrangler secret put INGRESS_TOKEN`, and run `npm run deploy`.
+9. Enable Cloudflare Email Routing and create a Worker routing rule for each mailbox.
 
 Do not enable a catch-all rule. Unknown recipients should be rejected rather than accepted and later bounced.
 
