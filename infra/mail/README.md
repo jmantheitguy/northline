@@ -30,8 +30,13 @@ All host bindings use loopback by default. If `cloudflared` runs on a different 
 8. In `worker`, run `npm install`, set the shared secret with `npx wrangler secret put INGRESS_TOKEN --config wrangler.jsonc`, and run `npm run deploy -- --config wrangler.jsonc`.
 9. Enable Cloudflare Email Routing and create an exact-recipient Worker rule for each mailbox.
 10. Publish DMARC in monitoring mode before moving to quarantine or rejection after reports confirm SPF and DKIM alignment.
+11. In Stalwart's DATA-stage settings, set `enableSpamFilter` to return `false` when `helo_domain == 'mail-ingress.vtuberoffices.com'`, falling back to `is_empty(authenticated_as)` for every other session.
 
 Do not enable a catch-all rule. Unknown recipients should be rejected rather than accepted and later bounced.
+
+### Inbound spam boundary
+
+Cloudflare Email Routing has already handled the public SMTP connection before the Worker forwards the original message. Stalwart otherwise sees the private ingress container as the sending server, which makes source-IP SPF, reverse-DNS, and reputation checks misleading. The DATA-stage exception therefore skips the redundant Stalwart scan only for the ingress bridge's fixed EHLO identity. Port 25 remains private to the Docker network, and normal spam filtering remains enabled for all other unauthenticated sessions.
 
 ## Outbound mail
 

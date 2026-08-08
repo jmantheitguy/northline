@@ -1,10 +1,10 @@
 # Orbit Project Hub
 
-Current release: **Alpha v0.1.3 — Enable authenticated outbound email delivery**
+Current release: **Alpha v0.1.4 — Correct inbound spam classification**
 
 Orbit is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.1.3 completes the outbound mail relay foundation. Stalwart now routes external recipients through Brevo over authenticated STARTTLS while continuing to deliver VTuber Offices recipients locally. The Brevo credential is supplied only through the server's private environment file, and the domain is authenticated with Brevo DKIM records without weakening the existing Cloudflare Email Routing SPF or DMARC policy.
+Alpha v0.1.4 corrects false-positive inbound spam classification at the Cloudflare-to-Stalwart handoff. Messages submitted by the private ingress bridge bypass Stalwart's redundant source-IP scan, while every other unauthenticated SMTP source retains normal filtering. Authenticated outbound delivery through Brevo remains enabled.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
