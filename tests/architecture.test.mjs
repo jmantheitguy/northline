@@ -22,7 +22,25 @@ test("directory synchronization revokes removed Authentik accounts",async()=>{
 
 test("board data is relational and cascade-safe",async()=>{
   const schema=await read("lib/db.ts");
-  for(const table of ["boards","board_members","tasks","comments"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  for(const table of ["boards","board_members","tasks","comments","reminders","workspace_settings"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.match(schema,/board_id INTEGER NOT NULL REFERENCES boards\(id\) ON DELETE CASCADE/);
   assert.match(schema,/task_id INTEGER NOT NULL REFERENCES tasks\(id\) ON DELETE CASCADE/);
+});
+
+test("Discord reminders are permission checked and secrets stay server-side",async()=>{
+  const [route,discord,worker,compose]=await Promise.all([read("app/api/reminders/route.ts"),read("lib/discord.ts"),read("lib/reminder-worker.ts"),read("compose.yaml")]);
+  assert.match(route,/canEdit\(boardPermission\(user,Number\(boardId\)\)\)/);
+  assert.match(route,/Channel is not available to the bot/);
+  assert.match(discord,/process\.env\.ORBIT_DISCORD_BOT_TOKEN/);
+  assert.doesNotMatch(route,/ORBIT_DISCORD_BOT_TOKEN/);
+  assert.match(discord,/allowed_mentions/);
+  assert.match(worker,/setInterval/);
+  assert.match(compose,/ORBIT_DISCORD_BOT_TOKEN/);
+});
+
+test("administration metrics and audit history come from the database",async()=>{
+  const overview=await read("app/api/admin/overview/route.ts");
+  assert.match(overview,/requireAdmin\(\)/);
+  assert.match(overview,/SELECT COUNT\(\*\) count FROM boards/);
+  assert.match(overview,/FROM audit_log a/);
 });

@@ -72,9 +72,29 @@ db.exec(`
     body TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel_id TEXT NOT NULL,
+    channel_name TEXT NOT NULL,
+    message TEXT NOT NULL,
+    remind_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','sent','failed','cancelled')),
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS workspace_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE INDEX IF NOT EXISTS board_members_user_idx ON board_members(user_id);
   CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
+  CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
 `);
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;

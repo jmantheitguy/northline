@@ -1,10 +1,10 @@
 # Orbit Project Hub
 
-Current release: **Alpha v0.1.4 — Correct inbound spam classification**
+Current release: **Alpha v0.2.0 — Complete the Orbit collaboration workspace**
 
 Orbit is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.1.4 corrects false-positive inbound spam classification at the Cloudflare-to-Stalwart handoff. Messages submitted by the private ingress bridge bypass Stalwart's redundant source-IP scan, while every other unauthenticated SMTP source retains normal filtering. Authenticated outbound delivery through Brevo remains enabled.
+Alpha v0.2.0 turns Orbit's polished shell into a complete collaboration workspace. It adds full task details and comments, board/list/calendar views, filtering and sorting, board settings and sharing, a live administration console, searchable directory controls, and persisted Discord channel reminders delivered by the self-hosted bot scheduler.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -42,14 +42,17 @@ The application combines visual task boards, private collaboration, user adminis
 - Invite-only registration policy controls
 - Discord connection and session-policy settings
 
-### Discord direction
+### Discord reminders
 
-- Discord account-linking interface
-- Discord bot and channel configuration interface
+- Server-side bot credentials that never reach the browser
+- Live discovery of text channels available to the configured bot
+- Board-wide and task-specific scheduled reminders
+- Durable reminder state with sent, failed, and cancelled statuses
+- A self-hosted polling worker started with the Orbit server
 - Task-reminder scheduling workflow
 - Channel selection and reminder-message composition
 
-Discord OAuth, Discord Gateway connectivity, and live reminder delivery are planned integrations; the current interface establishes their intended product workflow.
+Set `ORBIT_DISCORD_BOT_TOKEN` and `ORBIT_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Orbit validates every selected channel against the configured guild and suppresses all automatic mentions.
 
 ## Architecture
 
@@ -161,8 +164,8 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-- Discord OAuth sign-in and account linking
-- Discord bot delivery with durable scheduled reminders
+- Optional Discord OAuth account linking in addition to Authentik
+- Reminder retry controls and delivery-history filtering
 - Password reset and forced first-login password changes
 - File attachments backed by configurable object or NAS storage
 - Notifications and activity feeds
