@@ -1,6 +1,6 @@
 # Authentik identity provider
 
-This stack runs Authentik and its dedicated PostgreSQL database alongside Orbit. It is intentionally separate from Orbit's application database and persistent volume.
+This stack runs Authentik and its dedicated PostgreSQL database alongside Northline. It is intentionally separate from Northline's application database and persistent volume.
 
 ## First deployment
 
@@ -28,15 +28,15 @@ Create these groups in Authentik:
 ```text
 Domain Users
 ├── Domain Admins
-└── Orbit Users
-    └── Orbit Admins
+└── Northline Users
+    └── Northline Admins
 ```
 
-Keep Authentik's built-in `authentik Admins` group separate as a break-glass platform-administration role. Membership mapping for Orbit will be:
+Keep Authentik's built-in `authentik Admins` group separate as a break-glass platform-administration role. Membership mapping for Northline will be:
 
-- `Orbit Admins` grants the Orbit administrator role.
-- `Orbit Users` grants the normal Orbit member role.
-- `Domain Users` alone does not grant access to Orbit.
+- `Northline Admins` grants the Northline administrator role.
+- `Northline Users` grants the normal Northline member role.
+- `Domain Users` alone does not grant access to Northline.
 
 Future applications should receive their own application-specific user and administrator groups under `Domain Users`.
 

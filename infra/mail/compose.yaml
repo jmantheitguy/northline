@@ -1,7 +1,7 @@
 services:
   stalwart:
     image: stalwartlabs/stalwart:v0.16
-    container_name: orbit-stalwart
+    container_name: northline-stalwart
     restart: unless-stopped
     environment:
       STALWART_PUBLIC_URL: ${MAIL_PUBLIC_URL}
@@ -20,7 +20,7 @@ services:
 
   webmail:
     image: ghcr.io/bulwarkmail/webmail:latest
-    container_name: orbit-webmail
+    container_name: northline-webmail
     restart: unless-stopped
     dns:
       - 1.1.1.1
@@ -35,7 +35,7 @@ services:
 
   mail-ingress:
     build: ./ingress
-    container_name: orbit-mail-ingress
+    container_name: northline-mail-ingress
     restart: unless-stopped
     environment:
       INGRESS_TOKEN: ${MAIL_INGRESS_TOKEN}
@@ -49,7 +49,7 @@ services:
 
 networks:
   mail:
-    name: orbit-mail
+    name: northline-mail
 
 volumes:
   stalwart-config:

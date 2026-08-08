@@ -14,8 +14,8 @@ test("board mutations enforce server-side permissions",async()=>{
 
 test("directory synchronization revokes removed Authentik accounts",async()=>{
   const sync=await read("lib/authentik-directory.ts");
-  assert.match(sync,/groups\.includes\("Orbit Admins"\)/);
-  assert.match(sync,/groups\.includes\("Orbit Users"\)/);
+  assert.match(sync,/groups\.includes\("Northline Admins"\)/);
+  assert.match(sync,/groups\.includes\("Northline Users"\)/);
   assert.match(sync,/UPDATE users SET status='Suspended'/);
   assert.match(sync,/DELETE FROM sessions WHERE user_id=/);
 });
@@ -31,11 +31,11 @@ test("Discord reminders are permission checked and secrets stay server-side",asy
   const [route,discord,worker,compose]=await Promise.all([read("app/api/reminders/route.ts"),read("lib/discord.ts"),read("lib/reminder-worker.ts"),read("compose.yaml")]);
   assert.match(route,/canEdit\(boardPermission\(user,Number\(boardId\)\)\)/);
   assert.match(route,/Channel is not available to the bot/);
-  assert.match(discord,/process\.env\.ORBIT_DISCORD_BOT_TOKEN/);
-  assert.doesNotMatch(route,/ORBIT_DISCORD_BOT_TOKEN/);
+  assert.match(discord,/process\.env\.NORTHLINE_DISCORD_BOT_TOKEN/);
+  assert.doesNotMatch(route,/NORTHLINE_DISCORD_BOT_TOKEN/);
   assert.match(discord,/allowed_mentions/);
   assert.match(worker,/setInterval/);
-  assert.match(compose,/ORBIT_DISCORD_BOT_TOKEN/);
+  assert.match(compose,/NORTHLINE_DISCORD_BOT_TOKEN/);
 });
 
 test("administration metrics and audit history come from the database",async()=>{

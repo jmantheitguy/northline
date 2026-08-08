@@ -4,7 +4,7 @@ COPY package*.json ./
 RUN apk add --no-cache python3 make g++
 RUN npm ci
 COPY . .
-RUN ORBIT_ADMIN_EMAIL=build-only@invalid.local ORBIT_ADMIN_PASSWORD=build-only-placeholder npm run build
+RUN NORTHLINE_ADMIN_EMAIL=build-only@invalid.local NORTHLINE_ADMIN_PASSWORD=build-only-placeholder npm run build
 
 FROM node:22-alpine
 WORKDIR /app

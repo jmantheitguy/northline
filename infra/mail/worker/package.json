@@ -1,5 +1,5 @@
 {
-  "name": "orbit-mail-gateway",
+  "name": "northline-mail-gateway",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",

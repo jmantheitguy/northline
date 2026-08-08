@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Orbit is currently in **Alpha v0.1.0**. Only the latest commit on `main` receives security fixes during the alpha period.
+Northline is currently in **Alpha v0.3.0**. Only the latest commit on `main` receives security fixes during the alpha period.
 
 ## Credential handling
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Orbit — Projects in motion",
+  title: "Northline — Creative work, clearly organized",
   description: "A self-hosted, Discord-ready project workspace for your community.",
 };
 

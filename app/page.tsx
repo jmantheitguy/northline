@@ -1,5 +1,5 @@
-import { OrbitApp } from "./orbit-app";
+import { NorthlineApp } from "./northline-app";
 
 export default function Home() {
-  return <OrbitApp />;
+  return <NorthlineApp />;
 }

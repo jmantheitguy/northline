@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { hashSync } from "bcryptjs";
 
-const dataDirectory = process.env.ORBIT_DATA_DIR || path.join(process.cwd(), "data");
+const dataDirectory = process.env.NORTHLINE_DATA_DIR || path.join(process.cwd(), "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
-const db = new Database(path.join(dataDirectory, "orbit.db"));
+const db = new Database(path.join(dataDirectory, "northline.db"));
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -113,10 +113,10 @@ addUserColumn("auth_source", "auth_source TEXT NOT NULL DEFAULT 'local'");
 addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
 
-const email = process.env.ORBIT_ADMIN_EMAIL;
-const password = process.env.ORBIT_ADMIN_PASSWORD;
+const email = process.env.NORTHLINE_ADMIN_EMAIL;
+const password = process.env.NORTHLINE_ADMIN_PASSWORD;
 if (!email || !password) {
-  throw new Error("ORBIT_ADMIN_EMAIL and ORBIT_ADMIN_PASSWORD must be configured before Orbit starts");
+  throw new Error("NORTHLINE_ADMIN_EMAIL and NORTHLINE_ADMIN_PASSWORD must be configured before Northline starts");
 }
 db.transaction(() => {
   const claimed = db.prepare("INSERT OR IGNORE INTO app_meta (key,value) VALUES ('clean_slate_v1',CURRENT_TIMESTAMP)").run();

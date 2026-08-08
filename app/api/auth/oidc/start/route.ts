@@ -15,7 +15,7 @@ export async function GET() {
   authorize.searchParams.set("code_challenge",pkceChallenge(verifier));
   authorize.searchParams.set("code_challenge_method","S256");
   const response=NextResponse.redirect(authorize);
-  response.cookies.set("orbit_oidc_state",state,oidcCookieOptions);
-  response.cookies.set("orbit_oidc_verifier",verifier,oidcCookieOptions);
+  response.cookies.set("northline_oidc_state",state,oidcCookieOptions);
+  response.cookies.set("northline_oidc_verifier",verifier,oidcCookieOptions);
   return response;
 }

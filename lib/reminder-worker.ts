@@ -3,7 +3,7 @@ import "server-only";
 import db from "./db";
 import { discordConfigured, sendDiscordReminder } from "./discord";
 
-declare global { var orbitReminderWorkerStarted: boolean | undefined; }
+declare global { var northlineReminderWorkerStarted: boolean | undefined; }
 
 async function deliverDueReminders() {
   if (!discordConfigured()) return;
@@ -22,8 +22,8 @@ async function deliverDueReminders() {
 }
 
 export function startReminderWorker() {
-  if (globalThis.orbitReminderWorkerStarted) return;
-  globalThis.orbitReminderWorkerStarted = true;
+  if (globalThis.northlineReminderWorkerStarted) return;
+  globalThis.northlineReminderWorkerStarted = true;
   void deliverDueReminders();
   const timer = setInterval(() => void deliverDueReminders(), 30_000);
   timer.unref();

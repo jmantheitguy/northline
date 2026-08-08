@@ -2,10 +2,10 @@ import "server-only";
 
 const apiBase = "https://discord.com/api/v10";
 
-export const discordConfigured = () => Boolean(process.env.ORBIT_DISCORD_BOT_TOKEN && process.env.ORBIT_DISCORD_GUILD_ID);
+export const discordConfigured = () => Boolean(process.env.NORTHLINE_DISCORD_BOT_TOKEN && process.env.NORTHLINE_DISCORD_GUILD_ID);
 
 async function discord(path: string, init?: RequestInit) {
-  const token = process.env.ORBIT_DISCORD_BOT_TOKEN;
+  const token = process.env.NORTHLINE_DISCORD_BOT_TOKEN;
   if (!token) throw new Error("Discord bot is not configured");
   const response = await fetch(`${apiBase}${path}`, {
     ...init,
@@ -16,7 +16,7 @@ async function discord(path: string, init?: RequestInit) {
 }
 
 export async function listDiscordChannels() {
-  const guild = process.env.ORBIT_DISCORD_GUILD_ID;
+  const guild = process.env.NORTHLINE_DISCORD_GUILD_ID;
   if (!guild) return [];
   const channels = await discord(`/guilds/${guild}/channels`) as Array<{id:string;name:string;type:number;position:number}>;
   return channels.filter(channel => channel.type === 0 || channel.type === 5)

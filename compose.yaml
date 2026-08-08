@@ -1,25 +1,25 @@
 services:
-  orbit:
+  northline:
     build: .
-    container_name: orbit-project-hub
+    container_name: northline
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - ORBIT_DATA_DIR=/app/data
-      - ORBIT_ADMIN_EMAIL=${ORBIT_ADMIN_EMAIL:?initial administrator email required}
-      - ORBIT_ADMIN_PASSWORD=${ORBIT_ADMIN_PASSWORD:?initial administrator password required}
-      - ORBIT_PUBLIC_URL=${ORBIT_PUBLIC_URL:-http://localhost:3000}
-      - ORBIT_COOKIE_SECURE=${ORBIT_COOKIE_SECURE:-false}
-      - ORBIT_OIDC_ISSUER=${ORBIT_OIDC_ISSUER:-}
-      - ORBIT_OIDC_CLIENT_ID=${ORBIT_OIDC_CLIENT_ID:-}
-      - ORBIT_OIDC_CLIENT_SECRET=${ORBIT_OIDC_CLIENT_SECRET:-}
-      - ORBIT_AUTHENTIK_API_URL=${ORBIT_AUTHENTIK_API_URL:-}
-      - ORBIT_AUTHENTIK_API_TOKEN=${ORBIT_AUTHENTIK_API_TOKEN:-}
-      - ORBIT_DISCORD_BOT_TOKEN=${ORBIT_DISCORD_BOT_TOKEN:-}
-      - ORBIT_DISCORD_GUILD_ID=${ORBIT_DISCORD_GUILD_ID:-}
+      - NORTHLINE_DATA_DIR=/app/data
+      - NORTHLINE_ADMIN_EMAIL=${NORTHLINE_ADMIN_EMAIL:?initial administrator email required}
+      - NORTHLINE_ADMIN_PASSWORD=${NORTHLINE_ADMIN_PASSWORD:?initial administrator password required}
+      - NORTHLINE_PUBLIC_URL=${NORTHLINE_PUBLIC_URL:-http://localhost:3000}
+      - NORTHLINE_COOKIE_SECURE=${NORTHLINE_COOKIE_SECURE:-false}
+      - NORTHLINE_OIDC_ISSUER=${NORTHLINE_OIDC_ISSUER:-}
+      - NORTHLINE_OIDC_CLIENT_ID=${NORTHLINE_OIDC_CLIENT_ID:-}
+      - NORTHLINE_OIDC_CLIENT_SECRET=${NORTHLINE_OIDC_CLIENT_SECRET:-}
+      - NORTHLINE_AUTHENTIK_API_URL=${NORTHLINE_AUTHENTIK_API_URL:-}
+      - NORTHLINE_AUTHENTIK_API_TOKEN=${NORTHLINE_AUTHENTIK_API_TOKEN:-}
+      - NORTHLINE_DISCORD_BOT_TOKEN=${NORTHLINE_DISCORD_BOT_TOKEN:-}
+      - NORTHLINE_DISCORD_GUILD_ID=${NORTHLINE_DISCORD_GUILD_ID:-}
     volumes:
-      - orbit-data:/app/data
+      - northline-data:/app/data
 volumes:
-  orbit-data:
+  northline-data:

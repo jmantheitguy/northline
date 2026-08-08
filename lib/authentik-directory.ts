@@ -6,8 +6,8 @@ type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?
 const groupNames=(user:AuthentikUser)=>[...(user.groups||[]),...(user.groups_obj||[])].map(group=>typeof group==="string"?group:group.name||"");
 
 export async function syncAuthentikDirectory(force=false){
-  const base=process.env.ORBIT_AUTHENTIK_API_URL?.replace(/\/$/,"");
-  const token=process.env.ORBIT_AUTHENTIK_API_TOKEN;
+  const base=process.env.NORTHLINE_AUTHENTIK_API_URL?.replace(/\/$/,"");
+  const token=process.env.NORTHLINE_AUTHENTIK_API_TOKEN;
   if(!base||!token)return {configured:false,synced:0};
   const last=db.prepare("SELECT value FROM app_meta WHERE key='authentik_directory_synced_at'").get() as {value:string}|undefined;
   if(!force&&last&&Date.now()-new Date(last.value).getTime()<300000)return {configured:true,synced:0,cached:true};
@@ -21,7 +21,7 @@ export async function syncAuthentikDirectory(force=false){
     ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,status=excluded.status,oidc_subject=excluded.oidc_subject,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP`);
   db.transaction(()=>{
     for(const remote of users){
-      const groups=groupNames(remote),isAdmin=groups.includes("Orbit Admins"),hasAccess=isAdmin||groups.includes("Orbit Users");
+      const groups=groupNames(remote),isAdmin=groups.includes("Northline Admins"),hasAccess=isAdmin||groups.includes("Northline Users");
       const subject=remote.uuid||String(remote.pk||"");
       const email=remote.email||remote.username;
       if(!hasAccess||!subject||!email)continue;

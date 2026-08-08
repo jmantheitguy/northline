@@ -1,10 +1,10 @@
-# Orbit Project Hub
+# Northline
 
-Current release: **Alpha v0.2.1 — Production container deployment hotfix**
+Current release: **Alpha v0.3.0 — Northline identity migration**
 
-Orbit is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
+Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.2.1 contains the complete collaboration workspace from v0.2.0 and corrects the production container build. Build-time placeholders allow Next.js to inspect server routes without exposing administrator credentials, while the final image now uses Next's smaller standalone runtime. Real credentials remain runtime-only in the VM's protected `.env` file.
+Alpha v0.3.0 establishes Northline as the product identity across the application, GitHub repository, container deployment, environment configuration, documentation, cookies, database, and Authentik access groups. Task Buddy remains the Discord reminder bot. This release intentionally begins with a clean application database.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -48,15 +48,15 @@ The application combines visual task boards, private collaboration, user adminis
 - Live discovery of text channels available to the configured bot
 - Board-wide and task-specific scheduled reminders
 - Durable reminder state with sent, failed, and cancelled statuses
-- A self-hosted polling worker started with the Orbit server
+- A self-hosted polling worker started with the Northline server
 - Task-reminder scheduling workflow
 - Channel selection and reminder-message composition
 
-Set `ORBIT_DISCORD_BOT_TOKEN` and `ORBIT_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Orbit validates every selected channel against the configured guild and suppresses all automatic mentions.
+Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Northline validates every selected channel against the configured guild and suppresses all automatic mentions.
 
 ## Architecture
 
-Orbit currently uses:
+Northline currently uses:
 
 - Next.js 16 with the App Router
 - React 19 and TypeScript
@@ -90,7 +90,7 @@ npm install
 npm run dev
 ```
 
-Create a local `.env` from `.env.example`, replace every placeholder, then open [http://localhost:3000](http://localhost:3000). Orbit deliberately has no default administrator password and will refuse to start until the initial administrator email and password are configured.
+Create a local `.env` from `.env.example`, replace every placeholder, then open [http://localhost:3000](http://localhost:3000). Northline deliberately has no default administrator password and will refuse to start until the initial administrator email and password are configured.
 
 ## Production configuration
 
@@ -101,11 +101,11 @@ cp .env.example .env
 ```
 
 ```dotenv
-ORBIT_ADMIN_EMAIL=admin@example.com
-ORBIT_ADMIN_PASSWORD=replace-with-a-long-random-password
-ORBIT_DATA_DIR=/app/data
-ORBIT_AUTHENTIK_API_URL=http://authentik-host:9000
-ORBIT_AUTHENTIK_API_TOKEN=replace-with-an-authentik-api-token
+NORTHLINE_ADMIN_EMAIL=admin@example.com
+NORTHLINE_ADMIN_PASSWORD=replace-with-a-long-random-password
+NORTHLINE_DATA_DIR=/app/data
+NORTHLINE_AUTHENTIK_API_URL=http://authentik-host:9000
+NORTHLINE_AUTHENTIK_API_TOKEN=replace-with-an-authentik-api-token
 ```
 
 The first application start creates the initial administrator. Subsequent users can only be created from the authenticated administration console.
@@ -123,14 +123,14 @@ Recommended starting allocation for a small community:
 Deploy with:
 
 ```bash
-git clone https://github.com/jmantheitguy/orbit-project-hub.git
-cd orbit-project-hub
+git clone https://github.com/jmantheitguy/northline.git
+cd northline
 cp .env.example .env
 # Edit .env before continuing.
 docker compose up -d --build
 ```
 
-Orbit will listen on port `3000`. Publish it through the existing Cloudflare Tunnel and keep the origin port restricted to the private network.
+Northline will listen on port `3000`. Publish it through the existing Cloudflare Tunnel and keep the origin port restricted to the private network.
 
 Update the installation with:
 
@@ -143,11 +143,11 @@ The container uses `restart: unless-stopped`, so it will return after a VM reboo
 
 ## Central identity provider
 
-The repository includes a companion [Authentik deployment](infra/authentik/README.md) for central accounts and application-specific access groups. Orbit uses Authentik OpenID Connect for sign-in and synchronizes its searchable directory through the Authentik API. Membership in `Orbit Users` grants normal access; `Orbit Admins` grants administration. Removing both groups suspends the managed Orbit account and invalidates its sessions at the next synchronization.
+The repository includes a companion [Authentik deployment](infra/authentik/README.md) for central accounts and application-specific access groups. Northline uses Authentik OpenID Connect for sign-in and synchronizes its searchable directory through the Authentik API. Membership in `Northline Users` grants normal access; `Northline Admins` grants administration. Removing both groups suspends the managed Northline account and invalidates its sessions at the next synchronization.
 
 ## Data and backups
 
-The SQLite database is stored in the `orbit-data` Docker volume. Back it up regularly to storage outside the VM. A Synology or other NAS is suitable for encrypted backups and attachments, but the live SQLite database should remain on the VM's local disk rather than an NFS or SMB share.
+The SQLite database is stored in the `northline-data` Docker volume. Back it up regularly to storage outside the VM. A Synology or other NAS is suitable for encrypted backups and attachments, but the live SQLite database should remain on the VM's local disk rather than an NFS or SMB share.
 
 Environment files, local databases, generated builds, and dependencies are excluded from Git.
 
@@ -156,7 +156,7 @@ Environment files, local databases, generated builds, and dependencies are exclu
 - Use a unique administrator password generated by a password manager.
 - Never commit `.env` files, private keys, API tokens, OAuth client secrets, or exported service configuration.
 - Treat any credential that has appeared in Git history, logs, screenshots, or chat as compromised and rotate it before deployment.
-- Serve Orbit over HTTPS before allowing remote access.
+- Serve Northline over HTTPS before allowing remote access.
 - Keep the VM, Docker, and application dependencies updated.
 - Restrict direct access to port `3000` with the VM firewall.
 - Back up the database and periodically test restoration.
