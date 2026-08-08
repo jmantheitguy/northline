@@ -1,10 +1,10 @@
 # Orbit Project Hub
 
-Current release: **Alpha v0.2.0 — Complete the Orbit collaboration workspace**
+Current release: **Alpha v0.2.1 — Production container deployment hotfix**
 
 Orbit is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.2.0 turns Orbit's polished shell into a complete collaboration workspace. It adds full task details and comments, board/list/calendar views, filtering and sorting, board settings and sharing, a live administration console, searchable directory controls, and persisted Discord channel reminders delivered by the self-hosted bot scheduler.
+Alpha v0.2.1 contains the complete collaboration workspace from v0.2.0 and corrects the production container build. Build-time placeholders allow Next.js to inspect server routes without exposing administrator credentials, while the final image now uses Next's smaller standalone runtime. Real credentials remain runtime-only in the VM's protected `.env` file.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
