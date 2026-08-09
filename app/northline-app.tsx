@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { NORTHLINE_VERSION } from "@/lib/version";
+import { ReminderCenter } from "./reminder-center";
 
 type Status="ideas"|"ready"|"progress"|"hold"|"done";
 type Priority="Low"|"Medium"|"High";
@@ -14,7 +15,7 @@ type BoardDetail={board:{id:number;name:string;description:string;ownerId:number
 type WorkspaceUser={id:number;name:string;email:string;role:"Admin"|"Member"|"Guest";status:"Active"|"Invited"|"Suspended";boards:number;initials:string;color:string;authSource?:"local"|"oidc"};
 type SessionUser={id:number;name:string;email:string;role:"Admin"|"Member"|"Guest"};
 type Modal="task-create"|"task-detail"|"board-create"|"board-settings"|"share"|"reminder"|null;
-type View="board"|"directory"|"settings"|"admin";
+type View="board"|"directory"|"reminders"|"settings"|"admin";
 type BoardMode="board"|"list"|"timeline"|"calendar";
 
 const columns:{id:Status;label:string;color:string}[]=[
@@ -52,7 +53,7 @@ export function NorthlineApp(){
   if(authLoading)return <LoadingScreen/>;if(!authUser)return <Login onLogin={setAuthUser}/>;
   return <div className="app-shell">
     <aside className={sidebar?"sidebar":"sidebar collapsed"}><div className="brand"><BrandMark priority/><span>northline</span><small>{NORTHLINE_VERSION}</small><button className="icon-button close-side" onClick={()=>setSidebar(false)}>‹</button></div><button className="workspace"><span className="workspace-icon">V</span><span><b>VTuber Offices</b><small>Private workspace</small></span><i>⌄</i></button>
-      <nav><button className={view==="board"?"active":""} onClick={()=>setView("board")}><span>⌂</span>Boards</button><button className={view==="directory"?"active":""} onClick={()=>setView("directory")}><span>♙</span>People</button></nav>
+      <nav><button className={view==="board"?"active":""} onClick={()=>setView("board")}><span>⌂</span>Boards</button><button className={view==="directory"?"active":""} onClick={()=>setView("directory")}><span>♙</span>People</button><button className={view==="reminders"?"active":""} onClick={()=>setView("reminders")}><span>◷</span>Reminders</button></nav>
       <div className="nav-label"><span>MY BOARDS</span><button onClick={()=>setModal("board-create")}>＋</button></div><nav className="boards">{boards.filter(b=>b.permission==="owner"||b.permission==="admin").map(b=><BoardNav key={b.id} board={b} active={view==="board"&&activeBoardId===b.id} open={()=>{setActiveBoardId(b.id);setView("board")}}/>)}</nav>
       <div className="nav-label"><span>SHARED WITH ME</span></div><nav className="boards">{boards.filter(b=>b.permission==="editor"||b.permission==="viewer").map(b=><BoardNav key={b.id} board={b} active={view==="board"&&activeBoardId===b.id} shared open={()=>{setActiveBoardId(b.id);setView("board")}}/>)}{!boards.some(b=>b.permission==="editor"||b.permission==="viewer")&&<span className="nav-empty">No shared boards</span>}</nav>
       <div className="sidebar-bottom">{isAdmin&&<button className={view==="admin"?"admin-nav active":"admin-nav"} onClick={()=>setView("admin")}><span>♜</span>Administration <em>Admin</em></button>}<button className={view==="settings"?"active":""} onClick={()=>setView("settings")}><span>⚙</span>Settings</button><div className="profile"><Avatar name={authUser.name}/><span><b>{authUser.name}</b><small>{authUser.role}</small></span><button aria-label="Sign out" onClick={async()=>{await fetch("/api/auth/logout",{method:"POST"});setAuthUser(null)}}>↪</button></div></div>
@@ -60,6 +61,7 @@ export function NorthlineApp(){
     <main className="main"><header className="topbar">{!sidebar&&<button className="icon-button" onClick={()=>setSidebar(true)}>☰</button>}<div className="global-search">⌕<input aria-label="Global task search" placeholder="Search this board…" value={search} onChange={e=>setSearch(e.target.value)}/><kbd>⌘ K</kbd></div><div className="top-actions"><span className="version-pill">{NORTHLINE_VERSION}</span><Avatar name={authUser.name}/></div></header>
       {view==="board"&&(!activeBoardId?<Empty title="Create your first board" copy="Boards keep launches, projects, and collaborations organized." action={()=>setModal("board-create")}/>:!boardData?<PageLoading/>:<BoardView data={boardData} tasks={tasks} mode={mode} setMode={setMode} statusFilter={statusFilter} setStatusFilter={setStatusFilter} priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter} sort={sort} setSort={setSort} dragged={dragged} setDragged={setDragged} moveTask={moveTask} openTask={(task:Task)=>{setSelectedTask(task);setModal("task-detail")}} openModal={setModal}/>) }
       {view==="directory"&&<Directory users={directoryUsers}/>}
+      {view==="reminders"&&<ReminderCenter notify={notify}/>}
       {view==="settings"&&<Settings notify={notify}/>}
       {view==="admin"&&isAdmin&&<Admin users={users} reloadUsers={loadAdminUsers} notify={notify}/>}
     </main>

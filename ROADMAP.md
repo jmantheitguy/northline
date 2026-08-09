@@ -2,7 +2,7 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Alpha v0.3.6
+## Current — Alpha v0.4.0
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views
@@ -12,11 +12,12 @@ Northline is being built in public as a self-hosted project workspace for small 
 - Task Buddy Discord channel discovery and scheduled reminders
 - Northline visual identity, application icons, and social preview assets
 - Scheduled encrypted complete-stack backups with a tested restore workflow and NAS replication
+- Task Buddy reminder management with delivery history, editing, cancellation, and retries
 
 ## Alpha v0.4 — Notifications and operations
 
 - In-app notification center
-- View, edit, retry, and cancel scheduled reminders
+- In-app notification preferences and read-state controls
 - Stronger administration filters and audit detail
 - Backup status and failure visibility in the administration console
 - Health checks and clearer integration diagnostics

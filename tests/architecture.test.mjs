@@ -38,6 +38,17 @@ test("Discord reminders are permission checked and secrets stay server-side",asy
   assert.match(compose,/NORTHLINE_DISCORD_BOT_TOKEN/);
 });
 
+test("reminder management supports controlled updates, cancellation, and retry",async()=>{
+  const [collection,item,retry,ui]=await Promise.all([read("app/api/reminders/route.ts"),read("app/api/reminders/[id]/route.ts"),read("app/api/reminders/[id]/retry/route.ts"),read("app/reminder-center.tsx")]);
+  assert.match(collection,/canManage/);
+  assert.match(item,/Only pending reminders can be edited/);
+  assert.match(item,/REMINDER\.CANCEL/);
+  assert.match(retry,/Only failed reminders can be retried/);
+  assert.match(retry,/REMINDER\.RETRY/);
+  assert.match(ui,/Reminder center/);
+  assert.match(ui,/Retry now/);
+});
+
 test("administration metrics and audit history come from the database",async()=>{
   const overview=await read("app/api/admin/overview/route.ts");
   assert.match(overview,/requireAdmin\(\)/);

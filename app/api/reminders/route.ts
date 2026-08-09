@@ -7,10 +7,11 @@ import db from "@/lib/db";
 export async function GET() {
   const user=await currentUser(); if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
   const reminders=db.prepare(`SELECT r.id,r.board_id boardId,r.task_id taskId,r.channel_id channelId,r.channel_name channelName,
-    r.message,r.remind_at remindAt,r.status,r.error,b.name boardName,t.title taskTitle
+    r.message,r.remind_at remindAt,r.status,r.error,r.created_at createdAt,r.sent_at sentAt,b.name boardName,t.title taskTitle,
+    CASE WHEN b.owner_id=? OR ?='Admin' OR bm.permission='editor' THEN 1 ELSE 0 END canManage
     FROM reminders r JOIN boards b ON b.id=r.board_id LEFT JOIN tasks t ON t.id=r.task_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
-    WHERE b.owner_id=? OR ?='Admin' OR bm.user_id=? ORDER BY r.remind_at DESC LIMIT 100`).all(user.id,user.id,user.role,user.id);
+    WHERE b.owner_id=? OR ?='Admin' OR bm.user_id=? ORDER BY r.remind_at DESC LIMIT 100`).all(user.id,user.role,user.id,user.id,user.role,user.id);
   return NextResponse.json({reminders});
 }
 

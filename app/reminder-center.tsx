@@ -1,0 +1,35 @@
+"use client";
+/* eslint-disable react-hooks/exhaustive-deps, jsx-a11y/no-static-element-interactions */
+
+import { useEffect, useMemo, useState } from "react";
+
+type ReminderStatus="pending"|"sent"|"failed"|"cancelled";
+type Reminder={id:number;boardId:number;taskId:number|null;channelId:string;channelName:string;message:string;remindAt:string;status:ReminderStatus;error:string|null;createdAt:string;sentAt:string|null;boardName:string;taskTitle:string|null;canManage:number};
+type Channel={id:string;name:string};
+
+async function request(url:string,options?:RequestInit){const response=await fetch(url,options);const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong");return data}
+function localInput(iso:string){const date=new Date(iso);const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)}
+function displayTime(iso:string){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"short"}).format(new Date(iso))}
+
+export function ReminderCenter({notify}:{notify:(message:string)=>void}){
+  const[reminders,setReminders]=useState<Reminder[]>([]);const[loading,setLoading]=useState(true);const[filter,setFilter]=useState<ReminderStatus|"all">("all");const[editing,setEditing]=useState<Reminder|null>(null);const[busy,setBusy]=useState(false);
+  const load=async()=>{setLoading(true);try{setReminders((await request("/api/reminders")).reminders||[])}catch(error){notify((error as Error).message)}finally{setLoading(false)}};
+  useEffect(()=>{request("/api/reminders").then(data=>setReminders(data.reminders||[])).catch(error=>notify(error.message)).finally(()=>setLoading(false))},[]);
+  const shown=useMemo(()=>reminders.filter(item=>filter==="all"||item.status===filter),[reminders,filter]);
+  const count=(status:ReminderStatus)=>reminders.filter(item=>item.status===status).length;
+  const act=async(action:()=>Promise<void>,message:string)=>{if(busy)return;setBusy(true);try{await action();await load();notify(message)}catch(error){notify((error as Error).message)}finally{setBusy(false)}};
+  return <section className="content reminder-page"><div className="page-title"><div><div className="eyebrow">TASK BUDDY</div><h1>Reminder center</h1><p>Track every scheduled Discord delivery from creation through completion.</p></div><button className="secondary" onClick={()=>void load()}>↻ Refresh</button></div>
+    <div className="reminder-metrics"><Metric label="Scheduled" value={count("pending")} tone="purple"/><Metric label="Delivered" value={count("sent")} tone="green"/><Metric label="Needs attention" value={count("failed")} tone="red"/><Metric label="Cancelled" value={count("cancelled")} tone="gray"/></div>
+    <div className="reminder-panel"><div className="reminder-filters">{(["all","pending","sent","failed","cancelled"] as const).map(status=><button key={status} className={filter===status?"active":""} onClick={()=>setFilter(status)}>{status==="all"?"All":status[0].toUpperCase()+status.slice(1)} <span>{status==="all"?reminders.length:count(status)}</span></button>)}</div>
+      {loading?<div className="reminder-empty">Loading reminders…</div>:shown.length===0?<div className="reminder-empty"><b>No {filter==="all"?"reminders":filter+" reminders"}</b><span>Schedule a reminder from any board and it will appear here.</span></div>:<div className="reminder-list">{shown.map(item=><article className="reminder-item" key={item.id}><div className={`reminder-status ${item.status}`}><i/>{item.status}</div><div className="reminder-copy"><div><b>{item.boardName}</b>{item.taskTitle&&<span>· {item.taskTitle}</span>}</div><p>{item.message}</p><small>#{item.channelName} · {item.status==="sent"&&item.sentAt?`Delivered ${displayTime(item.sentAt)}`:`Scheduled ${displayTime(item.remindAt)}`}</small>{item.error&&<div className="reminder-error">{item.error}</div>}</div><div className="reminder-actions">{item.canManage===1&&item.status==="pending"&&<><button className="secondary" disabled={busy} onClick={()=>setEditing(item)}>Edit</button><button className="danger subtle" disabled={busy} onClick={()=>{if(confirm("Cancel this reminder?"))void act(()=>request(`/api/reminders/${item.id}`,{method:"DELETE"}),"Reminder cancelled")}}>Cancel</button></>}{item.canManage===1&&item.status==="failed"&&<><button className="primary" disabled={busy} onClick={()=>void act(()=>request(`/api/reminders/${item.id}/retry`,{method:"POST"}),"Reminder queued for retry")}>Retry now</button><button className="danger subtle" disabled={busy} onClick={()=>void act(()=>request(`/api/reminders/${item.id}`,{method:"DELETE"}),"Reminder cancelled")}>Cancel</button></>}</div></article>)}</div>}
+    </div>{editing&&<EditReminder reminder={editing} close={()=>setEditing(null)} saved={async()=>{setEditing(null);await load();notify("Reminder updated")}} notify={notify}/>}</section>
+}
+
+function Metric({label,value,tone}:{label:string;value:number;tone:string}){return <div className={`reminder-metric ${tone}`}><span>{label}</span><b>{value}</b><i/></div>}
+
+function EditReminder({reminder,close,saved,notify}:{reminder:Reminder;close:()=>void;saved:()=>Promise<void>;notify:(message:string)=>void}){
+  const[channels,setChannels]=useState<Channel[]>([]);const[channelId,setChannelId]=useState(reminder.channelId);const[message,setMessage]=useState(reminder.message);const[when,setWhen]=useState(localInput(reminder.remindAt));const[minWhen]=useState(()=>localInput(new Date(Date.now()+60000).toISOString()));const[busy,setBusy]=useState(false);
+  useEffect(()=>{request("/api/discord/channels").then(data=>setChannels(data.channels||[])).catch(error=>notify(error.message))},[]);
+  const save=async()=>{setBusy(true);try{await request(`/api/reminders/${reminder.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({channelId,message,remindAt:new Date(when).toISOString()})});await saved()}catch(error){notify((error as Error).message)}finally{setBusy(false)}};
+  return <div className="modal-backdrop" onMouseDown={event=>event.target===event.currentTarget&&close()}><div className="modal"><button className="modal-close" onClick={close}>×</button><span className="modal-icon discord-bg">#</span><h2>Edit reminder</h2><p>Update the delivery channel, time, or message before Task Buddy sends it.</p><label>Channel<select value={channelId} onChange={event=>setChannelId(event.target.value)}>{!channels.some(channel=>channel.id===channelId)&&<option value={channelId}>#{reminder.channelName}</option>}{channels.map(channel=><option key={channel.id} value={channel.id}>#{channel.name}</option>)}</select></label><label>Delivery time<input type="datetime-local" min={minWhen} value={when} onChange={event=>setWhen(event.target.value)}/></label><label>Message<textarea maxLength={1800} value={message} onChange={event=>setMessage(event.target.value)}/><small>{message.length}/1,800</small></label><button className="discord-button wide" disabled={busy||!channelId||!when||!message.trim()} onClick={()=>void save()}>{busy?"Saving…":"Save reminder"}</button></div></div>
+}

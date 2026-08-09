@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.3.6 — Complete-stack encrypted backups**
+Current release: **Alpha v0.4.0 — Reminder management**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.3.6 expands verified Synology replication to the complete local stack: Northline, Authentik, Stalwart mail, webmail, and mail ingress. It retains encrypted archives, integrity checks, and non-destructive restore testing. See the [backup and recovery guide](ops/backup/README.md).
+Alpha v0.4.0 introduces a complete Task Buddy reminder center with delivery status, filtering, editing, cancellation, failure details, and safe retry controls. Complete-stack encrypted Synology backups and non-destructive restore testing remain active. See the [backup and recovery guide](ops/backup/README.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 

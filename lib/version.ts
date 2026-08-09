@@ -1,1 +1,1 @@
-export const NORTHLINE_VERSION = "Alpha v0.3.6";
+export const NORTHLINE_VERSION = "Alpha v0.4.0";
