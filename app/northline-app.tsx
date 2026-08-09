@@ -475,6 +475,7 @@ export function NorthlineApp() {
           run={mutate}
           refresh={refresh}
           notify={notify}
+          openTaskReminder={() => setModal("reminder")}
         />
       )}{" "}
       {toast && (
@@ -1520,6 +1521,7 @@ function NorthlineModal({
   run,
   refresh,
   notify,
+  openTaskReminder,
 }: any) {
   const [taskForm, setTaskForm] = useState(
     task
@@ -1553,11 +1555,11 @@ function NorthlineModal({
     dueWarningHours: board?.notifications?.dueWarningHours || 24,
   });
   const [reminder, setReminder] = useState({
-    channelId: "",
+    channelId: board?.notifications?.channelId || "",
     taskId: task?.id ? String(task.id) : "",
     date: "",
     time: "",
-    message: "",
+    message: task?.title ? `Reminder: ${task.title}` : "",
   });
   useEffect(() => {
     if (type === "task-detail" && task)
@@ -1801,9 +1803,7 @@ function NorthlineModal({
             </div>
             <div className="modal-actions">
               {type === "task-detail" && (
-                <button className="danger" onClick={deleteTask}>
-                  Delete
-                </button>
+                <><button className="danger" onClick={deleteTask}>Delete</button><button className="discord-button" onClick={openTaskReminder}>◷ Remind me</button></>
               )}
               <button
                 className="primary"
