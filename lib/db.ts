@@ -1,11 +1,13 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { hashSync } from "bcryptjs";
 
 const dataDirectory = process.env.NORTHLINE_DATA_DIR || path.join(process.cwd(), "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
 const db = new Database(path.join(dataDirectory, "northline.db"));
+export const createBoardPublicId=()=>`brd_${randomBytes(16).toString("hex")}`;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -125,7 +127,7 @@ const addBoardColumn=(name:string,definition:string)=>{if(!boardColumns.some(col
 addBoardColumn("public_id","public_id TEXT");
 addBoardColumn("created_by","created_by INTEGER");
 db.prepare("UPDATE boards SET created_by=owner_id WHERE created_by IS NULL").run();
-for(const board of db.prepare("SELECT id,created_by FROM boards WHERE public_id IS NULL").all() as Array<{id:number;created_by:number}>)db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(`u${board.created_by}-b${board.id}`,board.id);
+for(const board of db.prepare("SELECT id FROM boards WHERE public_id IS NULL OR public_id LIKE 'u%-b%'").all() as Array<{id:number}>)db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(createBoardPublicId(),board.id);
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS boards_public_id_idx ON boards(public_id)");
 
 const reminderColumns = db.prepare("PRAGMA table_info(reminders)").all() as Array<{name:string}>;

@@ -28,9 +28,9 @@ test("board data is relational and cascade-safe",async()=>{
   assert.match(schema,/task_id INTEGER NOT NULL REFERENCES tasks\(id\) ON DELETE CASCADE/);
 });
 
-test("board references remain tied to their creating user",async()=>{
-  const [boards,detail,worker]=await Promise.all([read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("lib/reminder-worker.ts")]);
-  assert.match(boards,/created_by/);assert.match(boards,/`u\$\{user\.id\}-b\$\{id\}`/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);
+test("board references are opaque while creator ownership remains relational",async()=>{
+  const [schema,boards,detail,worker]=await Promise.all([read("lib/db.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("lib/reminder-worker.ts")]);
+  assert.match(boards,/created_by/);assert.match(schema,/brd_\$\{randomBytes\(16\)/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);
 });
 
 test("Task Buddy automatic notifications are board-routed and preference aware",async()=>{

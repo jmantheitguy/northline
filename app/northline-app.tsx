@@ -1899,7 +1899,7 @@ function NorthlineModal({
             <label>
               Board ID
               <input value={board.board.boardKey} readOnly />
-              <small>Permanent reference tied to the creating user.</small>
+              <small>Permanent random reference; creator ownership is stored privately.</small>
             </label>
             <label>
               Name
