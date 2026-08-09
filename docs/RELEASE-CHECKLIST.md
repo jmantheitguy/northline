@@ -3,6 +3,7 @@
 ## Before release
 
 - Run `npm run lint`, `npm test`, and the production dependency audit.
+- Update `README.md`, `CHANGELOG.md`, `ROADMAP.md`, `SECURITY.md`, and any affected operational guide.
 - Confirm the admin Health page reports a healthy database and sufficient VM storage.
 - Send a Task Buddy health-check message from the Health page.
 - Confirm the latest encrypted backup reached the NAS.
@@ -17,3 +18,4 @@
 - Search for that task from another board and inspect the board activity feed.
 - Schedule one reminder, verify delivery, and confirm its history remains visible.
 - Record the release tag and deployment commit in the change log.
+- Verify both light and dark themes on sign-in, a board, a modal, reminders, and Administration.

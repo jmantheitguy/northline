@@ -2,7 +2,19 @@
 
 ## Supported version
 
-Northline is currently in **Alpha v0.3.0**. Only the latest commit on `main` receives security fixes during the alpha period.
+Northline is currently in **Alpha v0.7.2**. Only the latest tagged release and latest commit on `main` receive security fixes during the alpha period.
+
+## Security model
+
+- Administrative routes require an active server-side Admin session.
+- Board routes resolve owner, editor, or viewer access on the server for every request.
+- Opaque board IDs prevent easy enumeration but are not considered authorization secrets.
+- Sessions use random tokens; only SHA-256 token digests are stored in SQLite.
+- Cookies are HTTP-only, same-site, and marked secure in HTTPS deployments.
+- Passwords for emergency local accounts are hashed with bcrypt.
+- Discord credentials, Authentik tokens, OIDC secrets, mail relay keys, and backup keys remain server-side.
+- Response headers deny framing, disable MIME sniffing, restrict referrers, and disable unused browser permissions.
+- Production dependency audits are required before each release.
 
 ## Credential handling
 

@@ -1,12 +1,27 @@
 # Northline
 
-Current release: **Alpha v0.7.1 — Complete dark mode**
+Current release: **Alpha v0.7.2 — Public documentation refresh**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.7.1 adds a persistent, system-aware dark theme across sign-in, boards, reminders, settings, administration, health reporting, and every modal. Alpha v0.7.0 introduced cross-board search, board activity, task duplication, starter board templates, preserved delivery history, response hardening, and operational health reporting. See the [backup and recovery guide](ops/backup/README.md) and [release checklist](docs/RELEASE-CHECKLIST.md).
+Alpha v0.7.2 brings the public documentation in line with the complete deployed platform while separating reproducible guidance from private infrastructure details. Alpha v0.7.1 added a persistent, system-aware dark theme across sign-in, boards, reminders, settings, administration, health reporting, and every modal. Alpha v0.7.0 introduced cross-board search, board activity, task duplication, starter board templates, preserved delivery history, response hardening, and operational health reporting.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
+
+## Documentation
+
+| Guide | Purpose |
+| --- | --- |
+| [Features](docs/FEATURES.md) | Complete user-facing capability and permissions reference |
+| [Architecture](docs/ARCHITECTURE.md) | Components, data model, trust boundaries, and request flows |
+| [Operations](docs/OPERATIONS.md) | Deployment, updates, health monitoring, troubleshooting, and maintenance |
+| [Member onboarding](docs/ONBOARDING.md) | Authentik, Discord linking, profiles, access, and first-use steps |
+| [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release |
+| [Backup and recovery](ops/backup/README.md) | Encrypted VM/NAS backups and non-destructive restore testing |
+| [Authentik](infra/authentik/README.md) | Central identity and Northline security groups |
+| [Mail](infra/mail/README.md) | Stalwart, webmail, Cloudflare ingress, and Brevo relay |
+| [Security policy](SECURITY.md) | Supported versions, credential rules, and private reporting |
+| [Release history](CHANGELOG.md) | Version-by-version feature summary |
 
 ## Product capabilities
 
@@ -22,6 +37,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Private boards and boards shared with selected workspace members
 - Long, random public board IDs used by task and reminder links while creator ownership remains private
 - Browser navigation uses random board IDs without treating URL secrecy as authorization
+- Persistent light and dark themes that honor the browser preference on first use
 
 ### Members and access
 
@@ -35,6 +51,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Authentik-managed accounts and group-based access revocation
 - User creation, role assignment, suspension, and reactivation
 - Protection against an administrator suspending their own active account
+- Authentik profile pictures and optional Discord account linking
 
 ### Administration
 
@@ -46,6 +63,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Invite-only registration policy controls
 - Discord connection and session-policy settings
 - Live health dashboard with Task Buddy test delivery, database integrity, disk capacity, and backup/restore status
+- Active-session, application-memory, Node runtime, database-size, and reminder-delivery visibility
 
 ### Discord reminders
 
@@ -79,7 +97,7 @@ Northline currently uses:
 - Server-side API routes for authentication and administration
 - Docker and Docker Compose for Linux deployment
 
-SQLite runs in WAL mode with foreign-key enforcement. The database contains users, sessions, boards, board memberships, tasks, comments, and administrative audit events. Docker stores it in a persistent named volume mounted at `/app/data`. Every board, task, comment, and sharing API verifies the requesting user's permission on the server.
+SQLite runs in WAL mode with foreign-key enforcement. The database contains users, sessions, boards, memberships, tasks, comments, reminders, notification snapshots, board activity, workspace settings, and administrative audit events. Docker stores it in a persistent named volume mounted at `/app/data`. Every board, task, comment, reminder, search, activity, and sharing API verifies the requesting user's permission on the server.
 
 ## Roles
 
@@ -117,8 +135,15 @@ cp .env.example .env
 NORTHLINE_ADMIN_EMAIL=admin@example.com
 NORTHLINE_ADMIN_PASSWORD=replace-with-a-long-random-password
 NORTHLINE_DATA_DIR=/app/data
+NORTHLINE_PUBLIC_URL=https://northline.example.com
+NORTHLINE_COOKIE_SECURE=true
+NORTHLINE_OIDC_ISSUER=https://auth.example.com/application/o/northline
+NORTHLINE_OIDC_CLIENT_ID=copy-from-authentik
+NORTHLINE_OIDC_CLIENT_SECRET=copy-from-authentik
 NORTHLINE_AUTHENTIK_API_URL=http://authentik-host:9000
 NORTHLINE_AUTHENTIK_API_TOKEN=replace-with-an-authentik-api-token
+NORTHLINE_DISCORD_BOT_TOKEN=replace-with-a-discord-bot-token
+NORTHLINE_DISCORD_GUILD_ID=replace-with-your-server-id
 ```
 
 The first application start creates the initial administrator. Subsequent users can only be created from the authenticated administration console.
@@ -177,13 +202,7 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-- Optional Discord OAuth account linking in addition to Authentik
-- Reminder retry controls and delivery-history filtering
-- Password reset and forced first-login password changes
-- File attachments backed by configurable object or NAS storage
-- Notifications and activity feeds
-- Expanded audit-log filtering and export
-- Automated tests for authentication and permission boundaries
+The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). The next major product milestone is private multi-calendar support with selective sharing. File attachments, richer automation rules, expanded reporting, and broader end-to-end identity testing remain planned for Beta.
 
 ## License
 

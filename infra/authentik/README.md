@@ -40,6 +40,16 @@ Keep Authentik's built-in `authentik Admins` group separate as a break-glass pla
 
 Future applications should receive their own application-specific user and administrator groups under `Domain Users`.
 
+## Northline integration
+
+Create an OpenID Connect provider and application for Northline. Use the public callback URL `https://<northline-host>/api/auth/oidc/callback`, then place the issuer, client ID, and client secret only in Northline's private `.env`. Create a service token for directory synchronization and set `NORTHLINE_AUTHENTIK_API_URL` plus `NORTHLINE_AUTHENTIK_API_TOKEN`.
+
+Northline synchronizes names, email addresses, roles, status, and profile images. Removing both Northline groups suspends the managed account and deletes its active sessions. The local administrator remains an emergency recovery path and should use a separate randomly generated password.
+
+## Discord linking and profile pictures
+
+Add a Discord OAuth source with `identify` and `email` scopes and the callback URL shown by Authentik. Allow users to link the source from their Authentik settings. Map the Discord avatar claim into the user's picture attribute so Northline receives it during OIDC sign-in and directory synchronization. Discord linking is optional and does not replace Northline group authorization.
+
 ## Operations
 
 ```bash

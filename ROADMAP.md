@@ -2,7 +2,7 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Alpha v0.4.0
+## Current — Alpha v0.7.2
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views
@@ -13,25 +13,26 @@ Northline is being built in public as a self-hosted project workspace for small 
 - Northline visual identity, application icons, and social preview assets
 - Scheduled encrypted complete-stack backups with a tested restore workflow and NAS replication
 - Task Buddy reminder management with delivery history, editing, cancellation, and retries
+- Automatic Task Buddy notifications for assignment, status, comment, mention, and due-date activity
+- Permission-aware global task search, task duplication, and starter board templates
+- Board activity history and durable notification snapshots
+- Administrator health dashboard with live Task Buddy testing and backup/restore reporting
+- Persistent system-aware dark mode across the complete application
 
-## Alpha v0.4 — Notifications and operations
+## Alpha v0.7 — Personal calendars
 
-- In-app notification center
-- In-app notification preferences and read-state controls
-- Stronger administration filters and audit detail
-- Backup status and failure visibility in the administration console
-- Health checks and clearer integration diagnostics
+- Private calendars owned by individual users
+- Multiple calendars per user
+- Month, week, and agenda views
+- Events, recurring events, reminders, and calendar color controls
+- Selective calendar sharing with viewer/editor permissions
+- Optional links between calendar events and Northline tasks
 
-## Alpha v0.5 — Workflow acceleration
+## Beta — Workflow acceleration and production readiness
 
-- Reusable board and task templates
 - Lightweight automation rules for status, due dates, and reminders
-- Activity feeds and richer task history
 - File attachments with configurable self-hosted storage
 - Personal task views across boards
-
-## Beta readiness
-
 - Broader automated coverage for permissions and identity lifecycle events
 - Accessibility and responsive-design review
 - Performance testing for larger boards and member directories
@@ -40,7 +41,7 @@ Northline is being built in public as a self-hosted project workspace for small 
 
 ## Longer-term ideas
 
-- Calendar integrations
+- External calendar import/export and integrations
 - Additional notification providers
 - Public API and webhooks
 - Reporting dashboards

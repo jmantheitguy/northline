@@ -85,3 +85,11 @@ test("dark mode is persistent and application-wide",async()=>{
   assert.match(ui,/northline-theme/);assert.match(ui,/document\.documentElement\.dataset\.theme/);assert.match(ui,/prefers-color-scheme: dark/);assert.match(ui,/Switch to/);
   assert.match(styles,/html\[data-theme="dark"\]/);assert.match(styles,/\.auth-screen/);assert.match(styles,/\.health-card/);assert.match(styles,/\.reminder-panel/);assert.match(styles,/\.modal/);
 });
+
+test("public documentation covers the deployed platform without private network addresses",async()=>{
+  const docs=await Promise.all(["README.md","ROADMAP.md","SECURITY.md","CHANGELOG.md","docs/FEATURES.md","docs/ARCHITECTURE.md","docs/OPERATIONS.md","docs/ONBOARDING.md","docs/RELEASE-CHECKLIST.md","ops/backup/README.md","infra/authentik/README.md","infra/mail/README.md"].map(read));
+  const combined=docs.join("\n");
+  for(const topic of ["dark theme","global search","board activity","task duplication","health dashboard","Task Buddy","Authentik","restore test"])assert.match(combined,new RegExp(topic,"i"));
+  assert.doesNotMatch(combined,/192\.168\.\d+\.\d+/);
+  assert.doesNotMatch(combined,/Password1!/);
+});

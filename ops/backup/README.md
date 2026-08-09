@@ -2,7 +2,9 @@
 
 The production backup job creates a consistent SQLite snapshot of Northline, a logical PostgreSQL dump of Authentik, private environment files, Authentik-managed files, and the complete local mail stack. Mail coverage includes Stalwart configuration and message data, Bulwark webmail state, SnappyMail data, mail ingress configuration, and the mail Compose deployment. Mail containers are paused only while their small local volumes are captured, then restarted automatically even if the job fails. Each archive includes checksums and is encrypted with AES-256-CBC using PBKDF2.
 
-The systemd timer runs daily at 03:17 with a randomized delay of up to 20 minutes. Archives are stored in `/var/backups/northline` with owner-only permissions and retained for 14 days. Production also replicates each verified encrypted archive to the Synology `Data/Northline-Backups` folder and retains NAS copies for 60 days.
+The production systemd timer runs once daily with a randomized delay. Archives are stored in a root-only local backup directory with short retention, then each verified encrypted archive is replicated to a separately managed NAS destination with longer retention. Exact schedules, share names, mount details, and credentials are intentionally excluded from this public repository.
+
+Each successful backup writes `runtime-status/backup.json`; each successful restore drill writes `runtime-status/restore.json`. The Northline container mounts this directory read-only and displays both reports in **Administration > Health**. `nasReplicated: true` confirms that a verified copy reached the NAS, not merely the VM.
 
 The encryption key is stored separately at `/root/.config/northline-backup.key`. Losing both the VM and the off-host copy of this key makes the archives unrecoverable. Never commit the key or an archive to Git.
 
@@ -33,8 +35,17 @@ The test decrypts the newest archive, verifies every checksum, opens the Northli
 
 An archive kept only on the application VM is not a complete disaster-recovery strategy. Copy encrypted archives to separate storage such as the NAS before relying on them for hardware failure recovery.
 
-## NAS mount
+## NAS destination
 
-The production VM mounts the Synology `Data` share at `/mnt/northline-backups` using a root-only credentials file. The older DS210j negotiates SMB 2.0 with NTLMSSP; SMB1 is not enabled. The persistent mount uses systemd automounting so boot is not blocked when the NAS is temporarily unavailable.
+The production VM uses a root-only credentials file and a systemd automount for its SMB backup destination, so boot is not blocked when the NAS is temporarily unavailable. Choose the newest protocol supported by both systems, disable SMB1, restrict the backup account to its destination, and never publish the NAS administration interface or SMB service to the internet.
 
 The NAS contains encrypted archives only. The recovery key remains separate and must never be copied into the backup folder.
+
+## What is protected
+
+- Northline SQLite data, reminder history, notification snapshots, activity history, and workspace settings
+- Authentik PostgreSQL, configuration, templates, profile media, and private environment file
+- Stalwart configuration and message data
+- Bulwark and SnappyMail state
+- Mail ingress configuration and deployment files
+- Checksums, container image references, and the exact Northline Git commit
