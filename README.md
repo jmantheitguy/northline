@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.7.0 — Operations and workflow readiness**
+Current release: **Alpha v0.7.1 — Complete dark mode**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.7.0 adds an administrator health dashboard for Northline, SQLite, VM storage, Authentik, Task Buddy, reminders, NAS backups, and restore tests. It also introduces cross-board search, board activity, task duplication, starter board templates, preserved delivery history, response hardening, and clearer operational validation. See the [backup and recovery guide](ops/backup/README.md) and [release checklist](docs/RELEASE-CHECKLIST.md).
+Alpha v0.7.1 adds a persistent, system-aware dark theme across sign-in, boards, reminders, settings, administration, health reporting, and every modal. Alpha v0.7.0 introduced cross-board search, board activity, task duplication, starter board templates, preserved delivery history, response hardening, and operational health reporting. See the [backup and recovery guide](ops/backup/README.md) and [release checklist](docs/RELEASE-CHECKLIST.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 

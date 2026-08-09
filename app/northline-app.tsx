@@ -135,6 +135,7 @@ async function jsonFetch(url: string, options?: RequestInit) {
 }
 
 export function NorthlineApp() {
+  const [theme,setTheme]=useState<"light"|"dark">("light");
   const [authUser, setAuthUser] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [boards, setBoards] = useState<BoardSummary[]>([]);
@@ -203,10 +204,12 @@ export function NorthlineApp() {
     }
   };
   useEffect(() => {
+    const saved=window.localStorage.getItem("northline-theme");const preferred=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";setTheme(saved==="dark"||saved==="light"?saved:preferred);
     jsonFetch("/api/auth/me")
       .then((d) => setAuthUser(d.user))
       .finally(() => setAuthLoading(false));
   }, []);
+  useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;window.localStorage.setItem("northline-theme",theme)},[theme]);
   useEffect(() => {
     if (window.matchMedia("(max-width: 950px)").matches) setSidebar(false);
     const query=new URLSearchParams(window.location.search),task=Number(query.get("task"));if(task>0)setDeepLinkTaskId(task);
@@ -287,8 +290,9 @@ export function NorthlineApp() {
     if (activeBoardId) await loadBoard(activeBoardId);
     await loadBoards();
   };
-  if (authLoading) return <LoadingScreen />;
-  if (!authUser) return <Login onLogin={setAuthUser} />;
+  const toggleTheme=()=>setTheme(current=>current==="dark"?"light":"dark");
+  if (authLoading) return <LoadingScreen theme={theme} toggleTheme={toggleTheme}/>;
+  if (!authUser) return <Login onLogin={setAuthUser} theme={theme} toggleTheme={toggleTheme}/>;
   return (
     <div className="app-shell">
       <aside className={sidebar ? "sidebar" : "sidebar collapsed"}>
@@ -426,6 +430,7 @@ export function NorthlineApp() {
             {globalResults.length>0&&<div className="global-results">{globalResults.map(result=><button key={result.id} onClick={()=>{setActiveBoardId(result.boardId);setView("board");setDeepLinkTaskId(result.id);setGlobalResults([]);setSearch("")}}><b>{result.title}</b><span>{result.boardName} · {result.status}</span></button>)}</div>}
           </div>
           <div className="top-actions">
+            <ThemeToggle theme={theme} toggle={toggleTheme}/>
             <span className="version-pill">{NORTHLINE_VERSION}</span>
             <Avatar name={authUser.name} avatar={authUser.avatar} />
           </div>
@@ -495,9 +500,11 @@ export function NorthlineApp() {
   );
 }
 
-function LoadingScreen() {
+function ThemeToggle({theme,toggle}:{theme:"light"|"dark";toggle:()=>void}){return <button className="theme-toggle" onClick={toggle} aria-label={`Switch to ${theme==="dark"?"light":"dark"} mode`} title={`Switch to ${theme==="dark"?"light":"dark"} mode`}><span aria-hidden="true">{theme==="dark"?"☀":"☾"}</span><em>{theme==="dark"?"Light":"Dark"}</em></button>}
+function LoadingScreen({theme,toggleTheme}:{theme:"light"|"dark";toggleTheme:()=>void}) {
   return (
     <div className="auth-screen">
+      <div className="auth-theme"><ThemeToggle theme={theme} toggle={toggleTheme}/></div>
       <div className="auth-card">
         <div className="auth-brand">
           <BrandMark priority />
@@ -508,7 +515,7 @@ function LoadingScreen() {
     </div>
   );
 }
-function Login({ onLogin }: { onLogin: (u: SessionUser) => void }) {
+function Login({ onLogin,theme,toggleTheme }: { onLogin: (u: SessionUser) => void;theme:"light"|"dark";toggleTheme:()=>void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -535,6 +542,7 @@ function Login({ onLogin }: { onLogin: (u: SessionUser) => void }) {
   };
   return (
     <div className="auth-screen">
+      <div className="auth-theme"><ThemeToggle theme={theme} toggle={toggleTheme}/></div>
       <div className="auth-aside">
         <div className="auth-brand light">
           <BrandMark priority />

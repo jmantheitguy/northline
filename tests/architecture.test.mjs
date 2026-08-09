@@ -79,3 +79,9 @@ test("release health and workflow tools remain permission constrained",async()=>
   assert.match(duplicate,/canEdit\(boardPermission/);assert.match(activity,/boardPermission/);
   assert.match(backup,/backup\.json/);assert.match(restore,/restore\.json/);
 });
+
+test("dark mode is persistent and application-wide",async()=>{
+  const [ui,styles]=await Promise.all([read("app/northline-app.tsx"),read("app/globals.css")]);
+  assert.match(ui,/northline-theme/);assert.match(ui,/document\.documentElement\.dataset\.theme/);assert.match(ui,/prefers-color-scheme: dark/);assert.match(ui,/Switch to/);
+  assert.match(styles,/html\[data-theme="dark"\]/);assert.match(styles,/\.auth-screen/);assert.match(styles,/\.health-card/);assert.match(styles,/\.reminder-panel/);assert.match(styles,/\.modal/);
+});
