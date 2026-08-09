@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Northline is currently in **Alpha v0.8.5**. Only the latest tagged release and latest commit on `main` receive security fixes during the alpha period.
+Northline is currently in **Beta v0.0.1**. Only the latest tagged Beta release and latest commit on `main` receive security fixes during the Beta period.
 
 ## Security model
 

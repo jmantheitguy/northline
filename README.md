@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.8.5 — Reliable Discord profile synchronization**
+Current release: **Beta v0.0.1 — Initial team validation release**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.8.0 established the security and reliability foundation for Beta: explicit cross-origin mutation protection, sign-in and administration throttling, user-visible session inventory and revocation, recorded schema migrations, backup/restore failure reporting, container health checks, clean-install verification, performance regression coverage, secret scanning, CI, Dependabot, and documented upgrade/rollback policy. Alpha v0.8.1 removes the unused prototype toolchain and brings the complete development dependency audit to zero known vulnerabilities. Browser-based visual and accessibility acceptance remains a clearly identified final Beta gate.
+The Beta line begins with the core board, identity, administration, Task Buddy, backup, and operational platform active for a small real-world team. Automated authorization, build, performance, clean-install, secret, dependency, database, backup, restore, service-health, and public-routing checks form the release baseline. Browser-driven accessibility, responsive presentation, failure recovery, and complete role journeys remain active Beta acceptance work and are tracked publicly rather than implied to be complete.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -18,6 +18,7 @@ The application combines visual task boards, private collaboration, user adminis
 | [Upgrading](docs/UPGRADING.md) | Migration policy, clean-install verification, and rollback procedure |
 | [Member onboarding](docs/ONBOARDING.md) | Authentik, Discord linking, profiles, access, and first-use steps |
 | [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release |
+| [Beta status](docs/BETA-STATUS.md) | Verified release evidence and remaining interactive validation |
 | [Backup and recovery](ops/backup/README.md) | Encrypted VM/NAS backups and non-destructive restore testing |
 | [Authentik](infra/authentik/README.md) | Central identity and Northline security groups |
 | [Mail](infra/mail/README.md) | Stalwart, webmail, Cloudflare ingress, and Brevo relay |
@@ -206,7 +207,7 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). Alpha v0.8.x freezes major feature expansion while Beta acceptance focuses on browser-driven accessibility, visual, responsive, and complete user-journey validation. Private multi-calendar support is intentionally deferred until after the Beta release.
+The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). Beta v0.0.x focuses on real-user validation, accessibility, visual and responsive review, failure recovery, and complete role journeys before broader feature expansion. Private multi-calendar support remains deferred until a later release.
 
 ## License
 

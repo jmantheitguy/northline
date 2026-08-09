@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.0.1 — Initial team validation release
+
+- Begin the Beta release line with private permissioned boards, task workflows, Authentik office identities, optional Discord profile linking, Task Buddy notifications, administration, health reporting, and operational recovery tooling.
+- Establish passing automated gates for builds, authorization structure, database integrity, performance, clean installation, secrets, and dependency vulnerabilities.
+- Validate the production database schema and foreign keys, Authentik/Discord linkage, container health, public Cloudflare route, encrypted NAS replication, and non-destructive restore reporting.
+- Reclaim accumulated container-build cache and restore safe VM storage headroom without removing active service images or data volumes.
+- Track browser role journeys, keyboard and screen-reader operation, responsive presentation, and failure recovery as explicit Beta acceptance work.
+
 ## Alpha v0.8.5 — Reliable Discord profile synchronization
 
 - Discover linked Discord IDs from Authentik source-connection records when custom mapped attributes are missing.

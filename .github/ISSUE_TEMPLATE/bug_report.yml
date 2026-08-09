@@ -27,7 +27,7 @@ body:
     id: version
     attributes:
       label: Northline version
-      placeholder: Alpha v0.3.1
+      placeholder: Beta v0.0.1
     validations:
       required: true
   - type: dropdown

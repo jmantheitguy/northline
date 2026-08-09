@@ -20,4 +20,4 @@
 - Schedule one reminder, verify delivery, and confirm its history remains visible.
 - Record the release tag and deployment commit in the change log.
 - Verify both light and dark themes on sign-in, a board, a modal, reminders, and Administration.
-- For Beta candidates, complete every browser, keyboard, screen-reader, and responsive journey in `docs/BETA-ACCEPTANCE.md`.
+- During Beta, record the completed browser, keyboard, screen-reader, and responsive journeys from `docs/BETA-ACCEPTANCE.md`; complete the full matrix before a stable release.

@@ -1,6 +1,6 @@
 # Beta acceptance checklist
 
-This is the remaining human/browser gate after Alpha v0.8.0. Record the browser, viewport, identity role, result, and issue link for each failure. Do not mark Beta ready from automated tests alone.
+This checklist governs validation throughout the Beta line. Record the browser, viewport, identity role, result, and issue link for each failure. Automated tests support these checks but do not replace the human/browser evidence required before a stable release.
 
 ## Identity and sessions
 

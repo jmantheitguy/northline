@@ -1,6 +1,6 @@
 {
   "name": "northline",
-  "version": "0.8.5-alpha.0",
+  "version": "0.0.1-beta.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

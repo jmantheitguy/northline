@@ -33,7 +33,7 @@ Never paste live environment values, OAuth secrets, bot tokens, mail keys, backu
 
 ## Remaining Beta acceptance gate
 
-Automated non-browser validation cannot establish visual correctness, keyboard usability, focus behavior, screen-reader output, or responsive layout quality. Before Beta, a human must execute the journeys in `docs/BETA-ACCEPTANCE.md` with browser access and record failures. Alpha v0.8.0 deliberately reports this as pending instead of claiming unperformed browser validation.
+Automated non-browser validation cannot establish visual correctness, keyboard usability, focus behavior, screen-reader output, or responsive layout quality. During Beta, humans execute the journeys in `docs/BETA-ACCEPTANCE.md`, record failures, and repeat affected journeys before a stable release. Northline reports unperformed browser validation as pending instead of implying it passed.
 
 ## Public documentation boundary
 
