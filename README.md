@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.5.1 — Connected identity profiles**
+Current release: **Alpha v0.5.2 — Connected identity profiles**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.5.1 adds Authentik-managed profile pictures, initials fallbacks, Discord account linking through Task Buddy, Discord avatar synchronization, consistent member pictures across Northline, and a direct profile-and-Discord management link in workspace settings. Complete-stack encrypted Synology backups and non-destructive restore testing remain active. See the [backup and recovery guide](ops/backup/README.md).
+Alpha v0.5.2 adds Authentik-managed profile pictures, initials fallbacks, Discord account linking and sign-in through Task Buddy, persistent Discord avatar synchronization, consistent member pictures across Northline, and a direct profile-and-Discord management link in workspace settings. Discord mappings update profile metadata only; Authentik usernames, groups, and Northline permissions remain authoritative. Complete-stack encrypted Synology backups and non-destructive restore testing remain active. See the [backup and recovery guide](ops/backup/README.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
