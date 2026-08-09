@@ -1,5 +1,11 @@
 # Northline release history
 
+## Alpha v0.8.5 — Reliable Discord profile synchronization
+
+- Discover linked Discord IDs from Authentik source-connection records when custom mapped attributes are missing.
+- Resolve linked members through Task Buddy to synchronize their current Discord avatar and stable mention ID.
+- Preserve Authentik's native profile fallback when Discord is unlinked or unavailable.
+
 ## Alpha v0.8.4 — Directory-bound OIDC subject rotation
 
 - Allow Authentik to rotate a pairwise OIDC subject only when the office email already belongs to a user bound to a verified Authentik directory UUID.

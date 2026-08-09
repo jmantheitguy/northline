@@ -111,6 +111,7 @@ test("directory, login, and Discord identities remain separate",async()=>{
   assert.match(ui,/Northline could not safely match this identity/);
   assert.match(schema,/directory_id TEXT/);assert.match(schema,/discord_user_id TEXT/);
   assert.match(sync,/WHERE directory_id=\?/);assert.doesNotMatch(sync,/oidc_subject=excluded\.oidc_subject/);
+  assert.match(sync,/user_connections\/all/);assert.match(sync,/discordMemberProfile/);
   assert.match(discordSource,/"promoted": False/);assert.match(discordSource,/selected_sources\.remove/);
   assert.match(worker,/discordUserId/);assert.match(worker,/allowed user|sendDiscordReminder/);
 });

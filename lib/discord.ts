@@ -23,6 +23,16 @@ export async function listDiscordChannels() {
     .sort((a,b) => a.position-b.position).map(({id,name}) => ({id,name}));
 }
 
+export async function discordMemberProfile(userId: string) {
+  const guild = process.env.NORTHLINE_DISCORD_GUILD_ID;
+  if (!guild) return null;
+  const member = await discord(`/guilds/${guild}/members/${encodeURIComponent(userId)}`) as {user?:{id?:string;avatar?:string|null}};
+  const id=member.user?.id||userId,avatar=member.user?.avatar;
+  if(!avatar)return {id,avatarUrl:null};
+  const extension=avatar.startsWith("a_")?"gif":"png";
+  return {id,avatarUrl:`https://cdn.discordapp.com/avatars/${id}/${avatar}.${extension}?size=128`};
+}
+
 export async function sendDiscordReminder(channelId: string, content: string, userIds: string[] = []) {
   await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify({content,flags:4,allowed_mentions:{parse:[],users:userIds.slice(0,10)}}) });
 }

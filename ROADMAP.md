@@ -2,7 +2,7 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Alpha v0.8.4
+## Current — Alpha v0.8.5
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views
