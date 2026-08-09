@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.6.7 — Compact clickable reminders**
+Current release: **Alpha v0.7.0 — Operations and workflow readiness**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.6.0 turns Task Buddy into Northline's automatic Discord notification service. Every board can select its own channel and independently control assignment, status, comment, mention, and due-date events. Personal preferences, direct task links, duplicate protection, delivery history, and failed-delivery retries are included. Authentik-managed profiles and Discord linking remain authoritative, and complete-stack encrypted Synology backups remain active. See the [backup and recovery guide](ops/backup/README.md).
+Alpha v0.7.0 adds an administrator health dashboard for Northline, SQLite, VM storage, Authentik, Task Buddy, reminders, NAS backups, and restore tests. It also introduces cross-board search, board activity, task duplication, starter board templates, preserved delivery history, response hardening, and clearer operational validation. See the [backup and recovery guide](ops/backup/README.md) and [release checklist](docs/RELEASE-CHECKLIST.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -17,6 +17,8 @@ The application combines visual task boards, private collaboration, user adminis
 - Task creation, priorities, categories, due dates, owners, and comments
 - Board, list, timeline, and calendar navigation concepts
 - Board-level progress indicators, filtering, and sorting controls
+- Permission-aware search across every accessible board
+- Task duplication, board activity history, and reusable starter templates
 - Private boards and boards shared with selected workspace members
 - Long, random public board IDs used by task and reminder links while creator ownership remains private
 - Browser navigation uses random board IDs without treating URL secrecy as authorization
@@ -43,6 +45,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Administrative audit records
 - Invite-only registration policy controls
 - Discord connection and session-policy settings
+- Live health dashboard with Task Buddy test delivery, database integrity, disk capacity, and backup/restore status
 
 ### Discord reminders
 

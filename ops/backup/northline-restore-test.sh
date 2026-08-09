@@ -7,6 +7,8 @@ KEY_FILE="${NORTHLINE_BACKUP_KEY_FILE:-/root/.config/northline-backup.key}"
 BACKUP_FILE="${1:-$(find "$BACKUP_ROOT" -maxdepth 1 -type f -name 'northline-*.tar.gz.enc' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)}"
 WORK_DIR="$(mktemp -d /tmp/northline-restore-test.XXXXXX)"
 TEST_DB="northline_restore_test_$(date +%s)"
+APP_ROOT="${NORTHLINE_APP_ROOT:-/home/johnathan/apps/northline}"
+STATUS_ROOT="${NORTHLINE_STATUS_ROOT:-$APP_ROOT/runtime-status}"
 
 cleanup() {
   docker exec authentik-postgresql-1 sh -c "PGPASSWORD=\"\$POSTGRES_PASSWORD\" dropdb --if-exists -U \"\$POSTGRES_USER\" '$TEST_DB'" >/dev/null 2>&1 || true
@@ -42,4 +44,8 @@ docker exec -i authentik-postgresql-1 sh -c "PGPASSWORD=\"\$POSTGRES_PASSWORD\" 
 TABLES="$(docker exec authentik-postgresql-1 sh -c "PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -At -U \"\$POSTGRES_USER\" -d '$TEST_DB' -c \"select count(*) from pg_tables where schemaname='public'\"")"
 [[ "$TABLES" =~ ^[0-9]+$ && "$TABLES" -gt 0 ]] || { echo "Authentik restore contains no tables" >&2; exit 1; }
 echo "Authentik restore verified: $TABLES tables"
+install -d -m 0700 "$STATUS_ROOT"
+printf '{"status":"healthy","completedAt":"%s","message":"Non-destructive restore test passed"}\n' "$(date -u +%FT%TZ)" > "$STATUS_ROOT/restore.json.tmp"
+mv -f -- "$STATUS_ROOT/restore.json.tmp" "$STATUS_ROOT/restore.json"
+chmod 0644 "$STATUS_ROOT/restore.json"
 echo "Restore test passed: $BACKUP_FILE"

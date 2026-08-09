@@ -72,10 +72,12 @@ type Modal =
   | "board-create"
   | "board-settings"
   | "share"
+  | "activity"
   | "reminder"
   | null;
 type View = "board" | "directory" | "reminders" | "settings" | "admin";
 type BoardMode = "board" | "list" | "timeline" | "calendar";
+type SearchResult={id:number;title:string;status:string;priority:string;boardId:number;boardKey:string;boardName:string};
 
 const columns: { id: Status; label: string; color: string }[] = [
   { id: "ideas", label: "Ideas", color: "#a78bfa" },
@@ -143,6 +145,7 @@ export function NorthlineApp() {
   const [modal, setModal] = useState<Modal>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
+  const [globalResults,setGlobalResults]=useState<SearchResult[]>([]);
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [sort, setSort] = useState<"created" | "due" | "priority">("created");
@@ -228,6 +231,7 @@ export function NorthlineApp() {
   useEffect(() => {
     if (isAdmin && view === "admin") void loadAdminUsers();
   }, [isAdmin, view]);
+  useEffect(()=>{if(search.trim().length<2){setGlobalResults([]);return}const timer=window.setTimeout(()=>jsonFetch(`/api/search?q=${encodeURIComponent(search)}`).then(data=>setGlobalResults(data.results||[])).catch(()=>setGlobalResults([])),250);return()=>window.clearTimeout(timer)},[search]);
   const tasks = useMemo(() => {
     const list = [...(boardData?.tasks || [])].filter(
       (t) =>
@@ -414,11 +418,12 @@ export function NorthlineApp() {
             ⌕
             <input
               aria-label="Global task search"
-              placeholder="Search this board…"
+              placeholder="Search every board…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <kbd>⌘ K</kbd>
+            {globalResults.length>0&&<div className="global-results">{globalResults.map(result=><button key={result.id} onClick={()=>{setActiveBoardId(result.boardId);setView("board");setDeepLinkTaskId(result.id);setGlobalResults([]);setSearch("")}}><b>{result.title}</b><span>{result.boardName} · {result.status}</span></button>)}</div>}
           </div>
           <div className="top-actions">
             <span className="version-pill">{NORTHLINE_VERSION}</span>
@@ -718,6 +723,7 @@ function BoardView({
               ⚙
             </button>
           )}
+          <button className="secondary" onClick={() => openModal("activity")} aria-label="View board activity">◷ Activity</button>
           {data.canEdit && (
             <button
               className="primary"
@@ -1209,7 +1215,7 @@ function Admin({
   reloadUsers: () => Promise<void>;
   notify: (s: string) => void;
 }) {
-  const [tab, setTab] = useState<"users" | "boards" | "audit" | "security">(
+  const [tab, setTab] = useState<"users" | "boards" | "audit" | "security" | "health">(
     "users",
   );
   const [query, setQuery] = useState("");
@@ -1221,12 +1227,14 @@ function Admin({
     role: "Member",
   });
   const [overview, setOverview] = useState<any>(null);
+  const [health,setHealth]=useState<any>(null);
   const loadOverview = () =>
     jsonFetch("/api/admin/overview")
       .then(setOverview)
       .catch((e) => notify(e.message));
   useEffect(() => {
     void loadOverview();
+    jsonFetch("/api/admin/health").then(setHealth).catch((e)=>notify(e.message));
   }, []);
   const updateUser = async (id: number, body: any) => {
     await jsonFetch(`/api/admin/users/${id}`, {
@@ -1282,7 +1290,7 @@ function Admin({
       </div>
       <div className="admin-panel">
         <div className="admin-tabs">
-          {(["users", "boards", "audit", "security"] as const).map((name) => (
+          {(["users", "boards", "audit", "security", "health"] as const).map((name) => (
             <button
               key={name}
               className={tab === name ? "active" : ""}
@@ -1431,6 +1439,25 @@ function Admin({
             />
           </div>
         )}
+        {tab === "health" && (
+          <div className="admin-section health-dashboard">
+            <div className="section-copy health-heading"><div><h2>System health</h2><p>Live application, identity, Discord, storage, and recovery signals.</p></div><button className="secondary" onClick={()=>jsonFetch('/api/admin/health').then(setHealth).then(()=>notify('Health data refreshed')).catch(e=>notify(e.message))}>↻ Refresh</button></div>
+            {!health?<div className="reminder-empty">Loading system health…</div>:<>
+              <div className="health-grid">
+                <HealthCard title="Application" status="healthy" detail={`Up ${Math.floor(health.application.uptimeSeconds/60)} min · ${formatBytes(health.application.rssBytes)} RAM`} />
+                <HealthCard title="Database" status={health.database.status} detail={`${health.database.integrity} · ${formatBytes(health.database.sizeBytes)}`} />
+                <HealthCard title="VM storage" status={health.storage.status} detail={`${formatBytes(health.storage.freeBytes)} free of ${formatBytes(health.storage.totalBytes)}`} />
+                <HealthCard title="Authentik" status={health.identity.status==='configured'?'healthy':'degraded'} detail={`${health.identity.activeSessions} active sessions`} />
+                <HealthCard title="Task Buddy" status={health.discord.status} detail={health.discord.error||`${health.discord.channels} channels available`} />
+                <HealthCard title="NAS backup" status={health.backup.status} detail={health.backup.message||health.backup.completedAt||'Awaiting report'} />
+                <HealthCard title="Restore test" status={health.restore.status} detail={health.restore.message||health.restore.completedAt||'Awaiting report'} />
+                <HealthCard title="Notifications" status={(health.reminders.counts.failed||0)>0?'degraded':'healthy'} detail={`${health.reminders.counts.sent||0} sent · ${health.reminders.counts.failed||0} failed`} />
+              </div>
+              <div className="health-actions"><div><h3>Task Buddy delivery test</h3><p>Sends a compact, embed-free health message to the most recently configured board channel.</p></div><button className="discord-button" onClick={()=>jsonFetch('/api/admin/health',{method:'POST'}).then(data=>notify(`Test delivered to #${data.channelName}`)).catch(e=>notify(e.message))}>Send test message</button></div>
+              <small className="health-generated">Updated {new Date(health.generatedAt).toLocaleString()}</small>
+            </>}
+          </div>
+        )}
       </div>
       {create && (
         <div className="modal-backdrop">
@@ -1512,6 +1539,8 @@ function Security({ title, copy }: { title: string; copy: string }) {
     </div>
   );
 }
+function formatBytes(value:number){if(!Number.isFinite(value))return "Unknown";const units=["B","KB","MB","GB","TB"];let amount=value,index=0;while(amount>=1024&&index<units.length-1){amount/=1024;index++}return `${amount.toFixed(index>1?1:0)} ${units[index]}`}
+function HealthCard({title,status,detail}:{title:string;status:string;detail:string}){const normalized=status==="healthy"||status==="success"?"healthy":status==="unknown"?"unknown":"degraded";return <article className={`health-card ${normalized}`}><div><i/><span>{normalized}</span></div><h3>{title}</h3><p>{detail}</p></article>}
 
 function NorthlineModal({
   type,
@@ -1541,11 +1570,13 @@ function NorthlineModal({
   const [boardForm, setBoardForm] = useState({
     name: board?.board.name || "",
     description: board?.board.description || "",
+    template: "blank",
   });
   const [selectedUser, setSelectedUser] = useState("");
   const [permission, setPermission] = useState("editor");
   const [comments, setComments] = useState<any[]>([]);
   const [comment, setComment] = useState("");
+  const [activity,setActivity]=useState<Array<{id:number;action:string;detail:string;createdAt:string;actorName:string;actorAvatar:string|null}>>([]);
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
   const [notificationSettings, setNotificationSettings] = useState({
     channelId: board?.notifications?.channelId || "",
@@ -1572,6 +1603,7 @@ function NorthlineModal({
       jsonFetch("/api/discord/channels")
         .then((d) => setChannels(d.channels || []))
         .catch((e) => notify(e.message));
+    if(type==="activity"&&board)jsonFetch(`/api/boards/${board.board.id}/activity`).then(data=>setActivity(data.activity||[])).catch((e)=>notify(e.message));
   }, [type, task]);
   const saveTask = () =>
     run(async () => {
@@ -1616,6 +1648,7 @@ function NorthlineModal({
       close();
       notify("Task deleted");
     });
+  const duplicateTask=()=>run(async()=>{await jsonFetch(`/api/tasks/${task.id}/duplicate`,{method:"POST"});await refresh();close();notify("Task duplicated")});
   const addComment = () =>
     run(async () => {
       await jsonFetch(`/api/tasks/${task.id}/comments`, {
@@ -1805,7 +1838,7 @@ function NorthlineModal({
             </div>
             <div className="modal-actions">
               {type === "task-detail" && (
-                <><button className="danger" onClick={deleteTask}>Delete</button><button className="discord-button" onClick={openTaskReminder}>◷ Remind me</button></>
+                <><button className="danger" onClick={deleteTask}>Delete</button><button className="secondary" onClick={duplicateTask}>⧉ Duplicate</button><button className="discord-button" onClick={openTaskReminder}>◷ Remind me</button></>
               )}
               <button
                 className="primary"
@@ -1873,6 +1906,7 @@ function NorthlineModal({
                 }
               />
             </label>
+            <label>Template<select value={boardForm.template} onChange={(e)=>setBoardForm({...boardForm,template:e.target.value})}><option value="blank">Blank board</option><option value="content">Content pipeline</option><option value="launch">Launch plan</option></select><small>Templates add a reusable starter workflow that you can edit.</small></label>
             <button
               className="primary wide"
               disabled={!boardForm.name.trim()}
@@ -1893,6 +1927,7 @@ function NorthlineModal({
             </button>
           </>
         )}
+        {type==="activity"&&<><h2>Board activity</h2><p>The latest changes across this board.</p><div className="activity-feed">{activity.length?activity.map(item=><article key={item.id}><Avatar name={item.actorName} avatar={item.actorAvatar}/><span><b>{item.actorName}</b><p>{item.detail}</p><small>{new Date(`${item.createdAt}Z`).toLocaleString()}</small></span></article>):<div className="empty-state"><b>No activity yet</b><span>New task changes will appear here.</span></div>}</div></>}
         {type === "board-settings" && (
           <>
             <h2>Board settings</h2>

@@ -19,7 +19,9 @@ services:
       - NORTHLINE_AUTHENTIK_API_TOKEN=${NORTHLINE_AUTHENTIK_API_TOKEN:-}
       - NORTHLINE_DISCORD_BOT_TOKEN=${NORTHLINE_DISCORD_BOT_TOKEN:-}
       - NORTHLINE_DISCORD_GUILD_ID=${NORTHLINE_DISCORD_GUILD_ID:-}
+      - NORTHLINE_STATUS_DIR=/app/status
     volumes:
       - northline-data:/app/data
+      - ./runtime-status:/app/status:ro
 volumes:
   northline-data:

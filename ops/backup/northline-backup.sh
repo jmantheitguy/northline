@@ -8,6 +8,7 @@ KEY_FILE="${NORTHLINE_BACKUP_KEY_FILE:-/root/.config/northline-backup.key}"
 RETENTION_DAYS="${NORTHLINE_BACKUP_RETENTION_DAYS:-14}"
 NAS_ROOT="${NORTHLINE_NAS_ROOT:-}"
 NAS_RETENTION_DAYS="${NORTHLINE_NAS_RETENTION_DAYS:-60}"
+STATUS_ROOT="${NORTHLINE_STATUS_ROOT:-$APP_ROOT/runtime-status}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 WORK_DIR="$(mktemp -d /tmp/northline-backup.XXXXXX)"
 ARCHIVE="$BACKUP_ROOT/northline-$STAMP.tar.gz"
@@ -23,7 +24,7 @@ resume_mail() {
 cleanup() { resume_mail; rm -rf -- "$WORK_DIR"; }
 trap cleanup EXIT
 
-install -d -m 0700 "$BACKUP_ROOT" "$(dirname "$KEY_FILE")"
+install -d -m 0700 "$BACKUP_ROOT" "$(dirname "$KEY_FILE")" "$STATUS_ROOT"
 if [[ ! -s "$KEY_FILE" ]]; then
   openssl rand -hex 32 > "$KEY_FILE"
   chmod 0600 "$KEY_FILE"
@@ -90,4 +91,8 @@ if [[ -n "$NAS_ROOT" ]]; then
   chmod 0600 "$NAS_FILE" || true
   find "$NAS_ROOT" -maxdepth 1 -type f -name 'northline-*.tar.gz.enc' -mtime "+$NAS_RETENTION_DAYS" -delete
 fi
+STATUS_TEMP="$STATUS_ROOT/backup.json.tmp"
+printf '{"status":"healthy","completedAt":"%s","archive":"%s","nasReplicated":%s,"message":"Encrypted backup and verification completed"}\n' "$(date -u +%FT%TZ)" "$(basename "$ENCRYPTED")" "$([[ -n "$NAS_ROOT" ]] && echo true || echo false)" > "$STATUS_TEMP"
+mv -f -- "$STATUS_TEMP" "$STATUS_ROOT/backup.json"
+chmod 0644 "$STATUS_ROOT/backup.json"
 echo "$ENCRYPTED"

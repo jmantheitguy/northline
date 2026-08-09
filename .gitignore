@@ -49,6 +49,7 @@ yarn-error.log*
 /dist/
 /build/
 /data/
+/runtime-status/
 /.wrangler/
 /outputs/
 /work/

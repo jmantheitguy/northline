@@ -111,6 +111,32 @@ db.exec(`
     due_enabled INTEGER NOT NULL DEFAULT 1,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS notification_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reminder_id INTEGER NOT NULL UNIQUE,
+    board_id_snapshot INTEGER NOT NULL,
+    board_key TEXT,
+    board_name TEXT NOT NULL,
+    task_title TEXT,
+    created_by INTEGER NOT NULL,
+    channel_id TEXT NOT NULL,
+    channel_name TEXT NOT NULL,
+    message TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    event_type TEXT,
+    status TEXT NOT NULL,
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    delivered_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS board_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    detail TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE TABLE IF NOT EXISTS workspace_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -120,6 +146,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
   CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
+  CREATE INDEX IF NOT EXISTS board_activity_board_idx ON board_activity(board_id,created_at);
 `);
 
 const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{name:string}>;

@@ -22,7 +22,7 @@ test("directory synchronization revokes removed Authentik accounts",async()=>{
 
 test("board data is relational and cascade-safe",async()=>{
   const schema=await read("lib/db.ts");
-  for(const table of ["boards","board_members","tasks","comments","reminders","board_notification_settings","user_notification_settings","workspace_settings"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  for(const table of ["boards","board_members","tasks","comments","reminders","notification_deliveries","board_activity","board_notification_settings","user_notification_settings","workspace_settings"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.match(schema,/public_id TEXT UNIQUE/);assert.match(schema,/created_by INTEGER REFERENCES users/);
   assert.match(schema,/board_id INTEGER NOT NULL REFERENCES boards\(id\) ON DELETE CASCADE/);
   assert.match(schema,/task_id INTEGER NOT NULL REFERENCES tasks\(id\) ON DELETE CASCADE/);
@@ -70,4 +70,12 @@ test("administration metrics and audit history come from the database",async()=>
   assert.match(overview,/requireAdmin\(\)/);
   assert.match(overview,/SELECT COUNT\(\*\) count FROM boards/);
   assert.match(overview,/FROM audit_log a/);
+});
+
+test("release health and workflow tools remain permission constrained",async()=>{
+  const [health,search,duplicate,activity,backup,restore]=await Promise.all([read("app/api/admin/health/route.ts"),read("app/api/search/route.ts"),read("app/api/tasks/[id]/duplicate/route.ts"),read("app/api/boards/[id]/activity/route.ts"),read("ops/backup/northline-backup.sh"),read("ops/backup/northline-restore-test.sh")]);
+  assert.match(health,/requireAdmin\(\)/);assert.match(health,/quick_check/);assert.match(health,/sendDiscordReminder/);
+  assert.match(search,/b\.owner_id=\?/);assert.match(search,/bm\.user_id=\?/);
+  assert.match(duplicate,/canEdit\(boardPermission/);assert.match(activity,/boardPermission/);
+  assert.match(backup,/backup\.json/);assert.match(restore,/restore\.json/);
 });
