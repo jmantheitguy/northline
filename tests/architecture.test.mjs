@@ -23,8 +23,14 @@ test("directory synchronization revokes removed Authentik accounts",async()=>{
 test("board data is relational and cascade-safe",async()=>{
   const schema=await read("lib/db.ts");
   for(const table of ["boards","board_members","tasks","comments","reminders","board_notification_settings","user_notification_settings","workspace_settings"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  assert.match(schema,/public_id TEXT UNIQUE/);assert.match(schema,/created_by INTEGER REFERENCES users/);
   assert.match(schema,/board_id INTEGER NOT NULL REFERENCES boards\(id\) ON DELETE CASCADE/);
   assert.match(schema,/task_id INTEGER NOT NULL REFERENCES tasks\(id\) ON DELETE CASCADE/);
+});
+
+test("board references remain tied to their creating user",async()=>{
+  const [boards,detail,worker]=await Promise.all([read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("lib/reminder-worker.ts")]);
+  assert.match(boards,/created_by/);assert.match(boards,/`u\$\{user\.id\}-b\$\{id\}`/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);
 });
 
 test("Task Buddy automatic notifications are board-routed and preference aware",async()=>{

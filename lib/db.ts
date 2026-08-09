@@ -38,9 +38,11 @@ db.exec(`
   );
   CREATE TABLE IF NOT EXISTS boards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT UNIQUE,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
@@ -117,6 +119,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
   CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
 `);
+
+const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{name:string}>;
+const addBoardColumn=(name:string,definition:string)=>{if(!boardColumns.some(column=>column.name===name)){try{db.exec(`ALTER TABLE boards ADD COLUMN ${definition}`);boardColumns.push({name});}catch(error){if(!(error instanceof Error)||!error.message.includes("duplicate column name"))throw error;}}};
+addBoardColumn("public_id","public_id TEXT");
+addBoardColumn("created_by","created_by INTEGER");
+db.prepare("UPDATE boards SET created_by=owner_id WHERE created_by IS NULL").run();
+for(const board of db.prepare("SELECT id,created_by FROM boards WHERE public_id IS NULL").all() as Array<{id:number;created_by:number}>)db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(`u${board.created_by}-b${board.id}`,board.id);
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS boards_public_id_idx ON boards(public_id)");
 
 const reminderColumns = db.prepare("PRAGMA table_info(reminders)").all() as Array<{name:string}>;
 const addReminderColumn = (name:string, definition:string) => {

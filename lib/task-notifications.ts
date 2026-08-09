@@ -14,7 +14,8 @@ function settings(boardId:number){
 
 function taskLink(task:TaskContext){
   const base=(process.env.NORTHLINE_PUBLIC_URL||"https://northline.vtuberoffices.com").replace(/\/$/,"");
-  return `${base}/?board=${task.boardId}&task=${task.id}`;
+  const board=db.prepare("SELECT public_id FROM boards WHERE id=?").get(task.boardId) as {public_id:string}|undefined;
+  return `${base}/?board=${encodeURIComponent(board?.public_id||String(task.boardId))}&task=${task.id}`;
 }
 
 function enqueue(task:TaskContext,actorId:number,event:EventType,message:string,dedupeKey:string,when=new Date(),preferenceUserId=actorId){

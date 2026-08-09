@@ -23,6 +23,7 @@ type Task = {
 };
 type BoardSummary = {
   id: number;
+  boardKey: string;
   name: string;
   description: string;
   ownerId: number;
@@ -38,7 +39,7 @@ type Member = {
   permission: "viewer" | "editor";
 };
 type BoardDetail = {
-  board: { id: number; name: string; description: string; ownerId: number };
+  board: { id: number; boardKey:string; name: string; description: string; ownerId: number; createdBy:number };
   tasks: Task[];
   members: Member[];
   permission: string;
@@ -161,10 +162,11 @@ export function NorthlineApp() {
     try {
       const d = await jsonFetch("/api/boards");
       setBoards(d.boards);
+      const requested=new URLSearchParams(window.location.search).get("board"),requestedBoard=d.boards.find((board:BoardSummary)=>board.boardKey===requested||String(board.id)===requested);
       setActiveBoardId((current) =>
-        current && d.boards.some((b: BoardSummary) => b.id === current)
+        requestedBoard?.id || (current && d.boards.some((b: BoardSummary) => b.id === current)
           ? current
-          : d.boards[0]?.id || null,
+          : d.boards[0]?.id || null),
       );
     } catch (e) {
       notify((e as Error).message);
@@ -204,8 +206,7 @@ export function NorthlineApp() {
   }, []);
   useEffect(() => {
     if (window.matchMedia("(max-width: 950px)").matches) setSidebar(false);
-    const query=new URLSearchParams(window.location.search),board=Number(query.get("board")),task=Number(query.get("task"));
-    if(board>0)setActiveBoardId(board);if(task>0)setDeepLinkTaskId(task);
+    const query=new URLSearchParams(window.location.search),task=Number(query.get("task"));if(task>0)setDeepLinkTaskId(task);
   }, []);
   useEffect(() => {
     if (authUser) void loadBoards();
@@ -1895,6 +1896,11 @@ function NorthlineModal({
           <>
             <h2>Board settings</h2>
             <p>Update this board or permanently remove it.</p>
+            <label>
+              Board ID
+              <input value={board.board.boardKey} readOnly />
+              <small>Permanent reference tied to the creating user.</small>
+            </label>
             <label>
               Name
               <input
