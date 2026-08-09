@@ -594,6 +594,7 @@ html[data-theme="dark"] .skeleton{background:linear-gradient(90deg,#202027 25%,#
 html[data-theme="dark"] .health-card{box-shadow:0 1px 0 #ffffff08 inset}
 html[data-theme="dark"] .global-results{background:var(--panel)}
 @media(max-width:520px){.theme-toggle em{display:none}.theme-toggle{width:34px;padding:0;justify-content:center}}
+.session-settings{align-items:flex-start}.session-settings>div{flex:1}.session-list{display:grid;gap:8px;margin-top:14px}.session-list article{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:9px;padding:11px}.session-list article>span{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}.session-list small{color:var(--muted);font-size:10px;overflow-wrap:anywhere}.session-list em{font-size:10px;color:#21865f;background:#e4f7ef;border-radius:12px;padding:4px 8px;font-style:normal;font-weight:750}html[data-theme="dark"] .session-list em{color:#7fe0b8;background:#203a31}@media(max-width:620px){.session-settings{flex-direction:column}.session-settings>button{margin-left:0;width:100%}.session-list article{align-items:flex-start;flex-direction:column}.session-list article button{width:100%}}
 * {
   box-sizing: border-box;
 }

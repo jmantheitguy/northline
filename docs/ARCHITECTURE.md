@@ -22,6 +22,10 @@ SQLite uses WAL mode and foreign keys. Board membership is owner, editor, or vie
 
 Sessions use random browser tokens and stored SHA-256 digests. Local passwords use bcrypt. OIDC state and PKCE protect the Authentik callback. Integration secrets remain environment variables and are not returned to the browser.
 
+A Next.js Proxy runs only for API routes and rejects foreign-origin mutations before route execution. It applies bounded per-client throttling to local sign-in and administrative mutations. This single-instance limiter is defense in depth for the current one-container deployment; Cloudflare or another upstream should provide distributed edge rate limiting when Northline scales horizontally.
+
+Schema changes are forward-only and recorded in `schema_migrations`. Startup creates missing tables/columns/indexes before recording the corresponding version. Downgrades across schema versions require restoration of the matching pre-upgrade database rather than destructive down migrations.
+
 ## Notification flow
 
 Task mutations create deduplicated reminder records according to board and user preferences. A server worker polls due records, validates the configured guild channel through Discord, sends content with mentions and embeds disabled, updates status, and writes a durable delivery snapshot. Manual reminders use the same delivery path.

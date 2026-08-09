@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.7.2 — Public documentation refresh**
+Current release: **Alpha v0.8.0 — Beta security and reliability foundation**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.7.2 brings the public documentation in line with the complete deployed platform while separating reproducible guidance from private infrastructure details. Alpha v0.7.1 added a persistent, system-aware dark theme across sign-in, boards, reminders, settings, administration, health reporting, and every modal. Alpha v0.7.0 introduced cross-board search, board activity, task duplication, starter board templates, preserved delivery history, response hardening, and operational health reporting.
+Alpha v0.8.0 establishes the security and reliability foundation for Beta: explicit cross-origin mutation protection, sign-in and administration throttling, user-visible session inventory and revocation, recorded schema migrations, backup/restore failure reporting, container health checks, clean-install verification, performance regression coverage, secret scanning, CI, Dependabot, and documented upgrade/rollback policy. Browser-based visual and accessibility acceptance remains a clearly identified final Beta gate.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -15,6 +15,7 @@ The application combines visual task boards, private collaboration, user adminis
 | [Features](docs/FEATURES.md) | Complete user-facing capability and permissions reference |
 | [Architecture](docs/ARCHITECTURE.md) | Components, data model, trust boundaries, and request flows |
 | [Operations](docs/OPERATIONS.md) | Deployment, updates, health monitoring, troubleshooting, and maintenance |
+| [Upgrading](docs/UPGRADING.md) | Migration policy, clean-install verification, and rollback procedure |
 | [Member onboarding](docs/ONBOARDING.md) | Authentik, Discord linking, profiles, access, and first-use steps |
 | [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release |
 | [Backup and recovery](ops/backup/README.md) | Encrypted VM/NAS backups and non-destructive restore testing |
@@ -52,6 +53,8 @@ The application combines visual task boards, private collaboration, user adminis
 - User creation, role assignment, suspension, and reactivation
 - Protection against an administrator suspending their own active account
 - Authentik profile pictures and optional Discord account linking
+- Active-session inventory with individual or bulk revocation
+- Same-origin enforcement and throttling for sensitive requests
 
 ### Administration
 
@@ -64,6 +67,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Discord connection and session-policy settings
 - Live health dashboard with Task Buddy test delivery, database integrity, disk capacity, and backup/restore status
 - Active-session, application-memory, Node runtime, database-size, and reminder-delivery visibility
+- Recorded database schema version and explicit backup/restore failure visibility
 
 ### Discord reminders
 
@@ -202,7 +206,7 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). The next major product milestone is private multi-calendar support with selective sharing. File attachments, richer automation rules, expanded reporting, and broader end-to-end identity testing remain planned for Beta.
+The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). Alpha v0.8.0 freezes major feature expansion while Beta acceptance focuses on browser-driven accessibility, visual, responsive, and complete user-journey validation. Private multi-calendar support is intentionally deferred until after the Beta release.
 
 ## License
 

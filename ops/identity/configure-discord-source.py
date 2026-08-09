@@ -13,6 +13,7 @@ import urllib.request
 
 base = os.environ["NORTHLINE_AUTHENTIK_API_URL"].rstrip("/")
 token = os.environ["NORTHLINE_AUTHENTIK_API_TOKEN"]
+client_id = os.environ["NORTHLINE_DISCORD_CLIENT_ID"]
 secret = sys.stdin.read().strip()
 if not secret:
     raise SystemExit("Discord OAuth secret is required on stdin")
@@ -78,7 +79,7 @@ source_payload = {
     "group_property_mappings": [],
     "user_matching_mode": "email_link",
     "provider_type": "discord",
-    "consumer_key": "1535449037946355712",
+    "consumer_key": client_id,
     "consumer_secret": secret,
     "additional_scopes": "identify email",
 }

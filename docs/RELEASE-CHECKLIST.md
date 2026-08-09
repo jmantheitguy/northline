@@ -3,6 +3,7 @@
 ## Before release
 
 - Run `npm run lint`, `npm test`, and the production dependency audit.
+- Run `npm run security:scan` and the disposable clean-install verifier.
 - Update `README.md`, `CHANGELOG.md`, `ROADMAP.md`, `SECURITY.md`, and any affected operational guide.
 - Confirm the admin Health page reports a healthy database and sufficient VM storage.
 - Send a Task Buddy health-check message from the Health page.
@@ -19,3 +20,4 @@
 - Schedule one reminder, verify delivery, and confirm its history remains visible.
 - Record the release tag and deployment commit in the change log.
 - Verify both light and dark themes on sign-in, a board, a modal, reminders, and Administration.
+- For Beta candidates, complete every browser, keyboard, screen-reader, and responsive journey in `docs/BETA-ACCEPTANCE.md`.

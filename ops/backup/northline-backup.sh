@@ -22,7 +22,16 @@ resume_mail() {
   fi
 }
 cleanup() { resume_mail; rm -rf -- "$WORK_DIR"; }
+report_failure() {
+  local code="$?"
+  install -d -m 0700 "$STATUS_ROOT" || true
+  printf '{"status":"degraded","failedAt":"%s","message":"Backup failed; inspect the host service journal","exitCode":%s}\n' "$(date -u +%FT%TZ)" "$code" > "$STATUS_ROOT/backup.json.tmp" || true
+  mv -f -- "$STATUS_ROOT/backup.json.tmp" "$STATUS_ROOT/backup.json" 2>/dev/null || true
+  chmod 0644 "$STATUS_ROOT/backup.json" 2>/dev/null || true
+  return "$code"
+}
 trap cleanup EXIT
+trap report_failure ERR
 
 install -d -m 0700 "$BACKUP_ROOT" "$(dirname "$KEY_FILE")" "$STATUS_ROOT"
 if [[ ! -s "$KEY_FILE" ]]; then

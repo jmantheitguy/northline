@@ -16,6 +16,7 @@ Open **Administration > Health**. Healthy production should show SQLite `ok`, ad
 - Weekly: inspect Administration Health, failed reminders, disk growth, and container status.
 - Monthly: run the non-destructive restore test and review OS/container updates.
 - Every release: lint, build, tests, production audit, secret scan, documentation update, tagged GitHub push, VM deployment, and smoke test.
+- Every pull request: GitHub CI repeats lint, build/tests, secret scanning, production audit, performance regression, and a disposable clean installation.
 
 ## Useful checks
 
@@ -29,6 +30,10 @@ sudo /usr/local/sbin/northline-restore-test
 ```
 
 Never paste live environment values, OAuth secrets, bot tokens, mail keys, backup keys, or NAS credentials into issues or logs. Rotate any secret that is exposed.
+
+## Remaining Beta acceptance gate
+
+Automated non-browser validation cannot establish visual correctness, keyboard usability, focus behavior, screen-reader output, or responsive layout quality. Before Beta, a human must execute the journeys in `docs/BETA-ACCEPTANCE.md` with browser access and record failures. Alpha v0.8.0 deliberately reports this as pending instead of claiming unperformed browser validation.
 
 ## Public documentation boundary
 

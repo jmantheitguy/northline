@@ -93,3 +93,19 @@ test("public documentation covers the deployed platform without private network 
   assert.doesNotMatch(combined,/192\.168\.\d+\.\d+/);
   assert.doesNotMatch(combined,/Password1!/);
 });
+
+test("beta security boundary rejects CSRF and throttles sensitive endpoints",async()=>{
+  const proxy=await read("proxy.ts");assert.match(proxy,/Cross-origin request rejected/);assert.match(proxy,/sec-fetch-site/);assert.match(proxy,/NORTHLINE_PUBLIC_URL/);assert.match(proxy,/Too many sign-in attempts/);assert.match(proxy,/Administrative request limit exceeded/);assert.match(proxy,/Retry-After/);
+});
+
+test("users can inspect and revoke only their own sessions",async()=>{
+  const [schema,auth,route,ui]=await Promise.all([read("lib/db.ts"),read("lib/auth.ts"),read("app/api/settings/sessions/route.ts"),read("app/northline-app.tsx")]);assert.match(schema,/user_agent/);assert.match(schema,/created_ip/);assert.match(auth,/currentSessionHash/);assert.match(route,/WHERE user_id=\?/);assert.match(route,/token_hash<>\?/);assert.match(route,/Sign out normally/);assert.match(ui,/Revoke all others/);
+});
+
+test("schema upgrades and operational failures are observable",async()=>{
+  const [schema,health,backup,restore,compose]=await Promise.all([read("lib/db.ts"),read("app/api/admin/health/route.ts"),read("ops/backup/northline-backup.sh"),read("ops/backup/northline-restore-test.sh"),read("compose.yaml")]);assert.match(schema,/schema_migrations/);assert.match(schema,/session inventory and beta hardening/);assert.match(health,/migrationVersion/);assert.match(backup,/Backup failed/);assert.match(restore,/Restore validation failed/);assert.match(compose,/healthcheck/);
+});
+
+test("authorization matrix is enforced at every board capability",async()=>{
+  const routes=await Promise.all(["app/api/boards/[id]/route.ts","app/api/boards/[id]/tasks/route.ts","app/api/boards/[id]/members/route.ts","app/api/boards/[id]/notifications/route.ts","app/api/boards/[id]/activity/route.ts","app/api/tasks/[id]/route.ts","app/api/tasks/[id]/duplicate/route.ts","app/api/tasks/[id]/comments/route.ts","app/api/reminders/route.ts","app/api/search/route.ts"].map(read));const joined=routes.join("\n");assert.match(joined,/boardPermission/);assert.match(joined,/canEdit/);assert.match(joined,/canShare/);assert.match(joined,/b\.owner_id=\?/);assert.match(joined,/bm\.user_id=\?/);
+});

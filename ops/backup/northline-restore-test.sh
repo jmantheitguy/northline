@@ -14,7 +14,16 @@ cleanup() {
   docker exec authentik-postgresql-1 sh -c "PGPASSWORD=\"\$POSTGRES_PASSWORD\" dropdb --if-exists -U \"\$POSTGRES_USER\" '$TEST_DB'" >/dev/null 2>&1 || true
   rm -rf -- "$WORK_DIR"
 }
+report_failure() {
+  local code="$?"
+  install -d -m 0700 "$STATUS_ROOT" || true
+  printf '{"status":"degraded","failedAt":"%s","message":"Restore validation failed; inspect the host service journal","exitCode":%s}\n' "$(date -u +%FT%TZ)" "$code" > "$STATUS_ROOT/restore.json.tmp" || true
+  mv -f -- "$STATUS_ROOT/restore.json.tmp" "$STATUS_ROOT/restore.json" 2>/dev/null || true
+  chmod 0644 "$STATUS_ROOT/restore.json" 2>/dev/null || true
+  return "$code"
+}
 trap cleanup EXIT
+trap report_failure ERR
 
 [[ -n "$BACKUP_FILE" && -f "$BACKUP_FILE" ]] || { echo "No backup archive found" >&2; exit 1; }
 [[ -s "$KEY_FILE" ]] || { echo "Backup key is missing" >&2; exit 1; }

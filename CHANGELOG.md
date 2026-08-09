@@ -1,5 +1,16 @@
 # Northline release history
 
+## Alpha v0.8.0 — Beta security and reliability foundation
+
+- Added explicit same-origin protection for every state-changing API request.
+- Added sign-in and administrative mutation throttling with retry guidance.
+- Added active-session inventory, individual revocation, and revoke-all-other-sessions controls.
+- Added recorded schema migrations and schema version reporting in Administration Health.
+- Added backup and restore-test failure reports plus Docker health checks.
+- Added clean-install verification, larger-data performance testing, an authorization matrix, secret scanning, CI, and Dependabot.
+- Added forward-upgrade and backup-based rollback documentation.
+- Deferred calendar development until after Beta and identified browser-based accessibility/visual acceptance as the remaining external gate.
+
 ## Alpha v0.7.2 — Public documentation refresh
 
 - Added comprehensive feature, architecture, operations, onboarding, security, backup, identity, mail, and release documentation.

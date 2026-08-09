@@ -27,6 +27,11 @@ db.exec(`
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor_id INTEGER REFERENCES users(id),
@@ -185,6 +190,15 @@ addUserColumn("auth_source", "auth_source TEXT NOT NULL DEFAULT 'local'");
 addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 addUserColumn("avatar", "avatar TEXT");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
+
+const sessionColumns=db.prepare("PRAGMA table_info(sessions)").all() as Array<{name:string}>;
+const addSessionColumn=(name:string,definition:string)=>{if(sessionColumns.some(column=>column.name===name))return;try{db.exec(`ALTER TABLE sessions ADD COLUMN ${definition}`);sessionColumns.push({name})}catch(error){if(!(error instanceof Error)||!error.message.includes("duplicate column name"))throw error}};
+addSessionColumn("user_agent","user_agent TEXT");
+addSessionColumn("created_ip","created_ip TEXT");
+addSessionColumn("last_seen_at","last_seen_at TEXT");
+
+const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"]];
+const recordMigrations=db.transaction(()=>{const insert=db.prepare("INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)");for(const migration of migrations)insert.run(...migration)});recordMigrations();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;
 const password = process.env.NORTHLINE_ADMIN_PASSWORD;

@@ -2,7 +2,7 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Alpha v0.7.2
+## Current — Alpha v0.8.0
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views
@@ -18,15 +18,19 @@ Northline is being built in public as a self-hosted project workspace for small 
 - Board activity history and durable notification snapshots
 - Administrator health dashboard with live Task Buddy testing and backup/restore reporting
 - Persistent system-aware dark mode across the complete application
+- Cross-origin mutation protection and rate limits for sign-in/administration
+- User-controlled active-session inventory and revocation
+- Recorded database migration versions, failure-aware backup reporting, and container health checks
+- CI, dependency update automation, secret scanning, clean-install tests, and larger-data performance regression coverage
 
-## Alpha v0.7 — Personal calendars
+## Beta acceptance
 
-- Private calendars owned by individual users
-- Multiple calendars per user
-- Month, week, and agenda views
-- Events, recurring events, reminders, and calendar color controls
-- Selective calendar sharing with viewer/editor permissions
-- Optional links between calendar events and Northline tasks
+- Browser-driven Admin, Member, editor, viewer, suspended-user, and expired-session journeys
+- Keyboard-only operation, focus order/containment, screen-reader semantics, and contrast review
+- Responsive visual review across sign-in, boards, reminders, settings, administration, health, and modals
+- Network-failure and expired-session recovery behavior
+- Clean-install verification by following only public documentation
+- Final known-limitations, support, and release notes
 
 ## Beta — Workflow acceleration and production readiness
 
@@ -41,6 +45,7 @@ Northline is being built in public as a self-hosted project workspace for small 
 
 ## Longer-term ideas
 
+- Private multi-calendar support with selective sharing
 - External calendar import/export and integrations
 - Additional notification providers
 - Public API and webhooks

@@ -1130,6 +1130,8 @@ function Settings({ notify }: { notify: (s: string) => void }) {
     error?: string;
   } | null>(null);
   const [preferences,setPreferences]=useState({assignmentEnabled:true,statusEnabled:true,commentEnabled:true,mentionEnabled:true,dueEnabled:true});
+  const [sessions,setSessions]=useState<Array<{id:string;createdAt:string;expiresAt:string;lastSeenAt:string|null;userAgent:string|null;createdIp:string|null;current:number}>>([]);
+  const loadSessions=()=>jsonFetch("/api/settings/sessions").then(data=>setSessions(data.sessions||[])).catch((error)=>notify(error.message));
   useEffect(() => {
     jsonFetch("/api/discord/channels")
       .then(setDiscord)
@@ -1137,6 +1139,7 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         setDiscord({ configured: false, channels: [], error: e.message }),
       );
     jsonFetch("/api/settings/notifications").then(data=>setPreferences(Object.fromEntries(Object.entries(data.settings).map(([key,value])=>[key,value!==0])) as typeof preferences)).catch(()=>{});
+    void loadSessions();
   }, []);
   return (
     <section className="content settings">
@@ -1180,6 +1183,10 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         >
           Refresh
         </button>
+      </div>
+      <div className="settings-body session-settings">
+        <div><h3>Active sessions</h3><p>Review browsers currently signed into your account and revoke any session you do not recognize.</p><div className="session-list">{sessions.map(session=><article key={session.id}><span><b>{session.current?"This browser":session.userAgent?.split(" ").slice(0,4).join(" ")||"Unknown browser"}</b><small>Started {new Date(`${session.createdAt}Z`).toLocaleString()} · expires {new Date(`${session.expiresAt}Z`).toLocaleDateString()}{session.createdIp?` · ${session.createdIp}`:""}</small></span>{session.current?<em>Current</em>:<button className="danger subtle" onClick={()=>jsonFetch("/api/settings/sessions",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:session.id})}).then(loadSessions).then(()=>notify("Session revoked")).catch(error=>notify(error.message))}>Revoke</button>}</article>)}</div></div>
+        {sessions.length>1&&<button className="secondary" onClick={()=>jsonFetch("/api/settings/sessions",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({allOthers:true})}).then(loadSessions).then(()=>notify("Other sessions revoked")).catch(error=>notify(error.message))}>Revoke all others</button>}
       </div>
       <div className="settings-body">
         <div>
@@ -1453,7 +1460,7 @@ function Admin({
             {!health?<div className="reminder-empty">Loading system health…</div>:<>
               <div className="health-grid">
                 <HealthCard title="Application" status="healthy" detail={`Up ${Math.floor(health.application.uptimeSeconds/60)} min · ${formatBytes(health.application.rssBytes)} RAM`} />
-                <HealthCard title="Database" status={health.database.status} detail={`${health.database.integrity} · ${formatBytes(health.database.sizeBytes)}`} />
+                <HealthCard title="Database" status={health.database.status} detail={`${health.database.integrity} · schema v${health.database.migrationVersion} · ${formatBytes(health.database.sizeBytes)}`} />
                 <HealthCard title="VM storage" status={health.storage.status} detail={`${formatBytes(health.storage.freeBytes)} free of ${formatBytes(health.storage.totalBytes)}`} />
                 <HealthCard title="Authentik" status={health.identity.status==='configured'?'healthy':'degraded'} detail={`${health.identity.activeSessions} active sessions`} />
                 <HealthCard title="Task Buddy" status={health.discord.status} detail={health.discord.error||`${health.discord.channels} channels available`} />

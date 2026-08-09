@@ -21,3 +21,7 @@ Admins can create and manage accounts, review roles/status, inspect board owners
 ## Experience
 
 Northline has responsive desktop/mobile layouts, structured empty/loading/error states, and persistent light/dark themes. The initial appearance follows the operating-system preference; a browser-local preference takes precedence after the user changes it.
+
+## Security and account controls
+
+Northline rejects state-changing browser requests from foreign origins, throttles repeated sign-in attempts and administrative mutations, stores only session-token digests, and lets each user inspect and revoke their own active sessions. The Health dashboard reports the current recorded schema migration. Automated release gates cover authorization structure, performance at a 10,000-task test scale, a disposable clean installation, production dependency vulnerabilities, and accidental private-value disclosure.

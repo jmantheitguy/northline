@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Northline is currently in **Alpha v0.7.2**. Only the latest tagged release and latest commit on `main` receive security fixes during the alpha period.
+Northline is currently in **Alpha v0.8.0**. Only the latest tagged release and latest commit on `main` receive security fixes during the alpha period.
 
 ## Security model
 
@@ -15,6 +15,9 @@ Northline is currently in **Alpha v0.7.2**. Only the latest tagged release and l
 - Discord credentials, Authentik tokens, OIDC secrets, mail relay keys, and backup keys remain server-side.
 - Response headers deny framing, disable MIME sniffing, restrict referrers, and disable unused browser permissions.
 - Production dependency audits are required before each release.
+- State-changing API requests are rejected when their browser origin is not Northline's configured origin.
+- Sign-in and administrative mutation endpoints use bounded in-process throttling; upstream Cloudflare rate limits remain recommended for distributed protection.
+- Users can inspect and revoke their own sessions without gaining access to another account's session records.
 
 ## Credential handling
 
