@@ -1,5 +1,11 @@
 # Northline release history
 
+## Alpha v0.8.2 — Linked-identity sign-in reliability
+
+- Resolve returning Authentik users by their stable OIDC subject before comparing email addresses.
+- Normalize email fallback matching and safely handle linked Discord identities whose profile email formatting differs from the existing Northline record.
+- Redirect identity collisions to a controlled sign-in error instead of returning an HTTP 500 response.
+
 ## Alpha v0.8.1 — Development dependency hardening
 
 - Removed an unused Cloudflare/Vite prototype toolchain from the Northline application package.

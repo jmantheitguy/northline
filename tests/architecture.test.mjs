@@ -102,6 +102,14 @@ test("users can inspect and revoke only their own sessions",async()=>{
   const [schema,auth,route,ui]=await Promise.all([read("lib/db.ts"),read("lib/auth.ts"),read("app/api/settings/sessions/route.ts"),read("app/northline-app.tsx")]);assert.match(schema,/user_agent/);assert.match(schema,/created_ip/);assert.match(auth,/currentSessionHash/);assert.match(route,/WHERE user_id=\?/);assert.match(route,/token_hash<>\?/);assert.match(route,/Sign out normally/);assert.match(ui,/Revoke all others/);
 });
 
+test("linked identities resolve by stable OIDC subject before email fallback",async()=>{
+  const [callback,ui]=await Promise.all([read("app/api/auth/oidc/callback/route.ts"),read("app/northline-app.tsx")]);
+  assert.ok(callback.indexOf("WHERE oidc_subject=?")<callback.indexOf("WHERE email=? COLLATE NOCASE"));
+  assert.match(callback,/OIDC_IDENTITY_CONFLICT/);
+  assert.match(callback,/auth_error=identity_conflict/);
+  assert.match(ui,/Northline could not safely match this identity/);
+});
+
 test("schema upgrades and operational failures are observable",async()=>{
   const [schema,health,backup,restore,compose]=await Promise.all([read("lib/db.ts"),read("app/api/admin/health/route.ts"),read("ops/backup/northline-backup.sh"),read("ops/backup/northline-restore-test.sh"),read("compose.yaml")]);assert.match(schema,/schema_migrations/);assert.match(schema,/session inventory and beta hardening/);assert.match(health,/migrationVersion/);assert.match(backup,/Backup failed/);assert.match(restore,/Restore validation failed/);assert.match(compose,/healthcheck/);
 });

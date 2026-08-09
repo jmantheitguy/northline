@@ -520,6 +520,13 @@ function Login({ onLogin,theme,toggleTheme }: { onLogin: (u: SessionUser) => voi
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(()=>{
+    const code=new URLSearchParams(window.location.search).get("auth_error");
+    if(!code)return;
+    const messages:Record<string,string>={invalid_state:"Your sign-in session expired. Please try again.",access_denied:"Your account does not have access to Northline.",identity_conflict:"Northline could not safely match this identity. Ask an administrator to review the account.",token_exchange:"Authentik could not complete sign-in. Please try again.",userinfo:"Authentik could not load your profile. Please try again.",incomplete_profile:"Your Authentik profile needs an email address before you can sign in.",oidc_not_configured:"Authentik sign-in is not configured."};
+    setError(messages[code]||"Sign-in could not be completed. Please try again.");
+    window.history.replaceState({},"",window.location.pathname);
+  },[]);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
