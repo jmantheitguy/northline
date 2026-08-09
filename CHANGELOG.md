@@ -1,5 +1,10 @@
 # Northline release history
 
+## Beta v0.1.1 — Consistent task actions
+
+- Normalize the task action buttons to Northline's interface font, size, weight, and letter spacing.
+- Keep destructive, secondary, Discord, and primary actions visually distinct without inconsistent typography.
+
 ## Beta v0.1.0 — Custom board workflows
 
 - Replace the fixed five-column workflow with persistent, board-specific columns across Kanban, list, timeline, calendar, task editing, filters, progress, and reminders.
