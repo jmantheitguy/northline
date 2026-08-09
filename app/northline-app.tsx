@@ -1726,29 +1726,6 @@ function NorthlineModal({
                 }
               />
             </label>
-            <label>
-              Task Buddy channel
-              <select value={notificationSettings.channelId} onChange={(e)=>setNotificationSettings({...notificationSettings,channelId:e.target.value})}>
-                <option value="">Automatic notifications off</option>
-                {channels.map(channel=><option key={channel.id} value={channel.id}>#{channel.name}</option>)}
-              </select>
-            </label>
-            <div className="notification-options">
-              <h3>Automatic notifications</h3>
-              {([
-                ["assignmentEnabled","Assignments"],
-                ["statusEnabled","Status changes"],
-                ["commentEnabled","Comments"],
-                ["mentionEnabled","Mentions"],
-                ["dueEnabled","Due-date warnings"],
-              ] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={notificationSettings[key] as boolean} onChange={(e)=>setNotificationSettings({...notificationSettings,[key]:e.target.checked})}/><span>{label}</span></label>)}
-            </div>
-            <label>
-              Due-date warning
-              <select value={notificationSettings.dueWarningHours} onChange={(e)=>setNotificationSettings({...notificationSettings,dueWarningHours:Number(e.target.value)})}>
-                <option value={1}>1 hour before</option><option value={6}>6 hours before</option><option value={12}>12 hours before</option><option value={24}>1 day before</option><option value={48}>2 days before</option><option value={168}>1 week before</option>
-              </select>
-            </label>
             <div className="modal-row three">
               <label>
                 Status
@@ -1935,6 +1912,23 @@ function NorthlineModal({
                   setBoardForm({ ...boardForm, description: e.target.value })
                 }
               />
+            </label>
+            <label>
+              Task Buddy channel
+              <select value={notificationSettings.channelId} onChange={(e)=>setNotificationSettings({...notificationSettings,channelId:e.target.value})}>
+                <option value="">Automatic notifications off</option>
+                {channels.map(channel=><option key={channel.id} value={channel.id}>#{channel.name}</option>)}
+              </select>
+            </label>
+            <div className="notification-options">
+              <h3>Automatic notifications</h3>
+              {([["assignmentEnabled","Assignments"],["statusEnabled","Status changes"],["commentEnabled","Comments"],["mentionEnabled","Mentions"],["dueEnabled","Due-date warnings"]] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={notificationSettings[key] as boolean} onChange={(e)=>setNotificationSettings({...notificationSettings,[key]:e.target.checked})}/><span>{label}</span></label>)}
+            </div>
+            <label>
+              Due-date warning
+              <select value={notificationSettings.dueWarningHours} onChange={(e)=>setNotificationSettings({...notificationSettings,dueWarningHours:Number(e.target.value)})}>
+                <option value={1}>1 hour before</option><option value={6}>6 hours before</option><option value={12}>12 hours before</option><option value={24}>1 day before</option><option value={48}>2 days before</option><option value={168}>1 week before</option>
+              </select>
             </label>
             <div className="modal-actions">
               <button className="danger" onClick={deleteBoard}>
