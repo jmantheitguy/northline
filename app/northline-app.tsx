@@ -2013,7 +2013,7 @@ function NorthlineModal({
               <select
                 value={reminder.channelId}
                 onChange={(e) =>
-                  setReminder({ ...reminder, channelId: e.target.value })
+                  setReminder((current) => ({ ...current, channelId: e.target.value }))
                 }
               >
                 <option value="">Choose a channel…</option>
@@ -2029,7 +2029,7 @@ function NorthlineModal({
               <select
                 value={reminder.taskId}
                 onChange={(e) =>
-                  setReminder({ ...reminder, taskId: e.target.value })
+                  setReminder((current) => ({ ...current, taskId: e.target.value }))
                 }
               >
                 <option value="">Board-wide reminder</option>
@@ -2047,7 +2047,7 @@ function NorthlineModal({
                   type="date"
                   value={reminder.date}
                   onChange={(e) =>
-                    setReminder({ ...reminder, date: e.target.value })
+                    setReminder((current) => ({ ...current, date: e.target.value }))
                   }
                 />
               </label>
@@ -2057,7 +2057,7 @@ function NorthlineModal({
                   type="time"
                   value={reminder.time}
                   onChange={(e) =>
-                    setReminder({ ...reminder, time: e.target.value })
+                    setReminder((current) => ({ ...current, time: e.target.value }))
                   }
                 />
               </label>
@@ -2067,7 +2067,7 @@ function NorthlineModal({
               <textarea
                 value={reminder.message}
                 onChange={(e) =>
-                  setReminder({ ...reminder, message: e.target.value })
+                  setReminder((current) => ({ ...current, message: e.target.value }))
                 }
                 placeholder="What should the team know?"
               />
