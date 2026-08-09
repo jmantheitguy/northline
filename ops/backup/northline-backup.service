@@ -5,6 +5,8 @@ After=docker.service
 
 [Service]
 Type=oneshot
+Environment=NORTHLINE_NAS_ROOT=/mnt/northline-backups/Northline-Backups
+Environment=NORTHLINE_NAS_RETENTION_DAYS=60
 ExecStart=/usr/local/sbin/northline-backup
 Nice=10
 IOSchedulingClass=best-effort

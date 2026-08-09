@@ -6,6 +6,8 @@ APP_ROOT="${NORTHLINE_APP_ROOT:-/home/johnathan/apps/northline}"
 BACKUP_ROOT="${NORTHLINE_BACKUP_ROOT:-/var/backups/northline}"
 KEY_FILE="${NORTHLINE_BACKUP_KEY_FILE:-/root/.config/northline-backup.key}"
 RETENTION_DAYS="${NORTHLINE_BACKUP_RETENTION_DAYS:-14}"
+NAS_ROOT="${NORTHLINE_NAS_ROOT:-}"
+NAS_RETENTION_DAYS="${NORTHLINE_NAS_RETENTION_DAYS:-60}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 WORK_DIR="$(mktemp -d /tmp/northline-backup.XXXXXX)"
 ARCHIVE="$BACKUP_ROOT/northline-$STAMP.tar.gz"
@@ -55,4 +57,14 @@ rm -f -- "$ARCHIVE"
 chmod 0600 "$ENCRYPTED"
 
 find "$BACKUP_ROOT" -maxdepth 1 -type f -name 'northline-*.tar.gz.enc' -mtime "+$RETENTION_DAYS" -delete
+if [[ -n "$NAS_ROOT" ]]; then
+  install -d -m 0700 "$NAS_ROOT"
+  NAS_FILE="$NAS_ROOT/$(basename "$ENCRYPTED")"
+  NAS_TEMP="$NAS_FILE.partial"
+  cp -- "$ENCRYPTED" "$NAS_TEMP"
+  cmp --silent "$ENCRYPTED" "$NAS_TEMP"
+  mv -f -- "$NAS_TEMP" "$NAS_FILE"
+  chmod 0600 "$NAS_FILE" || true
+  find "$NAS_ROOT" -maxdepth 1 -type f -name 'northline-*.tar.gz.enc' -mtime "+$NAS_RETENTION_DAYS" -delete
+fi
 echo "$ENCRYPTED"
