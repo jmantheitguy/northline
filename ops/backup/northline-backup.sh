@@ -13,7 +13,14 @@ WORK_DIR="$(mktemp -d /tmp/northline-backup.XXXXXX)"
 ARCHIVE="$BACKUP_ROOT/northline-$STAMP.tar.gz"
 ENCRYPTED="$ARCHIVE.enc"
 
-cleanup() { rm -rf -- "$WORK_DIR"; }
+RUNNING_MAIL=()
+resume_mail() {
+  if (( ${#RUNNING_MAIL[@]} )); then
+    docker start "${RUNNING_MAIL[@]}" >/dev/null || true
+    RUNNING_MAIL=()
+  fi
+}
+cleanup() { resume_mail; rm -rf -- "$WORK_DIR"; }
 trap cleanup EXIT
 
 install -d -m 0700 "$BACKUP_ROOT" "$(dirname "$KEY_FILE")"
@@ -26,7 +33,7 @@ for container in northline authentik-postgresql-1; do
   docker inspect "$container" >/dev/null 2>&1 || { echo "Required container is unavailable: $container" >&2; exit 1; }
 done
 
-install -d -m 0700 "$WORK_DIR/database" "$WORK_DIR/config" "$WORK_DIR/authentik-files"
+install -d -m 0700 "$WORK_DIR/database" "$WORK_DIR/config" "$WORK_DIR/authentik-files" "$WORK_DIR/docker-volumes"
 
 docker exec northline node -e "const Database=require('better-sqlite3');const db=new Database('/app/data/northline.db');db.backup('/tmp/northline-backup.db').then(()=>db.close())"
 docker cp northline:/tmp/northline-backup.db "$WORK_DIR/database/northline.db" >/dev/null
@@ -36,6 +43,7 @@ docker exec authentik-postgresql-1 sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dum
 
 install -m 0600 "$APP_ROOT/.env" "$WORK_DIR/config/northline.env"
 install -m 0600 "$APP_ROOT/infra/authentik/.env" "$WORK_DIR/config/authentik.env"
+tar --exclude='.git' -C "$APP_ROOT/infra" -czf "$WORK_DIR/config/mail-infrastructure.tar.gz" mail
 
 for directory in data certs custom-templates; do
   if [[ -d "$APP_ROOT/infra/authentik/$directory" ]]; then
@@ -43,11 +51,26 @@ for directory in data certs custom-templates; do
   fi
 done
 
+for container in northline-stalwart northline-webmail northline-mail-ingress; do
+  if [[ "$(docker inspect "$container" --format '{{.State.Running}}' 2>/dev/null || true)" == "true" ]]; then
+    RUNNING_MAIL+=("$container")
+  fi
+done
+if (( ${#RUNNING_MAIL[@]} )); then docker stop "${RUNNING_MAIL[@]}" >/dev/null; fi
+for volume in mail_stalwart-config mail_stalwart-data mail_bulwark-config mail_bulwark-state mail_snappymail-data; do
+  SOURCE="/var/lib/docker/volumes/$volume/_data"
+  [[ -d "$SOURCE" ]] || { echo "Required mail volume is unavailable: $volume" >&2; exit 1; }
+  tar -C "$SOURCE" -czf "$WORK_DIR/docker-volumes/$volume.tar.gz" .
+done
+resume_mail
+
 cat > "$WORK_DIR/manifest.txt" <<EOF
 created_utc=$STAMP
 northline_commit=$(git -c safe.directory="$APP_ROOT" -C "$APP_ROOT" rev-parse HEAD)
 northline_container=$(docker inspect northline --format '{{.Image}}')
 authentik_container=$(docker inspect authentik-server-1 --format '{{.Config.Image}}')
+stalwart_container=$(docker inspect northline-stalwart --format '{{.Config.Image}}')
+webmail_container=$(docker inspect northline-webmail --format '{{.Config.Image}}')
 EOF
 
 (cd "$WORK_DIR" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)

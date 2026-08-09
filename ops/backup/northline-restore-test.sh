@@ -31,6 +31,11 @@ assert tables > 0, "Northline snapshot contains no tables"
 print(f"Northline restore verified: {tables} tables")
 PY
 
+for archive in "$WORK_DIR"/docker-volumes/*.tar.gz "$WORK_DIR/config/mail-infrastructure.tar.gz"; do
+  tar -tzf "$archive" >/dev/null
+done
+echo "Mail stack restore artifacts verified: 5 volumes and infrastructure configuration"
+
 gunzip -c "$WORK_DIR/database/authentik.sql.gz" > "$WORK_DIR/database/authentik.sql"
 docker exec authentik-postgresql-1 sh -c "PGPASSWORD=\"\$POSTGRES_PASSWORD\" createdb -U \"\$POSTGRES_USER\" '$TEST_DB'"
 docker exec -i authentik-postgresql-1 sh -c "PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -v ON_ERROR_STOP=1 -U \"\$POSTGRES_USER\" -d '$TEST_DB'" < "$WORK_DIR/database/authentik.sql" >/dev/null

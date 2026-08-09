@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.3.5 — Off-host NAS backup replication**
+Current release: **Alpha v0.3.6 — Complete-stack encrypted backups**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.3.5 adds verified off-host replication to the Synology NAS on top of scheduled encrypted Northline and Authentik backups, retention controls, integrity checks, and non-destructive restore testing. See the [backup and recovery guide](ops/backup/README.md).
+Alpha v0.3.6 expands verified Synology replication to the complete local stack: Northline, Authentik, Stalwart mail, webmail, and mail ingress. It retains encrypted archives, integrity checks, and non-destructive restore testing. See the [backup and recovery guide](ops/backup/README.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
