@@ -86,6 +86,27 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sent_at TEXT
   );
+  CREATE TABLE IF NOT EXISTS board_notification_settings (
+    board_id INTEGER PRIMARY KEY REFERENCES boards(id) ON DELETE CASCADE,
+    channel_id TEXT,
+    channel_name TEXT,
+    assignment_enabled INTEGER NOT NULL DEFAULT 1,
+    status_enabled INTEGER NOT NULL DEFAULT 1,
+    comment_enabled INTEGER NOT NULL DEFAULT 1,
+    mention_enabled INTEGER NOT NULL DEFAULT 1,
+    due_enabled INTEGER NOT NULL DEFAULT 1,
+    due_warning_hours INTEGER NOT NULL DEFAULT 24,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS user_notification_settings (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    assignment_enabled INTEGER NOT NULL DEFAULT 1,
+    status_enabled INTEGER NOT NULL DEFAULT 1,
+    comment_enabled INTEGER NOT NULL DEFAULT 1,
+    mention_enabled INTEGER NOT NULL DEFAULT 1,
+    due_enabled INTEGER NOT NULL DEFAULT 1,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE TABLE IF NOT EXISTS workspace_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -96,6 +117,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
   CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
 `);
+
+const reminderColumns = db.prepare("PRAGMA table_info(reminders)").all() as Array<{name:string}>;
+const addReminderColumn = (name:string, definition:string) => {
+  if (!reminderColumns.some(column => column.name === name)) {
+    try { db.exec(`ALTER TABLE reminders ADD COLUMN ${definition}`); reminderColumns.push({name}); }
+    catch (error) { if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error; }
+  }
+};
+addReminderColumn("kind", "kind TEXT NOT NULL DEFAULT 'scheduled'");
+addReminderColumn("event_type", "event_type TEXT");
+addReminderColumn("dedupe_key", "dedupe_key TEXT");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS reminders_dedupe_idx ON reminders(dedupe_key) WHERE dedupe_key IS NOT NULL");
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;
 const addUserColumn = (name: string, definition: string) => {

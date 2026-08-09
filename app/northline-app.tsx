@@ -44,6 +44,7 @@ type BoardDetail = {
   permission: string;
   canEdit: boolean;
   canShare: boolean;
+  notifications?: {channelId:string;channelName:string;assignmentEnabled:number;statusEnabled:number;commentEnabled:number;mentionEnabled:number;dueEnabled:number;dueWarningHours:number};
 };
 type WorkspaceUser = {
   id: number;
@@ -150,6 +151,7 @@ export function NorthlineApp() {
   const [dragged, setDragged] = useState<number | null>(null);
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deepLinkTaskId,setDeepLinkTaskId]=useState<number|null>(null);
   const isAdmin = authUser?.role === "Admin";
   const notify = (message: string) => {
     setToast(message);
@@ -202,6 +204,8 @@ export function NorthlineApp() {
   }, []);
   useEffect(() => {
     if (window.matchMedia("(max-width: 950px)").matches) setSidebar(false);
+    const query=new URLSearchParams(window.location.search),board=Number(query.get("board")),task=Number(query.get("task"));
+    if(board>0)setActiveBoardId(board);if(task>0)setDeepLinkTaskId(task);
   }, []);
   useEffect(() => {
     if (authUser) void loadBoards();
@@ -209,6 +213,7 @@ export function NorthlineApp() {
   useEffect(() => {
     if (activeBoardId && view === "board") void loadBoard(activeBoardId);
   }, [activeBoardId, view]);
+  useEffect(()=>{if(!deepLinkTaskId||!boardData)return;const linked=boardData.tasks.find(task=>task.id===deepLinkTaskId);if(linked){setSelectedTask(linked);setModal("task-detail");}setDeepLinkTaskId(null);window.history.replaceState({},"",window.location.pathname);},[boardData,deepLinkTaskId]);
   useEffect(() => {
     if (
       view === "directory" ||
@@ -1107,12 +1112,14 @@ function Settings({ notify }: { notify: (s: string) => void }) {
     channels: { id: string; name: string }[];
     error?: string;
   } | null>(null);
+  const [preferences,setPreferences]=useState({assignmentEnabled:true,statusEnabled:true,commentEnabled:true,mentionEnabled:true,dueEnabled:true});
   useEffect(() => {
     jsonFetch("/api/discord/channels")
       .then(setDiscord)
       .catch((e) =>
         setDiscord({ configured: false, channels: [], error: e.message }),
       );
+    jsonFetch("/api/settings/notifications").then(data=>setPreferences(Object.fromEntries(Object.entries(data.settings).map(([key,value])=>[key,value!==0])) as typeof preferences)).catch(()=>{});
   }, []);
   return (
     <section className="content settings">
@@ -1166,6 +1173,10 @@ function Settings({ notify }: { notify: (s: string) => void }) {
           </p>
         </div>
         <span className="connected">● Server-side</span>
+      </div>
+      <div className="settings-body notification-preferences">
+        <div><h3>My Task Buddy preferences</h3><p>Choose which board-channel events should include activity involving you.</p><div className="notification-options">{([['assignmentEnabled','Assignments'],['statusEnabled','Status changes'],['commentEnabled','Comments'],['mentionEnabled','Mentions'],['dueEnabled','Due-date warnings']] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={preferences[key]} onChange={(e)=>setPreferences({...preferences,[key]:e.target.checked})}/><span>{label}</span></label>)}</div></div>
+        <button className="secondary" onClick={()=>jsonFetch('/api/settings/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(preferences)}).then(()=>notify('Notification preferences saved')).catch(e=>notify(e.message))}>Save preferences</button>
       </div>
       <div className="settings-body">
         <div>
@@ -1532,6 +1543,15 @@ function NorthlineModal({
   const [comments, setComments] = useState<any[]>([]);
   const [comment, setComment] = useState("");
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [notificationSettings, setNotificationSettings] = useState({
+    channelId: board?.notifications?.channelId || "",
+    assignmentEnabled: board?.notifications?.assignmentEnabled !== 0,
+    statusEnabled: board?.notifications?.statusEnabled !== 0,
+    commentEnabled: board?.notifications?.commentEnabled !== 0,
+    mentionEnabled: board?.notifications?.mentionEnabled !== 0,
+    dueEnabled: board?.notifications?.dueEnabled !== 0,
+    dueWarningHours: board?.notifications?.dueWarningHours || 24,
+  });
   const [reminder, setReminder] = useState({
     channelId: "",
     taskId: task?.id ? String(task.id) : "",
@@ -1544,7 +1564,7 @@ function NorthlineModal({
       jsonFetch(`/api/tasks/${task.id}/comments`).then((d) =>
         setComments(d.comments),
       );
-    if (type === "reminder")
+    if (type === "reminder" || type === "board-settings")
       jsonFetch("/api/discord/channels")
         .then((d) => setChannels(d.channels || []))
         .catch((e) => notify(e.message));
@@ -1630,6 +1650,11 @@ function NorthlineModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(boardForm),
       });
+      await jsonFetch(`/api/boards/${board.board.id}/notifications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(notificationSettings),
+      });
       await refresh();
       close();
       notify("Board updated");
@@ -1700,6 +1725,29 @@ function NorthlineModal({
                   }))
                 }
               />
+            </label>
+            <label>
+              Task Buddy channel
+              <select value={notificationSettings.channelId} onChange={(e)=>setNotificationSettings({...notificationSettings,channelId:e.target.value})}>
+                <option value="">Automatic notifications off</option>
+                {channels.map(channel=><option key={channel.id} value={channel.id}>#{channel.name}</option>)}
+              </select>
+            </label>
+            <div className="notification-options">
+              <h3>Automatic notifications</h3>
+              {([
+                ["assignmentEnabled","Assignments"],
+                ["statusEnabled","Status changes"],
+                ["commentEnabled","Comments"],
+                ["mentionEnabled","Mentions"],
+                ["dueEnabled","Due-date warnings"],
+              ] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={notificationSettings[key] as boolean} onChange={(e)=>setNotificationSettings({...notificationSettings,[key]:e.target.checked})}/><span>{label}</span></label>)}
+            </div>
+            <label>
+              Due-date warning
+              <select value={notificationSettings.dueWarningHours} onChange={(e)=>setNotificationSettings({...notificationSettings,dueWarningHours:Number(e.target.value)})}>
+                <option value={1}>1 hour before</option><option value={6}>6 hours before</option><option value={12}>12 hours before</option><option value={24}>1 day before</option><option value={48}>2 days before</option><option value={168}>1 week before</option>
+              </select>
             </label>
             <div className="modal-row three">
               <label>

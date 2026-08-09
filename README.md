@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.5.2 — Connected identity profiles**
+Current release: **Alpha v0.6.0 — Task Buddy notifications**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.5.2 adds Authentik-managed profile pictures, initials fallbacks, Discord account linking and sign-in through Task Buddy, persistent Discord avatar synchronization, consistent member pictures across Northline, and a direct profile-and-Discord management link in workspace settings. Discord mappings update profile metadata only; Authentik usernames, groups, and Northline permissions remain authoritative. Complete-stack encrypted Synology backups and non-destructive restore testing remain active. See the [backup and recovery guide](ops/backup/README.md).
+Alpha v0.6.0 turns Task Buddy into Northline's automatic Discord notification service. Every board can select its own channel and independently control assignment, status, comment, mention, and due-date events. Personal preferences, direct task links, duplicate protection, delivery history, and failed-delivery retries are included. Authentik-managed profiles and Discord linking remain authoritative, and complete-stack encrypted Synology backups remain active. See the [backup and recovery guide](ops/backup/README.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -51,6 +51,11 @@ The application combines visual task boards, private collaboration, user adminis
 - A self-hosted polling worker started with the Northline server
 - Task-reminder scheduling workflow
 - Channel selection and reminder-message composition
+- Per-board Task Buddy channel routing and notification controls
+- Automatic assignment, status-change, comment, mention, and due-date messages
+- Per-user notification preferences for activity involving each member
+- Direct links from Discord messages to the related Northline task
+- Duplicate suppression plus shared delivery history and retry controls
 
 Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Northline validates every selected channel against the configured guild and suppresses all automatic mentions.
 

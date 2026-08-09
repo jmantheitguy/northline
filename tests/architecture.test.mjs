@@ -22,9 +22,19 @@ test("directory synchronization revokes removed Authentik accounts",async()=>{
 
 test("board data is relational and cascade-safe",async()=>{
   const schema=await read("lib/db.ts");
-  for(const table of ["boards","board_members","tasks","comments","reminders","workspace_settings"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  for(const table of ["boards","board_members","tasks","comments","reminders","board_notification_settings","user_notification_settings","workspace_settings"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.match(schema,/board_id INTEGER NOT NULL REFERENCES boards\(id\) ON DELETE CASCADE/);
   assert.match(schema,/task_id INTEGER NOT NULL REFERENCES tasks\(id\) ON DELETE CASCADE/);
+});
+
+test("Task Buddy automatic notifications are board-routed and preference aware",async()=>{
+  const [automation,boardRoute,preferences,ui]=await Promise.all([read("lib/task-notifications.ts"),read("app/api/boards/[id]/notifications/route.ts"),read("app/api/settings/notifications/route.ts"),read("app/northline-app.tsx")]);
+  for(const event of ["assignment","status","comment","mention","due"])assert.match(automation,new RegExp(`\\b${event}\\b`));
+  assert.match(automation,/INSERT OR IGNORE INTO reminders/);
+  assert.match(automation,/NORTHLINE_PUBLIC_URL/);
+  assert.match(boardRoute,/canShare\(boardPermission/);
+  assert.match(preferences,/user_notification_settings/);
+  assert.match(ui,/Automatic notifications/);
 });
 
 test("Discord reminders are permission checked and secrets stay server-side",async()=>{
