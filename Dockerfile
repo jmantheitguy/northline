@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN apk add --no-cache python3 make g++
@@ -6,7 +6,7 @@ RUN npm ci
 COPY . .
 RUN NORTHLINE_ADMIN_EMAIL=build-only@invalid.local NORTHLINE_ADMIN_PASSWORD=build-only-placeholder npm run build
 
-FROM node:22-alpine
+FROM node:26-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
