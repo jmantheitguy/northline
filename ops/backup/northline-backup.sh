@@ -43,7 +43,7 @@ done
 
 cat > "$WORK_DIR/manifest.txt" <<EOF
 created_utc=$STAMP
-northline_commit=$(git -C "$APP_ROOT" rev-parse HEAD)
+northline_commit=$(git -c safe.directory="$APP_ROOT" -C "$APP_ROOT" rev-parse HEAD)
 northline_container=$(docker inspect northline --format '{{.Image}}')
 authentik_container=$(docker inspect authentik-server-1 --format '{{.Config.Image}}')
 EOF
