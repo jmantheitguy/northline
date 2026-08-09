@@ -1,5 +1,11 @@
 # Northline release history
 
+## Alpha v0.8.4 — Directory-bound OIDC subject rotation
+
+- Allow Authentik to rotate a pairwise OIDC subject only when the office email already belongs to a user bound to a verified Authentik directory UUID.
+- Continue rejecting subject changes for local or otherwise unbound accounts, and reject cross-account subject/email collisions.
+- Restore sign-in after an administrator corrects a linked member's canonical Authentik username.
+
 ## Alpha v0.8.3 — Separated office and Discord identities
 
 - Keep Authentik directory UUIDs, OIDC login subjects, and Discord user IDs in separate fields so a linked social profile cannot replace or duplicate an office account.

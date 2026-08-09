@@ -106,6 +106,7 @@ test("directory, login, and Discord identities remain separate",async()=>{
   const [callback,ui,schema,sync,discordSource,worker]=await Promise.all([read("app/api/auth/oidc/callback/route.ts"),read("app/northline-app.tsx"),read("lib/db.ts"),read("lib/authentik-directory.ts"),read("ops/identity/configure-discord-source.py"),read("lib/reminder-worker.ts")]);
   assert.ok(callback.indexOf("WHERE oidc_subject=?")<callback.indexOf("WHERE email=? COLLATE NOCASE"));
   assert.match(callback,/OIDC_IDENTITY_CONFLICT/);
+  assert.match(callback,/!byEmail\.directoryId/);
   assert.match(callback,/auth_error=identity_conflict/);
   assert.match(ui,/Northline could not safely match this identity/);
   assert.match(schema,/directory_id TEXT/);assert.match(schema,/discord_user_id TEXT/);

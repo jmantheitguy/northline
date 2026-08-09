@@ -6,19 +6,20 @@ import { oidcConfig } from "@/lib/oidc";
 
 type UserInfo={sub:string;email?:string;name?:string;preferred_username?:string;picture?:string;groups?:string[]};
 
-type IdentityUser={id:number;oidcSubject:string|null};
+type IdentityUser={id:number;oidcSubject:string|null;directoryId:string|null};
 
 function resolveIdentity(profile:{sub:string;email:string;name:string;avatar:string|null;role:"Admin"|"Member"}) {
   return db.transaction(()=>{
-    const bySubject=db.prepare("SELECT id,oidc_subject oidcSubject FROM users WHERE oidc_subject=?").get(profile.sub) as IdentityUser|undefined;
-    const byEmail=db.prepare("SELECT id,oidc_subject oidcSubject FROM users WHERE email=? COLLATE NOCASE").get(profile.email) as IdentityUser|undefined;
+    const bySubject=db.prepare("SELECT id,oidc_subject oidcSubject,directory_id directoryId FROM users WHERE oidc_subject=?").get(profile.sub) as IdentityUser|undefined;
+    const byEmail=db.prepare("SELECT id,oidc_subject oidcSubject,directory_id directoryId FROM users WHERE email=? COLLATE NOCASE").get(profile.email) as IdentityUser|undefined;
     if(bySubject){
+      if(byEmail&&byEmail.id!==bySubject.id)throw new Error("OIDC_IDENTITY_CONFLICT");
       if(!byEmail||byEmail.id===bySubject.id)db.prepare("UPDATE users SET name=?,email=?,role=?,status='Active',auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,last_active_at=CURRENT_TIMESTAMP,avatar=COALESCE(?,avatar) WHERE id=?").run(profile.name,profile.email,profile.role,profile.avatar,bySubject.id);
       else db.prepare("UPDATE users SET name=?,role=?,status='Active',auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,last_active_at=CURRENT_TIMESTAMP,avatar=COALESCE(?,avatar) WHERE id=?").run(profile.name,profile.role,profile.avatar,bySubject.id);
       return bySubject.id;
     }
     if(byEmail){
-      if(byEmail.oidcSubject&&byEmail.oidcSubject!==profile.sub)throw new Error("OIDC_IDENTITY_CONFLICT");
+      if(byEmail.oidcSubject&&byEmail.oidcSubject!==profile.sub&&!byEmail.directoryId)throw new Error("OIDC_IDENTITY_CONFLICT");
       db.prepare("UPDATE users SET name=?,role=?,status='Active',oidc_subject=?,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,last_active_at=CURRENT_TIMESTAMP,avatar=COALESCE(?,avatar) WHERE id=?").run(profile.name,profile.role,profile.sub,profile.avatar,byEmail.id);
       return byEmail.id;
     }
