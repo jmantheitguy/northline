@@ -1171,10 +1171,16 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         <div>
           <h3>Identity provider</h3>
           <p>
-            Authentik controls workspace membership and administrator groups.
+            Authentik controls workspace membership, profile pictures, and
+            linked Discord accounts.
           </p>
         </div>
-        <span className="connected">● Enabled</span>
+        <a
+          className="secondary settings-link"
+          href="https://auth.vtuberoffices.com/if/user/#/settings"
+        >
+          Manage profile &amp; Discord
+        </a>
       </div>
     </section>
   );
