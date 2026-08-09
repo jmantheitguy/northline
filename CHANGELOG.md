@@ -1,5 +1,11 @@
 # Northline release history
 
+## Alpha v0.8.1 — Development dependency hardening
+
+- Removed an unused Cloudflare/Vite prototype toolchain from the Northline application package.
+- Updated the remaining development dependency tree and expanded the release audit to reject development-time vulnerabilities as well as production vulnerabilities.
+- Reduced the application dependency footprint without changing the deployed feature set or database schema.
+
 ## Alpha v0.8.0 — Beta security and reliability foundation
 
 - Added explicit same-origin protection for every state-changing API request.

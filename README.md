@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.8.0 — Beta security and reliability foundation**
+Current release: **Alpha v0.8.1 — Development dependency hardening**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.8.0 establishes the security and reliability foundation for Beta: explicit cross-origin mutation protection, sign-in and administration throttling, user-visible session inventory and revocation, recorded schema migrations, backup/restore failure reporting, container health checks, clean-install verification, performance regression coverage, secret scanning, CI, Dependabot, and documented upgrade/rollback policy. Browser-based visual and accessibility acceptance remains a clearly identified final Beta gate.
+Alpha v0.8.0 established the security and reliability foundation for Beta: explicit cross-origin mutation protection, sign-in and administration throttling, user-visible session inventory and revocation, recorded schema migrations, backup/restore failure reporting, container health checks, clean-install verification, performance regression coverage, secret scanning, CI, Dependabot, and documented upgrade/rollback policy. Alpha v0.8.1 removes the unused prototype toolchain and brings the complete development dependency audit to zero known vulnerabilities. Browser-based visual and accessibility acceptance remains a clearly identified final Beta gate.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
@@ -206,7 +206,7 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). Alpha v0.8.0 freezes major feature expansion while Beta acceptance focuses on browser-driven accessibility, visual, responsive, and complete user-journey validation. Private multi-calendar support is intentionally deferred until after the Beta release.
+The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). Alpha v0.8.x freezes major feature expansion while Beta acceptance focuses on browser-driven accessibility, visual, responsive, and complete user-journey validation. Private multi-calendar support is intentionally deferred until after the Beta release.
 
 ## License
 
