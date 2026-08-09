@@ -214,7 +214,8 @@ export function NorthlineApp() {
   useEffect(() => {
     if (activeBoardId && view === "board") void loadBoard(activeBoardId);
   }, [activeBoardId, view]);
-  useEffect(()=>{if(!deepLinkTaskId||!boardData)return;const linked=boardData.tasks.find(task=>task.id===deepLinkTaskId);if(linked){setSelectedTask(linked);setModal("task-detail");}setDeepLinkTaskId(null);window.history.replaceState({},"",window.location.pathname);},[boardData,deepLinkTaskId]);
+  useEffect(()=>{const active=boards.find(board=>board.id===activeBoardId);if(!active||view!=="board")return;const query=new URLSearchParams(window.location.search);query.set("board",active.boardKey);window.history.replaceState({},"",`${window.location.pathname}?${query}`);},[activeBoardId,boards,view]);
+  useEffect(()=>{if(!deepLinkTaskId||!boardData)return;const linked=boardData.tasks.find(task=>task.id===deepLinkTaskId);if(linked){setSelectedTask(linked);setModal("task-detail");}setDeepLinkTaskId(null);const query=new URLSearchParams(window.location.search);query.delete("task");query.set("board",boardData.board.boardKey);window.history.replaceState({},"",`${window.location.pathname}?${query}`);},[boardData,deepLinkTaskId]);
   useEffect(() => {
     if (
       view === "directory" ||

@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Alpha v0.6.5 — Private board references and unified reminders**
+Current release: **Alpha v0.6.6 — Private board URLs and unified reminders**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -19,6 +19,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Board-level progress indicators, filtering, and sorting controls
 - Private boards and boards shared with selected workspace members
 - Long, random public board IDs used by task and reminder links while creator ownership remains private
+- Browser navigation uses random board IDs without treating URL secrecy as authorization
 
 ### Members and access
 

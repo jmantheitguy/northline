@@ -29,8 +29,8 @@ test("board data is relational and cascade-safe",async()=>{
 });
 
 test("board references are opaque while creator ownership remains relational",async()=>{
-  const [schema,boards,detail,worker]=await Promise.all([read("lib/db.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("lib/reminder-worker.ts")]);
-  assert.match(boards,/created_by/);assert.match(schema,/brd_\$\{randomBytes\(16\)/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);
+  const [schema,boards,detail,worker,ui,permissions]=await Promise.all([read("lib/db.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("lib/reminder-worker.ts"),read("app/northline-app.tsx"),read("lib/boards.ts")]);
+  assert.match(boards,/created_by/);assert.match(schema,/brd_\$\{randomBytes\(16\)/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);assert.match(ui,/query\.set\("board",active\.boardKey\)/);assert.match(permissions,/owner_id/);
 });
 
 test("Task Buddy automatic notifications are board-routed and preference aware",async()=>{
