@@ -111,6 +111,7 @@ if (!userColumns.some((column) => column.name === "oidc_subject")) {
 }
 addUserColumn("auth_source", "auth_source TEXT NOT NULL DEFAULT 'local'");
 addUserColumn("identity_synced_at", "identity_synced_at TEXT");
+addUserColumn("avatar", "avatar TEXT");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;
