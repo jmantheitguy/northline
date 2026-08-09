@@ -7,7 +7,7 @@
 | Next.js 16 / React 19 | UI, server rendering, API routes, authorization, reminder worker | None outside mounted paths |
 | SQLite / better-sqlite3 | Users, sessions, boards, tasks, reminders, activity, audit, settings | `northline-data:/app/data` |
 | Authentik / PostgreSQL | Central identity, OIDC, groups, profile sources | Authentik volumes and files |
-| Task Buddy / Discord API | Scheduled and automatic channel notifications | Delivery state remains in SQLite |
+| Task Buddy / Discord API | Scheduled and automatic private notifications | Delivery state remains in SQLite |
 | Cloudflare Tunnel | HTTPS publication without direct origin exposure | Cloudflare configuration |
 | Stalwart and webmail | Independent domain mailboxes and JMAP webmail | Mail Docker volumes |
 | Cloudflare Email Routing Worker | Inbound public SMTP gateway to private ingress | Worker configuration/secrets |
@@ -28,7 +28,7 @@ Schema changes are forward-only and recorded in `schema_migrations`. Startup cre
 
 ## Notification flow
 
-Task mutations create deduplicated reminder records according to board and user preferences. A server worker polls due records, validates the configured guild channel through Discord, suppresses link embeds, and permits only the explicitly linked recipient's Discord ID to be mentioned. Everyone, role, and arbitrary mentions remain disabled. The worker then updates status and writes a durable delivery snapshot. Manual reminders use the same delivery path.
+Task mutations create deduplicated reminder records according to board and task-creator preferences. A server worker polls due records, resolves the task creator's linked Discord ID, opens a private bot conversation, suppresses link embeds, and disables everyone, role, and arbitrary mentions. The worker then updates status and writes a durable delivery snapshot. Manual task reminders use the same creator-DM path; board-wide manual reminders go privately to the member who schedules them.
 
 ## Health and backup flow
 

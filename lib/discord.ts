@@ -33,6 +33,7 @@ export async function discordMemberProfile(userId: string) {
   return {id,avatarUrl:`https://cdn.discordapp.com/avatars/${id}/${avatar}.${extension}?size=128`};
 }
 
-export async function sendDiscordReminder(channelId: string, content: string, userIds: string[] = []) {
-  await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify({content,flags:4,allowed_mentions:{parse:[],users:userIds.slice(0,10)}}) });
+export async function sendDiscordDirectMessage(userId: string, content: string) {
+  const channel=await discord("/users/@me/channels",{method:"POST",body:JSON.stringify({recipient_id:userId})}) as {id:string};
+  await discord(`/channels/${channel.id}/messages`,{method:"POST",body:JSON.stringify({content,flags:4,allowed_mentions:{parse:[]}})});
 }

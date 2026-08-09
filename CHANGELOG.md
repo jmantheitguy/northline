@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.0.3 — Private Task Buddy delivery
+
+- Route automatic task activity and task-specific reminders to the Discord account linked by the task creator.
+- Route board-wide manual reminders to the linked Discord account of the member who schedules them.
+- Remove Discord channel selection from board notification settings and reminder creation while preserving historical delivery metadata.
+- Fail reminders visibly when the intended recipient has not linked Discord, and move administrator delivery tests to private messages.
+- Retain clickable Northline task links, suppress Discord embeds, and disable arbitrary mention parsing in every private delivery.
+
 ## Beta v0.0.2 — Streaming calendar product plan
 
 - Publish a detailed future plan for private multi-calendar scheduling designed around streamer workflows.

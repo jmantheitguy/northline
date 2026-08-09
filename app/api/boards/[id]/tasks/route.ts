@@ -18,6 +18,6 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   const result=db.prepare("INSERT INTO tasks(board_id,title,description,status,priority,tag,due_date,assignee_id,created_by) VALUES(?,?,?,?,?,?,?,?,?)").run(boardId,cleanTitle,cleanDescription,status,priority,cleanTag,dueDate||null,assigneeId||null,user.id);
   db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(boardId);db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"TASK.CREATE",String(result.lastInsertRowid));
   recordBoardActivity(boardId,user.id,"TASK.CREATE",`Created ${cleanTitle}`);
-  notifyTaskCreated({id:Number(result.lastInsertRowid),boardId,title:cleanTitle,status,assigneeId:assigneeId?Number(assigneeId):null,dueDate:dueDate||null},user.id);
+  notifyTaskCreated({id:Number(result.lastInsertRowid),boardId,title:cleanTitle,status,assigneeId:assigneeId?Number(assigneeId):null,dueDate:dueDate||null,createdBy:user.id},user.id);
   return NextResponse.json({id:Number(result.lastInsertRowid)},{status:201});
 }

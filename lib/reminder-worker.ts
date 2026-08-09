@@ -1,22 +1,22 @@
 import "server-only";
 
 import db from "./db";
-import { discordConfigured, sendDiscordReminder } from "./discord";
+import { discordConfigured, sendDiscordDirectMessage } from "./discord";
 
 declare global { var northlineReminderWorkerStarted: boolean | undefined; }
 
 async function deliverDueReminders() {
   if (!discordConfigured()) return;
-  const due = db.prepare(`SELECT r.id,r.created_by createdBy,r.channel_id channelId,r.channel_name channelName,r.message,r.kind,r.event_type eventType,b.id boardId,b.public_id boardKey,b.name boardName,t.id taskId,t.title taskTitle,u.name creatorName,recipient.discord_user_id discordUserId
-    FROM reminders r JOIN boards b ON b.id=r.board_id LEFT JOIN tasks t ON t.id=r.task_id JOIN users u ON u.id=r.created_by LEFT JOIN users recipient ON recipient.id=r.recipient_user_id
-    WHERE r.status='pending' AND datetime(r.remind_at)<=datetime('now') ORDER BY r.remind_at LIMIT 20`).all() as Array<{id:number;createdBy:number;channelId:string;channelName:string;message:string;kind:string;eventType:string|null;boardId:number;boardKey:string;boardName:string;taskId:number|null;taskTitle:string|null;creatorName:string;discordUserId:string|null}>;
+  const due = db.prepare(`SELECT r.id,r.created_by createdBy,r.channel_id channelId,r.channel_name channelName,r.message,r.kind,r.event_type eventType,b.id boardId,b.public_id boardKey,b.name boardName,t.id taskId,t.title taskTitle,u.name creatorName,recipient.discord_user_id discordUserId,recipient.name recipientName
+    FROM reminders r JOIN boards b ON b.id=r.board_id LEFT JOIN tasks t ON t.id=r.task_id JOIN users u ON u.id=r.created_by LEFT JOIN users recipient ON recipient.id=COALESCE(t.created_by,r.recipient_user_id,r.created_by)
+    WHERE r.status='pending' AND datetime(r.remind_at)<=datetime('now') ORDER BY r.remind_at LIMIT 20`).all() as Array<{id:number;createdBy:number;channelId:string;channelName:string;message:string;kind:string;eventType:string|null;boardId:number;boardKey:string;boardName:string;taskId:number|null;taskTitle:string|null;creatorName:string;discordUserId:string|null;recipientName:string|null}>;
   for (const reminder of due) {
     try {
       const context = reminder.taskTitle ? `**${reminder.boardName} · ${reminder.taskTitle}**` : `**${reminder.boardName}**`;
       const base=(process.env.NORTHLINE_PUBLIC_URL||"https://northline.vtuberoffices.com").replace(/\/$/,"");
       const link=reminder.taskId?`${base}/?board=${encodeURIComponent(reminder.boardKey||String(reminder.boardId))}&task=${reminder.taskId}`:`${base}/?board=${encodeURIComponent(reminder.boardKey||String(reminder.boardId))}`;
-      const ping=reminder.discordUserId?`<@${reminder.discordUserId}> `:"";
-      await sendDiscordReminder(reminder.channelId, `${ping}🛰️ ${context}\n🔔 **${reminder.creatorName}** set a reminder: ${reminder.message}\n${link}`,reminder.discordUserId?[reminder.discordUserId]:[]);
+      if(!reminder.discordUserId)throw new Error(`${reminder.recipientName||"Task creator"} has not linked Discord`);
+      await sendDiscordDirectMessage(reminder.discordUserId, `🛰️ ${context}\n🔔 **${reminder.creatorName}** set a reminder: ${reminder.message}\n${link}`);
       db.prepare("UPDATE reminders SET status='sent',sent_at=CURRENT_TIMESTAMP,error=NULL WHERE id=?").run(reminder.id);
       db.prepare(`INSERT INTO notification_deliveries(reminder_id,board_id_snapshot,board_key,board_name,task_title,created_by,channel_id,channel_name,message,kind,event_type,status,delivered_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'sent',CURRENT_TIMESTAMP) ON CONFLICT(reminder_id) DO UPDATE SET status='sent',error=NULL,delivered_at=CURRENT_TIMESTAMP`).run(reminder.id,reminder.boardId,reminder.boardKey,reminder.boardName,reminder.taskTitle,reminder.createdBy,reminder.channelId,reminder.channelName,reminder.message,reminder.kind,reminder.eventType);
     } catch (error) {

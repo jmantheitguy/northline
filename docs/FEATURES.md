@@ -8,11 +8,11 @@ Global search returns tasks only from boards the signed-in user can access. Dire
 
 ## Collaboration and identity
 
-Users sign in locally or through Authentik OIDC using their office identity. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Discord is an optional linked profile source—not a sign-in method—and supplies only the Discord ID/avatar used for profile pictures and targeted Task Buddy reminder mentions.
+Users sign in locally or through Authentik OIDC using their office identity. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Discord is an optional linked profile source—not a sign-in method—and supplies only the Discord ID/avatar used for profile pictures and private Task Buddy delivery.
 
 ## Task Buddy
 
-Each board can select a Discord text channel and enable assignment, status, comment, mention, and due-date notifications. Users can manage personal notification preferences. Scheduled board/task reminders support editing, cancellation, failure display, and retry. When a recipient has linked Discord, Task Buddy explicitly mentions only that recipient; arbitrary and role mentions remain disabled. Delivery messages include a direct clickable task link while suppressing Discord preview embeds. Delivery snapshots preserve history after the original task or board is deleted.
+Each board can enable assignment, status, comment, mention, and due-date notifications, and users can manage their personal notification preferences. Task Buddy privately DMs automatic events and task-specific reminders to the member who created the task; board-wide manual reminders go to the member who schedules them. Scheduled reminders support editing, cancellation, failure display, and retry. Delivery fails visibly when the intended recipient has not linked Discord. Messages include a direct clickable task link while suppressing Discord preview embeds, and delivery snapshots preserve history after the original task or board is deleted.
 
 ## Administration and operations
 

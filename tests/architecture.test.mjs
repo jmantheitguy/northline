@@ -33,7 +33,7 @@ test("board references are opaque while creator ownership remains relational",as
   assert.match(boards,/created_by/);assert.match(schema,/brd_\$\{randomBytes\(16\)/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);assert.match(ui,/query\.set\("board",active\.boardKey\)/);assert.match(permissions,/owner_id/);
 });
 
-test("Task Buddy automatic notifications are board-routed and preference aware",async()=>{
+test("Task Buddy automatic notifications are creator-routed and preference aware",async()=>{
   const [automation,boardRoute,preferences,ui]=await Promise.all([read("lib/task-notifications.ts"),read("app/api/boards/[id]/notifications/route.ts"),read("app/api/settings/notifications/route.ts"),read("app/northline-app.tsx")]);
   for(const event of ["assignment","status","comment","mention","due"])assert.match(automation,new RegExp(`\\b${event}\\b`));
   assert.match(automation,/INSERT OR IGNORE INTO reminders/);
@@ -46,10 +46,14 @@ test("Task Buddy automatic notifications are board-routed and preference aware",
 test("Discord reminders are permission checked and secrets stay server-side",async()=>{
   const [route,discord,worker,compose]=await Promise.all([read("app/api/reminders/route.ts"),read("lib/discord.ts"),read("lib/reminder-worker.ts"),read("compose.yaml")]);
   assert.match(route,/canEdit\(boardPermission\(user,Number\(boardId\)\)\)/);
-  assert.match(route,/Channel is not available to the bot/);
+  assert.match(route,/created_by createdBy/);
+  assert.match(route,/has not linked Discord/);
   assert.match(discord,/process\.env\.NORTHLINE_DISCORD_BOT_TOKEN/);
+  assert.match(discord,/\/users\/@me\/channels/);
+  assert.match(discord,/recipient_id/);
   assert.doesNotMatch(route,/NORTHLINE_DISCORD_BOT_TOKEN/);
   assert.match(discord,/allowed_mentions/);assert.match(discord,/flags:4/);
+  assert.match(worker,/COALESCE\(t\.created_by/);
   assert.match(worker,/setInterval/);
   assert.match(compose,/NORTHLINE_DISCORD_BOT_TOKEN/);
 });
@@ -74,7 +78,7 @@ test("administration metrics and audit history come from the database",async()=>
 
 test("release health and workflow tools remain permission constrained",async()=>{
   const [health,search,duplicate,activity,backup,restore]=await Promise.all([read("app/api/admin/health/route.ts"),read("app/api/search/route.ts"),read("app/api/tasks/[id]/duplicate/route.ts"),read("app/api/boards/[id]/activity/route.ts"),read("ops/backup/northline-backup.sh"),read("ops/backup/northline-restore-test.sh")]);
-  assert.match(health,/requireAdmin\(\)/);assert.match(health,/quick_check/);assert.match(health,/sendDiscordReminder/);
+  assert.match(health,/requireAdmin\(\)/);assert.match(health,/quick_check/);assert.match(health,/sendDiscordDirectMessage/);
   assert.match(search,/b\.owner_id=\?/);assert.match(search,/bm\.user_id=\?/);
   assert.match(duplicate,/canEdit\(boardPermission/);assert.match(activity,/boardPermission/);
   assert.match(backup,/backup\.json/);assert.match(restore,/restore\.json/);
@@ -114,7 +118,7 @@ test("directory, login, and Discord identities remain separate",async()=>{
   assert.match(sync,/WHERE directory_id=\?/);assert.doesNotMatch(sync,/oidc_subject=excluded\.oidc_subject/);
   assert.match(sync,/user_connections\/all/);assert.match(sync,/discordMemberProfile/);
   assert.match(discordSource,/"promoted": False/);assert.match(discordSource,/selected_sources\.remove/);
-  assert.match(worker,/discordUserId/);assert.match(worker,/allowed user|sendDiscordReminder/);
+  assert.match(worker,/discordUserId/);assert.match(worker,/COALESCE\(t\.created_by/);assert.match(worker,/sendDiscordDirectMessage/);
 });
 
 test("schema upgrades and operational failures are observable",async()=>{

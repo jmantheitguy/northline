@@ -2,14 +2,14 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.0.2
+## Current — Beta v0.0.3
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views
 - Task ownership, categories, priorities, due dates, and discussion
 - Authentik sign-in, group-controlled access, and a searchable directory
 - Administrator console, audit history, and emergency local recovery access
-- Task Buddy Discord channel discovery and scheduled reminders
+- Task Buddy private Discord delivery and scheduled reminders
 - Northline visual identity, application icons, and social preview assets
 - Scheduled encrypted complete-stack backups with a tested restore workflow and NAS replication
 - Task Buddy reminder management with delivery history, editing, cancellation, and retries

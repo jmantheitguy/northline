@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.0.2 — Streaming calendar product plan**
+Current release: **Beta v0.0.3 — Private Task Buddy delivery**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -74,22 +74,22 @@ The application combines visual task boards, private collaboration, user adminis
 ### Discord reminders
 
 - Server-side bot credentials that never reach the browser
-- Live discovery of text channels available to the configured bot
-- Board-wide and task-specific scheduled reminders
+- Private Discord delivery through the configured bot
+- Board-wide and task-specific scheduled reminders, with explicit recipient rules
 - Durable reminder state with sent, failed, and cancelled statuses
 - A self-hosted polling worker started with the Northline server
 - Task-reminder scheduling workflow
 - One-click “Remind me” scheduling directly from Task details
 - Consistent rich Discord formatting for automatic and scheduled reminders
 - Clickable Northline links with Discord preview embeds suppressed
-- Channel selection and reminder-message composition
-- Per-board Task Buddy channel routing and notification controls
+- Reminder-message composition without public channel configuration
+- Per-board Task Buddy event controls
 - Automatic assignment, status-change, comment, mention, and due-date messages
-- Per-user notification preferences for activity involving each member
+- Per-user notification preferences, evaluated for the task creator
 - Direct links from Discord messages to the related Northline task
 - Duplicate suppression plus shared delivery history and retry controls
 
-Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Northline validates every selected channel against the configured guild. It suppresses everyone, role, and arbitrary mentions while allowing a reminder to mention only its intended recipient when that user linked Discord in Authentik.
+Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the shared server, and rebuild the container. Task-specific and automatic notifications privately DM the task creator; board-wide manual reminders privately DM the member who scheduled them. A recipient must have linked Discord through Authentik. Northline disables everyone, role, and arbitrary mentions and reports failed private delivery in the Reminder center.
 
 ## Architecture
 

@@ -826,7 +826,7 @@ function BoardView({
           disabled={!data.canEdit}
           onClick={() => openModal("reminder")}
         >
-          ◷ Schedule Discord reminder
+          ◷ Schedule private reminder
         </button>
       </div>
       {mode === "board" && (
@@ -1155,7 +1155,7 @@ function Settings({ notify }: { notify: (s: string) => void }) {
           <div className="eyebrow">WORKSPACE SETTINGS</div>
           <h1>Integrations</h1>
           <p>
-            Connect community tools and choose where Northline sends updates.
+            Connect community tools and manage private Northline updates.
           </p>
         </div>
       </div>
@@ -1176,7 +1176,7 @@ function Settings({ notify }: { notify: (s: string) => void }) {
           <h3>Bot connection</h3>
           <p>
             {discord?.error ||
-              `${discord?.channels.length || 0} text channels are available to Northline. Bot credentials are managed only through the server environment.`}
+              `Task Buddy is available in ${discord?.channels.length || 0} shared-server channels and delivers reminders privately. Bot credentials are managed only through the server environment.`}
           </p>
         </div>
         <button
@@ -1206,7 +1206,7 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         <span className="connected">● Server-side</span>
       </div>
       <div className="settings-body notification-preferences">
-        <div><h3>My Task Buddy preferences</h3><p>Choose which board-channel events should include activity involving you.</p><div className="notification-options">{([['assignmentEnabled','Assignments'],['statusEnabled','Status changes'],['commentEnabled','Comments'],['mentionEnabled','Mentions'],['dueEnabled','Due-date warnings']] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={preferences[key]} onChange={(e)=>setPreferences({...preferences,[key]:e.target.checked})}/><span>{label}</span></label>)}</div></div>
+        <div><h3>My Task Buddy preferences</h3><p>Choose which task events Task Buddy may deliver privately.</p><div className="notification-options">{([['assignmentEnabled','Assignments'],['statusEnabled','Status changes'],['commentEnabled','Comments'],['mentionEnabled','Mentions'],['dueEnabled','Due-date warnings']] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={preferences[key]} onChange={(e)=>setPreferences({...preferences,[key]:e.target.checked})}/><span>{label}</span></label>)}</div></div>
         <button className="secondary" onClick={()=>jsonFetch('/api/settings/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(preferences)}).then(()=>notify('Notification preferences saved')).catch(e=>notify(e.message))}>Save preferences</button>
       </div>
       <div className="settings-body">
@@ -1470,12 +1470,12 @@ function Admin({
                 <HealthCard title="Database" status={health.database.status} detail={`${health.database.integrity} · schema v${health.database.migrationVersion} · ${formatBytes(health.database.sizeBytes)}`} />
                 <HealthCard title="VM storage" status={health.storage.status} detail={`${formatBytes(health.storage.freeBytes)} free of ${formatBytes(health.storage.totalBytes)}`} />
                 <HealthCard title="Authentik" status={health.identity.status==='configured'?'healthy':'degraded'} detail={`${health.identity.activeSessions} active sessions`} />
-                <HealthCard title="Task Buddy" status={health.discord.status} detail={health.discord.error||`${health.discord.channels} channels available`} />
+                <HealthCard title="Task Buddy" status={health.discord.status} detail={health.discord.error||`Private delivery ready · ${health.discord.channels} shared channels visible`} />
                 <HealthCard title="NAS backup" status={health.backup.status} detail={health.backup.message||health.backup.completedAt||'Awaiting report'} />
                 <HealthCard title="Restore test" status={health.restore.status} detail={health.restore.message||health.restore.completedAt||'Awaiting report'} />
                 <HealthCard title="Notifications" status={(health.reminders.counts.failed||0)>0?'degraded':'healthy'} detail={`${health.reminders.counts.sent||0} sent · ${health.reminders.counts.failed||0} failed`} />
               </div>
-              <div className="health-actions"><div><h3>Task Buddy delivery test</h3><p>Sends a compact, embed-free health message to the most recently configured board channel.</p></div><button className="discord-button" onClick={()=>jsonFetch('/api/admin/health',{method:'POST'}).then(data=>notify(`Test delivered to #${data.channelName}`)).catch(e=>notify(e.message))}>Send test message</button></div>
+              <div className="health-actions"><div><h3>Task Buddy delivery test</h3><p>Sends a compact, embed-free DM to your linked Discord account.</p></div><button className="discord-button" onClick={()=>jsonFetch('/api/admin/health',{method:'POST'}).then(()=>notify('Test delivered by DM')).catch(e=>notify(e.message))}>Send test DM</button></div>
               <small className="health-generated">Updated {new Date(health.generatedAt).toLocaleString()}</small>
             </>}
           </div>
@@ -1599,9 +1599,7 @@ function NorthlineModal({
   const [comments, setComments] = useState<any[]>([]);
   const [comment, setComment] = useState("");
   const [activity,setActivity]=useState<Array<{id:number;action:string;detail:string;createdAt:string;actorName:string;actorAvatar:string|null}>>([]);
-  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
   const [notificationSettings, setNotificationSettings] = useState({
-    channelId: board?.notifications?.channelId || "",
     assignmentEnabled: board?.notifications?.assignmentEnabled !== 0,
     statusEnabled: board?.notifications?.statusEnabled !== 0,
     commentEnabled: board?.notifications?.commentEnabled !== 0,
@@ -1610,7 +1608,6 @@ function NorthlineModal({
     dueWarningHours: board?.notifications?.dueWarningHours || 24,
   });
   const [reminder, setReminder] = useState({
-    channelId: board?.notifications?.channelId || "",
     taskId: task?.id ? String(task.id) : "",
     date: "",
     time: "",
@@ -1621,10 +1618,6 @@ function NorthlineModal({
       jsonFetch(`/api/tasks/${task.id}/comments`).then((d) =>
         setComments(d.comments),
       );
-    if (type === "reminder" || type === "board-settings")
-      jsonFetch("/api/discord/channels")
-        .then((d) => setChannels(d.channels || []))
-        .catch((e) => notify(e.message));
     if(type==="activity"&&board)jsonFetch(`/api/boards/${board.board.id}/activity`).then(data=>setActivity(data.activity||[])).catch((e)=>notify(e.message));
   }, [type, task]);
   const saveTask = () =>
@@ -1735,13 +1728,12 @@ function NorthlineModal({
         body: JSON.stringify({
           boardId: board.board.id,
           taskId: reminder.taskId ? Number(reminder.taskId) : null,
-          channelId: reminder.channelId,
           message: reminder.message,
           remindAt: new Date(`${reminder.date}T${reminder.time}`).toISOString(),
         }),
       });
       close();
-      notify("Discord reminder scheduled");
+      notify("Private Discord reminder scheduled");
     });
   return (
     <div
@@ -1977,13 +1969,7 @@ function NorthlineModal({
                 }
               />
             </label>
-            <label>
-              Task Buddy channel
-              <select value={notificationSettings.channelId} onChange={(e)=>setNotificationSettings({...notificationSettings,channelId:e.target.value})}>
-                <option value="">Automatic notifications off</option>
-                {channels.map(channel=><option key={channel.id} value={channel.id}>#{channel.name}</option>)}
-              </select>
-            </label>
+            <div className="settings-callout"><b>Private Task Buddy delivery</b><span>Enabled notifications are sent by DM to the person who created each task.</span></div>
             <div className="notification-options">
               <h3>Automatic notifications</h3>
               {([["assignmentEnabled","Assignments"],["statusEnabled","Status changes"],["commentEnabled","Comments"],["mentionEnabled","Mentions"],["dueEnabled","Due-date warnings"]] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={notificationSettings[key] as boolean} onChange={(e)=>setNotificationSettings({...notificationSettings,[key]:e.target.checked})}/><span>{label}</span></label>)}
@@ -2070,24 +2056,8 @@ function NorthlineModal({
         {type === "reminder" && (
           <>
             <span className="modal-icon discord-bg">#</span>
-            <h2>Schedule Discord reminder</h2>
-            <p>Task Buddy will post without mentioning users or roles.</p>
-            <label>
-              Channel
-              <select
-                value={reminder.channelId}
-                onChange={(e) =>
-                  setReminder((current) => ({ ...current, channelId: e.target.value }))
-                }
-              >
-                <option value="">Choose a channel…</option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <h2>Schedule private reminder</h2>
+            <p>Task Buddy will DM the task creator. Board-wide reminders are sent to you.</p>
             <label>
               Task (optional)
               <select
@@ -2139,7 +2109,6 @@ function NorthlineModal({
             <button
               className="discord-button wide"
               disabled={
-                !reminder.channelId ||
                 !reminder.date ||
                 !reminder.time ||
                 !reminder.message.trim()

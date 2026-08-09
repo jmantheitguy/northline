@@ -8,7 +8,7 @@ For updates, review the release notes, confirm a current NAS backup, pull the ta
 
 ## Health dashboard
 
-Open **Administration > Health**. Healthy production should show SQLite `ok`, adequate VM free space, Authentik configured, Task Buddy reachable, no unexplained failed reminders, a recent backup with NAS replication, and a recent successful restore test. The Task Buddy test sends a real message to the most recently configured board channel and records an audit event.
+Open **Administration > Health**. Healthy production should show SQLite `ok`, adequate VM free space, Authentik configured, Task Buddy reachable, no unexplained failed reminders, a recent backup with NAS replication, and a recent successful restore test. The Task Buddy test sends a real private message to the linked Discord account of the administrator running the check and records an audit event.
 
 ## Routine schedule
 
