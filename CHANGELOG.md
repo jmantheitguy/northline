@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.0.2 — Streaming calendar product plan
+
+- Publish a detailed future plan for private multi-calendar scheduling designed around streamer workflows.
+- Define opt-in public schedules, collaboration proposals, event invitations, attendance responses, privacy boundaries, moderation, and Task Buddy integration.
+- Establish a phased delivery path from private calendars through selective sharing, public schedules, collaboration discovery, workflow automation, and external interoperability.
+
 ## Beta v0.0.1 — Initial team validation release
 
 - Begin the Beta release line with private permissioned boards, task workflows, Authentik office identities, optional Discord profile linking, Task Buddy notifications, administration, health reporting, and operational recovery tooling.

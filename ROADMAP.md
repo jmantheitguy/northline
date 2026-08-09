@@ -2,7 +2,7 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.0.1
+## Current — Beta v0.0.2
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views
@@ -45,11 +45,16 @@ Northline is being built in public as a self-hosted project workspace for small 
 
 ## Longer-term ideas
 
-- Private multi-calendar support with selective sharing
-- External calendar import/export and integrations
+- Streamer-focused private multi-calendar support with selective sharing
+- Opt-in public stream schedules with local-time viewing and subscription feeds
+- Collaboration proposals, availability preferences, invitations, attendance responses, and shared events
+- Northline task and Task Buddy integration for stream preparation and announcements
+- External calendar import/export and later provider synchronization
 - Additional notification providers
 - Public API and webhooks
 - Reporting dashboards
 - Optional multi-workspace support
+
+The complete calendar and collaboration concept is described in [docs/FUTURE-PLANS.md](docs/FUTURE-PLANS.md).
 
 Please use a feature request to discuss new ideas. Security-sensitive reports should not be filed publicly.

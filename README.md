@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.0.1 — Initial team validation release**
+Current release: **Beta v0.0.2 — Streaming calendar product plan**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -19,6 +19,7 @@ The application combines visual task boards, private collaboration, user adminis
 | [Member onboarding](docs/ONBOARDING.md) | Authentik, Discord linking, profiles, access, and first-use steps |
 | [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release |
 | [Beta status](docs/BETA-STATUS.md) | Verified release evidence and remaining interactive validation |
+| [Future plans](docs/FUTURE-PLANS.md) | Streaming calendars, collaboration planning, and longer-term directions |
 | [Backup and recovery](ops/backup/README.md) | Encrypted VM/NAS backups and non-destructive restore testing |
 | [Authentik](infra/authentik/README.md) | Central identity and Northline security groups |
 | [Mail](infra/mail/README.md) | Stalwart, webmail, Cloudflare ingress, and Brevo relay |

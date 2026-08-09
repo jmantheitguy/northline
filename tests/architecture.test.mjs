@@ -87,9 +87,10 @@ test("dark mode is persistent and application-wide",async()=>{
 });
 
 test("public documentation covers the deployed platform without private network addresses",async()=>{
-  const docs=await Promise.all(["README.md","ROADMAP.md","SECURITY.md","CHANGELOG.md","docs/FEATURES.md","docs/ARCHITECTURE.md","docs/OPERATIONS.md","docs/ONBOARDING.md","docs/RELEASE-CHECKLIST.md","ops/backup/README.md","infra/authentik/README.md","infra/mail/README.md"].map(read));
+  const docs=await Promise.all(["README.md","ROADMAP.md","SECURITY.md","CHANGELOG.md","docs/FEATURES.md","docs/ARCHITECTURE.md","docs/OPERATIONS.md","docs/ONBOARDING.md","docs/RELEASE-CHECKLIST.md","docs/FUTURE-PLANS.md","ops/backup/README.md","infra/authentik/README.md","infra/mail/README.md"].map(read));
   const combined=docs.join("\n");
   for(const topic of ["dark theme","global search","board activity","task duplication","health dashboard","Task Buddy","Authentik","restore test"])assert.match(combined,new RegExp(topic,"i"));
+  assert.match(combined,/streaming calendars/i);assert.match(combined,/collaboration requests/i);
   assert.doesNotMatch(combined,/192\.168\.\d+\.\d+/);
   assert.doesNotMatch(combined,/Password1!/);
 });
