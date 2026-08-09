@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.3.1 — Brand and project foundation**
+Current release: **Alpha v0.3.2 — Repository integration verification**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.3.1 introduces Northline's complete visual identity across the application, browser icons, link previews, and Task Buddy. It also adds structured contribution templates and a public [product roadmap](ROADMAP.md).
+Alpha v0.3.2 verifies Northline's renamed GitHub repository integrations while retaining the visual identity, contribution templates, and public [product roadmap](ROADMAP.md) introduced in Alpha v0.3.1.
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 
