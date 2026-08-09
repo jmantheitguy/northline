@@ -8,6 +8,7 @@ const dataDirectory = process.env.NORTHLINE_DATA_DIR || path.join(process.cwd(),
 fs.mkdirSync(dataDirectory, { recursive: true });
 const db = new Database(path.join(dataDirectory, "northline.db"));
 export const createBoardPublicId=()=>`brd_${randomBytes(16).toString("hex")}`;
+export const createColumnKey=()=>`col_${randomBytes(8).toString("hex")}`;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -59,6 +60,18 @@ db.exec(`
     permission TEXT NOT NULL CHECK(permission IN ('viewer','editor')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(board_id,user_id)
+  );
+  CREATE TABLE IF NOT EXISTS board_columns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    column_key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#7c6ce7',
+    position INTEGER NOT NULL,
+    is_done INTEGER NOT NULL DEFAULT 0 CHECK(is_done IN (0,1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(board_id,column_key),
+    UNIQUE(board_id,position)
   );
   CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,6 +175,37 @@ db.prepare("UPDATE boards SET created_by=owner_id WHERE created_by IS NULL").run
 for(const board of db.prepare("SELECT id FROM boards WHERE public_id IS NULL OR public_id LIKE 'u%-b%'").all() as Array<{id:number}>)db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(createBoardPublicId(),board.id);
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS boards_public_id_idx ON boards(public_id)");
 
+const taskSchema=(db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get() as {sql:string}|undefined)?.sql||"";
+if(taskSchema.includes("CHECK(status IN ('ideas','ready','progress','hold','done'))")){
+  db.pragma("foreign_keys = OFF");
+  try{db.exec(`BEGIN;
+    CREATE TABLE tasks_dynamic (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'Medium' CHECK(priority IN ('Low','Medium','High')),
+      tag TEXT NOT NULL DEFAULT 'General',
+      due_date TEXT,
+      assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_by INTEGER NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO tasks_dynamic SELECT id,board_id,title,description,status,priority,tag,due_date,assignee_id,created_by,created_at,updated_at FROM tasks;
+    DROP TABLE tasks;
+    ALTER TABLE tasks_dynamic RENAME TO tasks;
+    COMMIT;`)}catch(error){if(db.inTransaction)db.exec("ROLLBACK");throw error}finally{db.pragma("foreign_keys = ON")}
+}
+db.exec("CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status)");
+
+export function createDefaultBoardColumns(boardId:number){
+  const insert=db.prepare("INSERT OR IGNORE INTO board_columns(board_id,column_key,name,color,position,is_done) VALUES(?,?,?,?,?,?)");
+  [["ideas","Ideas","#a78bfa",0,0],["ready","Ready","#60a5fa",1,0],["progress","In progress","#f59e0b",2,0],["hold","On hold","#f472b6",3,0],["done","Done","#34d399",4,1]].forEach(column=>insert.run(boardId,...column));
+}
+for(const board of db.prepare("SELECT id FROM boards").all() as Array<{id:number}>)createDefaultBoardColumns(board.id);
+
 const reminderColumns = db.prepare("PRAGMA table_info(reminders)").all() as Array<{name:string}>;
 const addReminderColumn = (name:string, definition:string) => {
   if (!reminderColumns.some(column => column.name === name)) {
@@ -202,7 +246,7 @@ addSessionColumn("user_agent","user_agent TEXT");
 addSessionColumn("created_ip","created_ip TEXT");
 addSessionColumn("last_seen_at","last_seen_at TEXT");
 
-const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"]];
+const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"],[10,"custom board workflow columns"]];
 const recordMigrations=db.transaction(()=>{const insert=db.prepare("INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)");for(const migration of migrations)insert.run(...migration)});recordMigrations();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;

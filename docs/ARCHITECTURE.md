@@ -18,7 +18,7 @@ The table describes logical responsibilities, not the production network map. In
 
 ## Data and authorization
 
-SQLite uses WAL mode and foreign keys. Board membership is owner, editor, or viewer; Admin is a workspace role. API routes authenticate the session and resolve permissions from the database before reading or mutating board data. Search and activity endpoints use the same accessible-board boundary. Random board IDs reduce enumeration but never replace authorization.
+SQLite uses WAL mode and foreign keys. Board membership is owner, editor, or viewer; Admin is a workspace role. API routes authenticate the session and resolve permissions from the database before reading or mutating board data. Search and activity endpoints use the same accessible-board boundary. Random board IDs reduce enumeration but never replace authorization. Workflow columns are stored per board with stable internal keys and ordered positions. Task status values are validated against that board's columns, and column removal moves affected tasks transactionally to an explicitly selected destination.
 
 Sessions use random browser tokens and stored SHA-256 digests. Local passwords use bcrypt. OIDC state and PKCE protect the Authentik callback. Authentik directory UUIDs, OIDC subjects, and optional Discord user IDs are stored independently so linking a social profile cannot replace the office identity. Board authorization is independently derived from ownership or an explicit membership row; the site-administrator role does not bypass that boundary. Integration secrets remain environment variables and are not returned to the browser.
 

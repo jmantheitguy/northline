@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.1.0 — Custom board workflows
+
+- Replace the fixed five-column workflow with persistent, board-specific columns across Kanban, list, timeline, calendar, task editing, filters, progress, and reminders.
+- Let board owners and editors add, rename, recolor, reorder, and remove columns from a dedicated workflow manager.
+- Require a destination column when removing a populated workflow stage so tasks are moved safely instead of deleted or orphaned.
+- Preserve server-side board permissions on every column operation and validate task status against the board's own workflow.
+- Repair the task action layout so Delete, Duplicate, Remind me, and Save task remain readable at desktop and mobile widths.
+
 ## Beta v0.0.4 — Private board isolation
 
 - Remove the implicit site-administrator bypass from board discovery, deep links, search, reminders, editing, sharing, and deletion.

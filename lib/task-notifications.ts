@@ -6,7 +6,7 @@ type EventType="assignment"|"status"|"comment"|"mention"|"due";
 type TaskContext={id:number;boardId:number;title:string;status?:string|null;assigneeId?:number|null;dueDate?:string|null;createdBy?:number|null};
 
 const eventColumn:Record<EventType,string>={assignment:"assignment_enabled",status:"status_enabled",comment:"comment_enabled",mention:"mention_enabled",due:"due_enabled"};
-const statusName:Record<string,string>={ideas:"Ideas",ready:"Ready",progress:"In progress",hold:"On hold",done:"Done"};
+function statusName(boardId:number,key:string|null|undefined){return (db.prepare("SELECT name FROM board_columns WHERE board_id=? AND column_key=?").get(boardId,key||"") as {name:string}|undefined)?.name||key||"Unknown"}
 
 function settings(boardId:number){
   return db.prepare(`SELECT * FROM board_notification_settings WHERE board_id=?`).get(boardId) as Record<string,unknown>|undefined;
@@ -33,7 +33,7 @@ export function notifyTaskCreated(task:TaskContext,actorId:number){
 
 export function notifyTaskChanges(before:TaskContext,after:TaskContext,actorId:number){
   if(before.assigneeId!==after.assigneeId&&after.assigneeId){const person=db.prepare("SELECT name FROM users WHERE id=?").get(after.assigneeId) as {name:string}|undefined;enqueue(after,actorId,"assignment",`👤 **${person?.name||"A teammate"}** was assigned to **${after.title}**.`,`assignment:${after.id}:${after.assigneeId}:${Date.now()}`);}
-  if(before.status!==after.status)enqueue(after,actorId,"status",`🔄 **${after.title}** moved from **${statusName[before.status||""]||before.status}** to **${statusName[after.status||""]||after.status}**.`,`status:${after.id}:${after.status}:${Date.now()}`);
+  if(before.status!==after.status)enqueue(after,actorId,"status",`🔄 **${after.title}** moved from **${statusName(after.boardId,before.status)}** to **${statusName(after.boardId,after.status)}**.`,`status:${after.id}:${after.status}:${Date.now()}`);
   if(before.dueDate!==after.dueDate||before.status!==after.status)scheduleDueNotification(after,actorId);
 }
 
@@ -46,7 +46,8 @@ export function notifyComment(task:TaskContext,actorId:number,actorName:string,b
 
 export function scheduleDueNotification(task:TaskContext,actorId:number){
   db.prepare("UPDATE reminders SET status='cancelled',error=NULL WHERE task_id=? AND event_type='due' AND status='pending'").run(task.id);
-  if(!task.dueDate||task.status==="done")return;
+  const completed=(db.prepare("SELECT is_done isDone FROM board_columns WHERE board_id=? AND column_key=?").get(task.boardId,task.status||"") as {isDone:number}|undefined)?.isDone===1;
+  if(!task.dueDate||completed)return;
   const config=settings(task.boardId);const hours=Number(config?.due_warning_hours||24);
   const due=new Date(`${task.dueDate}T17:00:00Z`);const when=new Date(due.getTime()-hours*3600000);if(when<=new Date())when.setTime(Date.now()+1000);
   enqueue(task,actorId,"due",`⏰ **${task.title}** is due ${task.dueDate}.`,`due:${task.id}:${task.dueDate}:${hours}`,when);

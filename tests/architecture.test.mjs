@@ -138,3 +138,12 @@ test("site administration does not bypass private board membership",async()=>{
   assert.match(ui,/people=\{boardData\?\.assignees \|\| \[\]\}/);
   assert.match(ui,/directoryPeople=\{directoryUsers\}/);
 });
+
+test("board workflow columns are persistent, mutable, and task safe",async()=>{
+  const [schema,collection,item,detail,createTask,updateTask,ui,styles]=await Promise.all([read("lib/db.ts"),read("app/api/boards/[id]/columns/route.ts"),read("app/api/boards/[id]/columns/[columnId]/route.ts"),read("app/api/boards/[id]/route.ts"),read("app/api/boards/[id]/tasks/route.ts"),read("app/api/tasks/[id]/route.ts"),read("app/northline-app.tsx"),read("app/v2.css")]);
+  assert.match(schema,/CREATE TABLE IF NOT EXISTS board_columns/);assert.match(schema,/custom board workflow columns/);assert.match(schema,/CREATE TABLE tasks_dynamic/);
+  for(const route of [collection,item])assert.match(route,/canEdit\(boardPermission/);
+  assert.match(collection,/COLUMN\.REORDER/);assert.match(item,/destinationId/);assert.match(item,/UPDATE tasks SET status=/);assert.match(item,/A board must keep at least one column/);
+  assert.match(detail,/column_key key/);assert.match(createTask,/SELECT 1 FROM board_columns/);assert.match(updateTask,/SELECT 1 FROM board_columns/);
+  assert.match(ui,/function ColumnManager/);assert.match(ui,/Move tasks to/);assert.match(ui,/data\.columns\.map/);assert.match(styles,/\.task-actions/);
+});

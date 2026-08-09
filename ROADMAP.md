@@ -2,7 +2,11 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.0.4
+## Current — Beta v0.1.0
+
+- Custom board workflow columns with persistent ordering, names, colors, and completion semantics
+- Safe task migration when a workflow column is removed
+- Responsive task action controls across desktop and mobile layouts
 
 - Private boards with owner, editor, and viewer permissions
 - Kanban, list, timeline, and calendar-oriented task views

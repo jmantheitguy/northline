@@ -6,8 +6,9 @@ import Image from "next/image";
 import { NORTHLINE_VERSION } from "@/lib/version";
 import { ReminderCenter } from "./reminder-center";
 
-type Status = "ideas" | "ready" | "progress" | "hold" | "done";
+type Status = string;
 type Priority = "Low" | "Medium" | "High";
+type BoardColumn={id:number;key:string;name:string;color:string;position:number;isDone:number};
 type Task = {
   id: number;
   title: string;
@@ -43,6 +44,7 @@ type BoardDetail = {
   tasks: Task[];
   members: Member[];
   assignees: Array<{id:number;name:string;email:string;avatar:string|null}>;
+  columns: BoardColumn[];
   permission: string;
   canEdit: boolean;
   canShare: boolean;
@@ -74,19 +76,12 @@ type Modal =
   | "board-settings"
   | "share"
   | "activity"
+  | "columns"
   | "reminder"
   | null;
 type View = "board" | "directory" | "reminders" | "settings" | "admin";
 type BoardMode = "board" | "list" | "timeline" | "calendar";
 type SearchResult={id:number;title:string;status:string;priority:string;boardId:number;boardKey:string;boardName:string};
-
-const columns: { id: Status; label: string; color: string }[] = [
-  { id: "ideas", label: "Ideas", color: "#a78bfa" },
-  { id: "ready", label: "Ready", color: "#60a5fa" },
-  { id: "progress", label: "In progress", color: "#f59e0b" },
-  { id: "hold", label: "On hold", color: "#f472b6" },
-  { id: "done", label: "Done", color: "#34d399" },
-];
 
 function BrandMark({ priority = false }: { priority?: boolean }) {
   return (
@@ -103,7 +98,7 @@ function BrandMark({ priority = false }: { priority?: boolean }) {
 const emptyTask = {
   title: "",
   description: "",
-  status: "ideas" as Status,
+  status: "" as Status,
   priority: "Medium" as Priority,
   tag: "General",
   dueDate: "",
@@ -236,6 +231,7 @@ export function NorthlineApp() {
     if (isAdmin && view === "admin") void loadAdminUsers();
   }, [isAdmin, view]);
   useEffect(()=>{if(search.trim().length<2){setGlobalResults([]);return}const timer=window.setTimeout(()=>jsonFetch(`/api/search?q=${encodeURIComponent(search)}`).then(data=>setGlobalResults(data.results||[])).catch(()=>setGlobalResults([])),250);return()=>window.clearTimeout(timer)},[search]);
+  useEffect(()=>{if(statusFilter!=="all"&&boardData&&!boardData.columns.some(column=>column.key===statusFilter))setStatusFilter("all")},[boardData,statusFilter]);
   const tasks = useMemo(() => {
     const list = [...(boardData?.tasks || [])].filter(
       (t) =>
@@ -700,7 +696,8 @@ function BoardView({
   openTask,
   openModal,
 }: any) {
-  const done = tasks.filter((t: Task) => t.status === "done").length;
+  const columns=data.columns as BoardColumn[];
+  const done = tasks.filter((t: Task) => columns.find(column=>column.key===t.status)?.isDone===1).length;
   const pct = Math.round((done / Math.max(tasks.length, 1)) * 100);
   return (
     <section className="content board-page">
@@ -732,6 +729,7 @@ function BoardView({
               ♙ Share
             </button>
           )}
+          {data.canEdit && <button className="secondary" onClick={()=>openModal("columns")}>☷ Columns</button>}
           {data.canShare && (
             <button
               className="secondary"
@@ -785,8 +783,8 @@ function BoardView({
           >
             <option value="all">All</option>
             {columns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
+              <option key={c.id} value={c.key}>
+                {c.name}
               </option>
             ))}
           </select>
@@ -842,9 +840,9 @@ function BoardView({
           add={() => openModal("task-create")}
         />
       )}{" "}
-      {mode === "list" && <TaskList tasks={tasks} openTask={openTask} />}{" "}
-      {mode === "timeline" && <Timeline tasks={tasks} openTask={openTask} />}{" "}
-      {mode === "calendar" && <Calendar tasks={tasks} openTask={openTask} />}{" "}
+      {mode === "list" && <TaskList tasks={tasks} columns={columns} openTask={openTask} />}{" "}
+      {mode === "timeline" && <Timeline tasks={tasks} columns={columns} openTask={openTask} />}{" "}
+      {mode === "calendar" && <Calendar tasks={tasks} columns={columns} openTask={openTask} />}{" "}
       {tasks.length === 0 && (
         <div className="empty-state">
           <b>No tasks match this view</b>
@@ -864,25 +862,25 @@ function Kanban({
   add,
 }: any) {
   return (
-    <div className="kanban">
-      {columns.map((col) => (
+    <div className="kanban" style={{gridTemplateColumns:`repeat(${data.columns.length}, minmax(210px, 1fr))`}}>
+      {data.columns.map((col:BoardColumn) => (
         <div
           className="column"
           key={col.id}
           onDragOver={(e) => data.canEdit && e.preventDefault()}
           onDrop={() => {
-            if (dragged) void moveTask(dragged, col.id);
+            if (dragged) void moveTask(dragged, col.key);
             setDragged(null);
           }}
         >
           <div className="column-head">
             <span style={{ background: col.color }} />
-            {col.label}
-            <em>{tasks.filter((t: Task) => t.status === col.id).length}</em>
+            {col.name}
+            <em>{tasks.filter((t: Task) => t.status === col.key).length}</em>
           </div>
           <div className="cards">
             {tasks
-              .filter((t: Task) => t.status === col.id)
+              .filter((t: Task) => t.status === col.key)
               .map((task: Task) => (
                 <TaskCard
                   key={task.id}
@@ -943,9 +941,11 @@ function TaskCard({
 }
 function TaskList({
   tasks,
+  columns,
   openTask,
 }: {
   tasks: Task[];
+  columns:BoardColumn[];
   openTask: (task: Task) => void;
 }) {
   return (
@@ -963,8 +963,8 @@ function TaskList({
             <b>{t.title}</b>
             <small>{t.tag}</small>
           </span>
-          <span className={`status-dot ${t.status}`}>
-            {columns.find((c) => c.id === t.status)?.label}
+          <span className="status-dot" style={{"--status-color":columns.find(c=>c.key===t.status)?.color} as React.CSSProperties}>
+            {columns.find((c) => c.key === t.status)?.name||"Unknown"}
           </span>
           <span>{t.ownerName || "Unassigned"}</span>
           <span>{t.due || "No date"}</span>
@@ -978,9 +978,11 @@ function TaskList({
 }
 function Timeline({
   tasks,
+  columns,
   openTask,
 }: {
   tasks: Task[];
+  columns:BoardColumn[];
   openTask: (task: Task) => void;
 }) {
   const dated = tasks
@@ -1000,12 +1002,12 @@ function Timeline({
               day: "numeric",
             })}
           </time>
-          <i className={`timeline-dot ${t.status}`} />
+          <i className="timeline-dot" style={{background:columns.find(c=>c.key===t.status)?.color}} />
           <span>
             <b>{t.title}</b>
             <small>
               {t.ownerName || "Unassigned"} ·{" "}
-              {columns.find((c) => c.id === t.status)?.label}
+              {columns.find((c) => c.key === t.status)?.name||"Unknown"}
             </small>
           </span>
           <em style={{ width: `${Math.max(15, 100 - index * 8)}%` }} />
@@ -1022,9 +1024,11 @@ function Timeline({
 }
 function Calendar({
   tasks,
+  columns,
   openTask,
 }: {
   tasks: Task[];
+  columns:BoardColumn[];
   openTask: (task: Task) => void;
 }) {
   const groups = Object.entries(
@@ -1049,7 +1053,7 @@ function Calendar({
           <div>
             {list.map((t) => (
               <button key={t.id} onClick={() => openTask(t)}>
-                <i className={`status-dot ${t.status}`} />
+                <i className="status-dot" style={{"--status-color":columns.find(c=>c.key===t.status)?.color} as React.CSSProperties} />
                 <span>
                   <b>{t.title}</b>
                   <small>{t.ownerName || "Unassigned"}</small>
@@ -1566,6 +1570,16 @@ function Security({ title, copy }: { title: string; copy: string }) {
 function formatBytes(value:number){if(!Number.isFinite(value))return "Unknown";const units=["B","KB","MB","GB","TB"];let amount=value,index=0;while(amount>=1024&&index<units.length-1){amount/=1024;index++}return `${amount.toFixed(index>1?1:0)} ${units[index]}`}
 function HealthCard({title,status,detail}:{title:string;status:string;detail:string}){const normalized=status==="healthy"||status==="success"?"healthy":status==="unknown"?"unknown":"degraded";return <article className={`health-card ${normalized}`}><div><i/><span>{normalized}</span></div><h3>{title}</h3><p>{detail}</p></article>}
 
+function ColumnManager({board,busy,run,refresh,notify}:{board:BoardDetail;busy:boolean;run:(action:()=>Promise<void>)=>void;refresh:()=>Promise<void>;close?:()=>void;notify:(message:string)=>void}){
+  const[drafts,setDrafts]=useState<BoardColumn[]>(board.columns);const[newName,setNewName]=useState("");const[newColor,setNewColor]=useState("#7c6ce7");const[destinations,setDestinations]=useState<Record<number,string>>({});
+  const add=()=>run(async()=>{const data=await jsonFetch(`/api/boards/${board.board.id}/columns`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:newName,color:newColor})});setDrafts(current=>[...current,data.column]);setNewName("");await refresh();notify("Column added")});
+  const save=(column:BoardColumn)=>run(async()=>{await jsonFetch(`/api/boards/${board.board.id}/columns/${column.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:column.name,color:column.color,isDone:column.isDone===1})});await refresh();notify("Column updated")});
+  const move=(index:number,direction:number)=>{const next=[...drafts],target=index+direction;if(target<0||target>=next.length)return;[next[index],next[target]]=[next[target],next[index]];setDrafts(next);run(async()=>{await jsonFetch(`/api/boards/${board.board.id}/columns`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({columnIds:next.map(column=>column.id)})});await refresh();notify("Columns reordered")})};
+  const remove=(column:BoardColumn)=>{const destinationId=destinations[column.id]||String(drafts.find(item=>item.id!==column.id)?.id||"");if(!destinationId)return;run(async()=>{await jsonFetch(`/api/boards/${board.board.id}/columns/${column.id}?destinationId=${destinationId}`,{method:"DELETE"});setDrafts(current=>current.filter(item=>item.id!==column.id));await refresh();notify("Column removed and tasks moved")})};
+  const change=(id:number,patch:Partial<BoardColumn>)=>setDrafts(current=>current.map(column=>column.id===id?{...column,...patch}:column));
+  return <><h2>Workflow columns</h2><p>Add, rename, reorder, or remove the stages on this board. Removing a column moves its tasks to the destination you choose.</p><div className="column-manager">{drafts.map((column,index)=><article key={column.id}><div className="column-editor-main"><input aria-label="Column color" type="color" value={column.color} onChange={event=>change(column.id,{color:event.target.value})}/><input aria-label="Column name" maxLength={50} value={column.name} onChange={event=>change(column.id,{name:event.target.value})}/><label className="done-column"><input type="checkbox" checked={column.isDone===1} onChange={event=>change(column.id,{isDone:event.target.checked?1:0})}/> Completed</label></div><div className="column-editor-actions"><button className="icon-button" disabled={busy||index===0} onClick={()=>move(index,-1)} aria-label={`Move ${column.name} left`}>←</button><button className="icon-button" disabled={busy||index===drafts.length-1} onClick={()=>move(index,1)} aria-label={`Move ${column.name} right`}>→</button><button className="secondary" disabled={busy||!column.name.trim()} onClick={()=>save(column)}>Save</button></div>{drafts.length>1&&<div className="column-delete"><select value={destinations[column.id]||""} onChange={event=>setDestinations({...destinations,[column.id]:event.target.value})}><option value="">Move tasks to…</option>{drafts.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="danger subtle" disabled={busy||!destinations[column.id]} onClick={()=>remove(column)}>Remove</button></div>}</article>)}</div><div className="column-create"><input type="color" value={newColor} onChange={event=>setNewColor(event.target.value)}/><input placeholder="New column name" maxLength={50} value={newName} onChange={event=>setNewName(event.target.value)}/><button className="primary" disabled={busy||!newName.trim()} onClick={add}>＋ Add column</button></div></>
+}
+
 function NorthlineModal({
   type,
   close,
@@ -1579,6 +1593,7 @@ function NorthlineModal({
   notify,
   openTaskReminder,
 }: any) {
+  const columns=(board?.columns||[]) as BoardColumn[];
   const [taskForm, setTaskForm] = useState(
     task
       ? {
@@ -1590,7 +1605,7 @@ function NorthlineModal({
           dueDate: task.due || "",
           assigneeId: task.ownerId ? String(task.ownerId) : "",
         }
-      : emptyTask,
+      : {...emptyTask,status:columns[0]?.key||""},
   );
   const [boardForm, setBoardForm] = useState({
     name: board?.board.name || "",
@@ -1743,7 +1758,7 @@ function NorthlineModal({
       className="modal-backdrop"
       onMouseDown={(e) => e.target === e.currentTarget && close()}
     >
-      <div className={`modal ${type === "task-detail" ? "modal-large" : ""}`}>
+      <div className={`modal ${type === "task-detail"||type==="columns" ? "modal-large" : ""}`}>
         <button className="modal-close" onClick={close}>
           ×
         </button>
@@ -1790,8 +1805,8 @@ function NorthlineModal({
                   }
                 >
                   {columns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
+                    <option key={c.id} value={c.key}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -1853,7 +1868,7 @@ function NorthlineModal({
                 </select>
               </label>
             </div>
-            <div className="modal-actions">
+            <div className="modal-actions task-actions">
               {type === "task-detail" && (
                 <><button className="danger" onClick={deleteTask}>Delete</button><button className="secondary" onClick={duplicateTask}>⧉ Duplicate</button><button className="discord-button" onClick={openTaskReminder}>◷ Remind me</button></>
               )}
@@ -1945,6 +1960,7 @@ function NorthlineModal({
           </>
         )}
         {type==="activity"&&<><h2>Board activity</h2><p>The latest changes across this board.</p><div className="activity-feed">{activity.length?activity.map(item=><article key={item.id}><Avatar name={item.actorName} avatar={item.actorAvatar}/><span><b>{item.actorName}</b><p>{item.detail}</p><small>{new Date(`${item.createdAt}Z`).toLocaleString()}</small></span></article>):<div className="empty-state"><b>No activity yet</b><span>New task changes will appear here.</span></div>}</div></>}
+        {type==="columns"&&<ColumnManager board={board} busy={busy} run={run} refresh={refresh} close={close} notify={notify}/>}
         {type === "board-settings" && (
           <>
             <h2>Board settings</h2>

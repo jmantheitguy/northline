@@ -1383,6 +1383,7 @@ button {
   min-height: 80px;
   resize: vertical;
 }
+.modal-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}.modal-actions button{min-width:0;white-space:nowrap}.task-actions{display:grid;grid-template-columns:auto 1fr 1fr 1fr}.task-actions button{width:100%;min-height:42px;height:auto;padding:9px 12px;line-height:1.2}.column-manager{display:grid;gap:10px;max-height:56vh;overflow:auto;padding-right:3px}.column-manager article{border:1px solid var(--line);border-radius:11px;padding:12px;background:var(--subtle)}.column-editor-main,.column-editor-actions,.column-delete,.column-create{display:flex;align-items:center;gap:9px}.column-editor-main>input[type="color"],.column-create>input[type="color"]{width:42px;height:38px;padding:3px;flex:0 0 auto}.column-editor-main>input[type="text"],.column-editor-main>input:not([type]),.column-create>input:not([type="color"]){flex:1}.done-column{margin:0!important;flex-direction:row!important;align-items:center;white-space:nowrap}.done-column input{width:16px!important;height:16px}.column-editor-actions{margin-top:10px;justify-content:flex-end}.column-editor-actions .secondary{height:34px}.column-delete{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.column-delete select{flex:1}.column-delete .danger{height:36px}.column-create{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.column-create input:not([type="color"]){min-width:0;border:1px solid var(--line);border-radius:7px;padding:10px;background:var(--panel);color:var(--text)}
 .modal-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1500,5 +1501,6 @@ button {
   .modal-row {
     grid-template-columns: 1fr;
   }
+  .task-actions{grid-template-columns:1fr 1fr}.column-editor-main{align-items:flex-start;flex-wrap:wrap}.column-editor-main>input:not([type="color"]){flex-basis:calc(100% - 55px)}.done-column{margin-left:51px!important}.column-create{flex-wrap:wrap}.column-create input:not([type="color"]){flex:1}.column-create button{width:100%}
   .health-grid{grid-template-columns:1fr}.health-heading,.health-actions{align-items:flex-start;flex-direction:column}.health-actions button{width:100%}
 }
