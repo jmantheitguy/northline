@@ -8,11 +8,11 @@ export async function GET() {
   const user=await currentUser(); if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
   const reminders=db.prepare(`SELECT r.id,r.board_id boardId,r.task_id taskId,r.channel_id channelId,r.channel_name channelName,
     r.message,r.remind_at remindAt,r.status,r.error,r.created_at createdAt,r.sent_at sentAt,r.kind,r.event_type eventType,b.name boardName,t.title taskTitle,
-    CASE WHEN b.owner_id=? OR ?='Admin' OR bm.permission='editor' THEN 1 ELSE 0 END canManage
+    CASE WHEN b.owner_id=? OR bm.permission='editor' THEN 1 ELSE 0 END canManage
     FROM reminders r JOIN boards b ON b.id=r.board_id LEFT JOIN tasks t ON t.id=r.task_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
-    WHERE b.owner_id=? OR ?='Admin' OR bm.user_id=? ORDER BY r.remind_at DESC LIMIT 100`).all(user.id,user.role,user.id,user.id,user.role,user.id) as Array<Record<string,unknown>>;
-  const archived=db.prepare(`SELECT -d.id id,d.board_id_snapshot boardId,NULL taskId,d.channel_id channelId,d.channel_name channelName,d.message,d.created_at remindAt,d.status,d.error,d.created_at createdAt,d.delivered_at sentAt,d.kind,d.event_type eventType,d.board_name boardName,d.task_title taskTitle,0 canManage FROM notification_deliveries d WHERE NOT EXISTS(SELECT 1 FROM reminders r WHERE r.id=d.reminder_id) AND (d.created_by=? OR ?='Admin') ORDER BY d.id DESC LIMIT 100`).all(user.id,user.role);
+    WHERE b.owner_id=? OR bm.user_id=? ORDER BY r.remind_at DESC LIMIT 100`).all(user.id,user.id,user.id,user.id) as Array<Record<string,unknown>>;
+  const archived=db.prepare(`SELECT -d.id id,d.board_id_snapshot boardId,NULL taskId,d.channel_id channelId,d.channel_name channelName,d.message,d.created_at remindAt,d.status,d.error,d.created_at createdAt,d.delivered_at sentAt,d.kind,d.event_type eventType,d.board_name boardName,d.task_title taskTitle,0 canManage FROM notification_deliveries d WHERE NOT EXISTS(SELECT 1 FROM reminders r WHERE r.id=d.reminder_id) AND d.created_by=? ORDER BY d.id DESC LIMIT 100`).all(user.id);
   return NextResponse.json({reminders:[...reminders,...archived as Array<Record<string,unknown>>].sort((a,b)=>String(b.remindAt).localeCompare(String(a.remindAt))).slice(0,100)});
 }
 

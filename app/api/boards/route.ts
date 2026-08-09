@@ -5,10 +5,10 @@ import db,{createBoardPublicId} from "@/lib/db";
 export async function GET(){
   const user=await currentUser(); if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
   let boards=db.prepare(`SELECT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,
-    CASE WHEN b.owner_id=? THEN 'owner' WHEN ?='Admin' THEN 'admin' ELSE bm.permission END permission,
+    CASE WHEN b.owner_id=? THEN 'owner' ELSE bm.permission END permission,
     (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id) taskCount
     FROM boards b JOIN users u ON u.id=b.owner_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
-    WHERE b.owner_id=? OR ?='Admin' OR bm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.role,user.id,user.id,user.role,user.id);
+    WHERE b.owner_id=? OR bm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id);
   if(!boards.length){const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by) VALUES(?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);boards=[{id,boardKey,name:"My first board",description:"Plan your first project and invite collaborators.",ownerId:user.id,ownerName:user.name,permission:"owner",taskCount:0}];}
   return NextResponse.json({boards});
 }

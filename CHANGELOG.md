@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.0.4 — Private board isolation
+
+- Remove the implicit site-administrator bypass from board discovery, deep links, search, reminders, editing, sharing, and deletion.
+- Keep site administration focused on workspace operations and account management; administrators must be explicitly invited to collaborate on another member's board.
+- Limit task assignee choices to the board owner and active members who have been granted access.
+- Add automated regression coverage for administrator isolation and server-filtered assignee lists.
+
 ## Beta v0.0.3 — Private Task Buddy delivery
 
 - Route automatic task activity and task-specific reminders to the Discord account linked by the task creator.

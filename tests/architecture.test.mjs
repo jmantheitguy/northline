@@ -8,8 +8,9 @@ test("board mutations enforce server-side permissions",async()=>{
   const [taskRoute,memberRoute,permissions]=await Promise.all([read("app/api/tasks/[id]/route.ts"),read("app/api/boards/[id]/members/route.ts"),read("lib/boards.ts")]);
   assert.match(taskRoute,/canEdit\(boardPermission\(user,task\.board_id\)\)/);
   assert.match(memberRoute,/canShare\(boardPermission\(user,boardId\)\)/);
-  assert.match(permissions,/permission==="owner"\|\|permission==="admin"\|\|permission==="editor"/);
-  assert.match(permissions,/permission==="owner"\|\|permission==="admin"/);
+  assert.match(permissions,/permission==="owner"\|\|permission==="editor"/);
+  assert.match(permissions,/canShare=.*permission==="owner"/);
+  assert.doesNotMatch(permissions,/permission==="admin"|user\.role==="Admin"/);
 });
 
 test("directory synchronization revokes removed Authentik accounts",async()=>{
@@ -127,4 +128,13 @@ test("schema upgrades and operational failures are observable",async()=>{
 
 test("authorization matrix is enforced at every board capability",async()=>{
   const routes=await Promise.all(["app/api/boards/[id]/route.ts","app/api/boards/[id]/tasks/route.ts","app/api/boards/[id]/members/route.ts","app/api/boards/[id]/notifications/route.ts","app/api/boards/[id]/activity/route.ts","app/api/tasks/[id]/route.ts","app/api/tasks/[id]/duplicate/route.ts","app/api/tasks/[id]/comments/route.ts","app/api/reminders/route.ts","app/api/search/route.ts"].map(read));const joined=routes.join("\n");assert.match(joined,/boardPermission/);assert.match(joined,/canEdit/);assert.match(joined,/canShare/);assert.match(joined,/b\.owner_id=\?/);assert.match(joined,/bm\.user_id=\?/);
+});
+
+test("site administration does not bypass private board membership",async()=>{
+  const [permissions,boards,detail,search,reminders,ui]=await Promise.all([read("lib/boards.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("app/api/search/route.ts"),read("app/api/reminders/route.ts"),read("app/northline-app.tsx")]);
+  for(const source of [permissions,boards,search,reminders])assert.doesNotMatch(source,/\?='Admin'|role==="Admin"|permission==="admin"/);
+  assert.match(detail,/const assignees=db\.prepare/);
+  assert.match(detail,/u\.id=b\.owner_id OR bm\.user_id IS NOT NULL/);
+  assert.match(ui,/people=\{boardData\?\.assignees \|\| \[\]\}/);
+  assert.match(ui,/directoryPeople=\{directoryUsers\}/);
 });

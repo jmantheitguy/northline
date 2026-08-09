@@ -8,7 +8,7 @@ Global search returns tasks only from boards the signed-in user can access. Dire
 
 ## Collaboration and identity
 
-Users sign in locally or through Authentik OIDC using their office identity. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Discord is an optional linked profile source—not a sign-in method—and supplies only the Discord ID/avatar used for profile pictures and private Task Buddy delivery.
+Users sign in locally or through Authentik OIDC using their office identity. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Site administrators do not receive implicit access to private board content and must be shared onto a board like any other collaborator. Task assignment is limited to the owner and active shared members. Discord is an optional linked profile source—not a sign-in method—and supplies only the Discord ID/avatar used for profile pictures and private Task Buddy delivery.
 
 ## Task Buddy
 

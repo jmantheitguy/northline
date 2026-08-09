@@ -28,7 +28,7 @@ type BoardSummary = {
   description: string;
   ownerId: number;
   ownerName: string;
-  permission: "owner" | "admin" | "editor" | "viewer";
+  permission: "owner" | "editor" | "viewer";
   taskCount: number;
 };
 type Member = {
@@ -42,6 +42,7 @@ type BoardDetail = {
   board: { id: number; boardKey:string; name: string; description: string; ownerId: number; createdBy:number };
   tasks: Task[];
   members: Member[];
+  assignees: Array<{id:number;name:string;email:string;avatar:string|null}>;
   permission: string;
   canEdit: boolean;
   canShare: boolean;
@@ -341,7 +342,7 @@ export function NorthlineApp() {
         </div>
         <nav className="boards">
           {boards
-            .filter((b) => b.permission === "owner" || b.permission === "admin")
+            .filter((b) => b.permission === "owner")
             .map((b) => (
               <BoardNav
                 key={b.id}
@@ -482,7 +483,8 @@ export function NorthlineApp() {
           }}
           board={boardData}
           task={selectedTask}
-          people={directoryUsers}
+          people={boardData?.assignees || []}
+          directoryPeople={directoryUsers}
           busy={busy}
           run={mutate}
           refresh={refresh}
@@ -1570,6 +1572,7 @@ function NorthlineModal({
   board,
   task,
   people,
+  directoryPeople,
   busy,
   run,
   refresh,
@@ -2002,7 +2005,7 @@ function NorthlineModal({
                   onChange={(e) => setSelectedUser(e.target.value)}
                 >
                   <option value="">Choose a person…</option>
-                  {people
+                  {directoryPeople
                     .filter(
                       (p: WorkspaceUser) =>
                         p.id !== board.board.ownerId &&
