@@ -1,10 +1,10 @@
 # Northline
 
-Current release: **Alpha v0.3.2 — Repository integration verification**
+Current release: **Alpha v0.3.3 — Encrypted backup and recovery foundation**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
-Alpha v0.3.2 verifies Northline's renamed GitHub repository integrations while retaining the visual identity, contribution templates, and public [product roadmap](ROADMAP.md) introduced in Alpha v0.3.1.
+Alpha v0.3.3 adds scheduled encrypted backups for Northline and Authentik, retention controls, integrity checks, and a non-destructive restore test. See the [backup and recovery guide](ops/backup/README.md).
 
 The application combines visual task boards, private collaboration, user administration, and Discord-oriented reminder workflows in a lightweight package designed for an inexpensive Linux VM.
 

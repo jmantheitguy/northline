@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Northline and Authentik backup
+
+[Timer]
+OnCalendar=*-*-* 03:17:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=northline-backup.service
+
+[Install]
+WantedBy=timers.target
