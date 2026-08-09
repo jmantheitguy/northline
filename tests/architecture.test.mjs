@@ -102,12 +102,16 @@ test("users can inspect and revoke only their own sessions",async()=>{
   const [schema,auth,route,ui]=await Promise.all([read("lib/db.ts"),read("lib/auth.ts"),read("app/api/settings/sessions/route.ts"),read("app/northline-app.tsx")]);assert.match(schema,/user_agent/);assert.match(schema,/created_ip/);assert.match(auth,/currentSessionHash/);assert.match(route,/WHERE user_id=\?/);assert.match(route,/token_hash<>\?/);assert.match(route,/Sign out normally/);assert.match(ui,/Revoke all others/);
 });
 
-test("linked identities resolve by stable OIDC subject before email fallback",async()=>{
-  const [callback,ui]=await Promise.all([read("app/api/auth/oidc/callback/route.ts"),read("app/northline-app.tsx")]);
+test("directory, login, and Discord identities remain separate",async()=>{
+  const [callback,ui,schema,sync,discordSource,worker]=await Promise.all([read("app/api/auth/oidc/callback/route.ts"),read("app/northline-app.tsx"),read("lib/db.ts"),read("lib/authentik-directory.ts"),read("ops/identity/configure-discord-source.py"),read("lib/reminder-worker.ts")]);
   assert.ok(callback.indexOf("WHERE oidc_subject=?")<callback.indexOf("WHERE email=? COLLATE NOCASE"));
   assert.match(callback,/OIDC_IDENTITY_CONFLICT/);
   assert.match(callback,/auth_error=identity_conflict/);
   assert.match(ui,/Northline could not safely match this identity/);
+  assert.match(schema,/directory_id TEXT/);assert.match(schema,/discord_user_id TEXT/);
+  assert.match(sync,/WHERE directory_id=\?/);assert.doesNotMatch(sync,/oidc_subject=excluded\.oidc_subject/);
+  assert.match(discordSource,/"promoted": False/);assert.match(discordSource,/selected_sources\.remove/);
+  assert.match(worker,/discordUserId/);assert.match(worker,/allowed user|sendDiscordReminder/);
 });
 
 test("schema upgrades and operational failures are observable",async()=>{

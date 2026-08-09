@@ -23,6 +23,6 @@ export async function listDiscordChannels() {
     .sort((a,b) => a.position-b.position).map(({id,name}) => ({id,name}));
 }
 
-export async function sendDiscordReminder(channelId: string, content: string) {
-  await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify({content,flags:4,allowed_mentions:{parse:[]}}) });
+export async function sendDiscordReminder(channelId: string, content: string, userIds: string[] = []) {
+  await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify({content,flags:4,allowed_mentions:{parse:[],users:userIds.slice(0,10)}}) });
 }

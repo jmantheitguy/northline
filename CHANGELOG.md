@@ -1,5 +1,12 @@
 # Northline release history
 
+## Alpha v0.8.3 — Separated office and Discord identities
+
+- Keep Authentik directory UUIDs, OIDC login subjects, and Discord user IDs in separate fields so a linked social profile cannot replace or duplicate an office account.
+- Make Discord a link-only profile source: it no longer appears as an Authentik sign-in option and continues to provide avatars and stable Discord IDs.
+- Add narrowly scoped Task Buddy mentions for the intended reminder recipient while keeping arbitrary, everyone, and role mentions disabled.
+- Repair canonical office-account matching and preserve sessions, board ownership, memberships, and related activity when consolidating duplicate linked identities.
+
 ## Alpha v0.8.2 — Linked-identity sign-in reliability
 
 - Resolve returning Authentik users by their stable OIDC subject before comparing email addresses.

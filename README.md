@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Alpha v0.8.2 — Linked-identity sign-in reliability**
+Current release: **Alpha v0.8.3 — Separated office and Discord identities**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -52,7 +52,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Authentik-managed accounts and group-based access revocation
 - User creation, role assignment, suspension, and reactivation
 - Protection against an administrator suspending their own active account
-- Authentik profile pictures and optional Discord account linking
+- Authentik profile pictures and optional Discord linking for avatars and targeted reminder pings (not sign-in)
 - Active-session inventory with individual or bulk revocation
 - Same-origin enforcement and throttling for sensitive requests
 
@@ -87,7 +87,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Direct links from Discord messages to the related Northline task
 - Duplicate suppression plus shared delivery history and retry controls
 
-Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Northline validates every selected channel against the configured guild and suppresses all automatic mentions.
+Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the server with permission to view channels and send messages, and rebuild the container. Northline validates every selected channel against the configured guild. It suppresses everyone, role, and arbitrary mentions while allowing a reminder to mention only its intended recipient when that user linked Discord in Authentik.
 
 ## Architecture
 

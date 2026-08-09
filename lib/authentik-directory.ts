@@ -1,7 +1,7 @@
 import db from "./db";
 
 type AuthentikGroup=string|{name?:string};
-type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?:string;avatar?:string;is_active?:boolean;groups?:AuthentikGroup[];groups_obj?:AuthentikGroup[]};
+type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?:string;avatar?:string;is_active?:boolean;groups?:AuthentikGroup[];groups_obj?:AuthentikGroup[];attributes?:{discord?:{id?:string;avatar_url?:string}}};
 
 const groupNames=(user:AuthentikUser)=>[...(user.groups||[]),...(user.groups_obj||[])].map(group=>typeof group==="string"?group:group.name||"");
 
@@ -16,21 +16,22 @@ export async function syncAuthentikDirectory(force=false){
   const payload=await response.json() as {results?:AuthentikUser[]};
   const users=payload.results||[];
   if(users.length&&!users.some(user=>Array.isArray(user.groups_obj)))throw new Error("Authentik response did not include expanded group membership");
-  const activeEmails:string[]=[];
-  const upsert=db.prepare(`INSERT INTO users(name,email,password_hash,role,status,oidc_subject,auth_source,identity_synced_at,avatar) VALUES(?,?,?,?,?,?, 'oidc',CURRENT_TIMESTAMP,?)
-    ON CONFLICT(email) DO UPDATE SET name=excluded.name,role=excluded.role,status=excluded.status,oidc_subject=excluded.oidc_subject,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,avatar=excluded.avatar`);
+  const activeDirectoryIds:string[]=[];
   db.transaction(()=>{
     for(const remote of users){
       const groups=groupNames(remote),isAdmin=groups.includes("Northline Admins"),hasAccess=isAdmin||groups.includes("Northline Users");
-      const subject=remote.uuid||String(remote.pk||"");
+      const directoryId=remote.uuid||String(remote.pk||"");
       const email=remote.email||remote.username;
-      if(!hasAccess||!subject||!email)continue;
-      activeEmails.push(email.toLowerCase());
-      upsert.run(remote.name||remote.username||email,email,"oidc-managed-account",isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",subject,remote.avatar||null);
+      if(!hasAccess||!directoryId||!email)continue;
+      activeDirectoryIds.push(directoryId);
+      const existing=db.prepare("SELECT id FROM users WHERE directory_id=? OR email=? COLLATE NOCASE ORDER BY directory_id=? DESC LIMIT 1").get(directoryId,email,directoryId) as {id:number}|undefined;
+      const avatar=remote.attributes?.discord?.avatar_url||remote.avatar||null;
+      if(existing)db.prepare("UPDATE users SET name=?,email=?,role=?,status=?,directory_id=?,discord_user_id=?,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,avatar=COALESCE(?,avatar) WHERE id=?").run(remote.name||remote.username||email,email,isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,remote.attributes?.discord?.id||null,avatar,existing.id);
+      else db.prepare("INSERT INTO users(name,email,password_hash,role,status,directory_id,discord_user_id,auth_source,identity_synced_at,avatar) VALUES(?,?,?,?,?,?,?,'oidc',CURRENT_TIMESTAMP,?)").run(remote.name||remote.username||email,email,"oidc-managed-account",isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,remote.attributes?.discord?.id||null,avatar);
     }
-    const managed=db.prepare("SELECT id,email FROM users WHERE auth_source='oidc'").all() as Array<{id:number;email:string}>;
-    for(const local of managed)if(!activeEmails.includes(local.email.toLowerCase())){db.prepare("UPDATE users SET status='Suspended',identity_synced_at=CURRENT_TIMESTAMP WHERE id=?").run(local.id);db.prepare("DELETE FROM sessions WHERE user_id=?").run(local.id);}
+    const managed=db.prepare("SELECT id,directory_id directoryId FROM users WHERE auth_source='oidc' AND directory_id IS NOT NULL").all() as Array<{id:number;directoryId:string}>;
+    for(const local of managed)if(!activeDirectoryIds.includes(local.directoryId)){db.prepare("UPDATE users SET status='Suspended',identity_synced_at=CURRENT_TIMESTAMP WHERE id=?").run(local.id);db.prepare("DELETE FROM sessions WHERE user_id=?").run(local.id);}
     db.prepare("INSERT INTO app_meta(key,value) VALUES('authentik_directory_synced_at',CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=CURRENT_TIMESTAMP").run();
   })();
-  return {configured:true,synced:activeEmails.length};
+  return {configured:true,synced:activeDirectoryIds.length};
 }

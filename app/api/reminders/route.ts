@@ -25,8 +25,8 @@ export async function POST(request:Request) {
   const channels=await listDiscordChannels(); const channel=channels.find(item=>item.id===String(channelId));
   if(!channel)return NextResponse.json({error:"Channel is not available to the bot"},{status:400});
   if(taskId){const task=db.prepare("SELECT id FROM tasks WHERE id=? AND board_id=?").get(Number(taskId),Number(boardId));if(!task)return NextResponse.json({error:"Task not found on this board"},{status:400});}
-  const result=db.prepare("INSERT INTO reminders(board_id,task_id,created_by,channel_id,channel_name,message,remind_at) VALUES(?,?,?,?,?,?,?)")
-    .run(Number(boardId),taskId?Number(taskId):null,user.id,channel.id,channel.name,String(message).trim(),when.toISOString());
+  const result=db.prepare("INSERT INTO reminders(board_id,task_id,created_by,recipient_user_id,channel_id,channel_name,message,remind_at) VALUES(?,?,?,?,?,?,?,?)")
+    .run(Number(boardId),taskId?Number(taskId):null,user.id,user.id,channel.id,channel.name,String(message).trim(),when.toISOString());
   db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"REMINDER.CREATE",String(result.lastInsertRowid));
   return NextResponse.json({id:Number(result.lastInsertRowid)},{status:201});
 }

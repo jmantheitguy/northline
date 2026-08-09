@@ -172,6 +172,7 @@ const addReminderColumn = (name:string, definition:string) => {
 addReminderColumn("kind", "kind TEXT NOT NULL DEFAULT 'scheduled'");
 addReminderColumn("event_type", "event_type TEXT");
 addReminderColumn("dedupe_key", "dedupe_key TEXT");
+addReminderColumn("recipient_user_id", "recipient_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS reminders_dedupe_idx ON reminders(dedupe_key) WHERE dedupe_key IS NOT NULL");
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;
@@ -189,7 +190,11 @@ if (!userColumns.some((column) => column.name === "oidc_subject")) {
 addUserColumn("auth_source", "auth_source TEXT NOT NULL DEFAULT 'local'");
 addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 addUserColumn("avatar", "avatar TEXT");
+addUserColumn("directory_id", "directory_id TEXT");
+addUserColumn("discord_user_id", "discord_user_id TEXT");
+db.prepare("UPDATE users SET directory_id=oidc_subject,oidc_subject=NULL WHERE directory_id IS NULL AND oidc_subject GLOB '????????-????-????-????-????????????'").run();
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_directory_id_idx ON users(directory_id) WHERE directory_id IS NOT NULL");
 
 const sessionColumns=db.prepare("PRAGMA table_info(sessions)").all() as Array<{name:string}>;
 const addSessionColumn=(name:string,definition:string)=>{if(sessionColumns.some(column=>column.name===name))return;try{db.exec(`ALTER TABLE sessions ADD COLUMN ${definition}`);sessionColumns.push({name})}catch(error){if(!(error instanceof Error)||!error.message.includes("duplicate column name"))throw error}};
@@ -197,7 +202,7 @@ addSessionColumn("user_agent","user_agent TEXT");
 addSessionColumn("created_ip","created_ip TEXT");
 addSessionColumn("last_seen_at","last_seen_at TEXT");
 
-const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"]];
+const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"]];
 const recordMigrations=db.transaction(()=>{const insert=db.prepare("INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)");for(const migration of migrations)insert.run(...migration)});recordMigrations();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;

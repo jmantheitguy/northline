@@ -21,8 +21,8 @@ function taskLink(task:TaskContext){
 function enqueue(task:TaskContext,actorId:number,event:EventType,message:string,dedupeKey:string,when=new Date(),preferenceUserId=actorId){
   const config=settings(task.boardId); if(!config?.channel_id||config[eventColumn[event]]===0)return;
   const preference=db.prepare(`SELECT ${eventColumn[event]} enabled FROM user_notification_settings WHERE user_id=?`).get(preferenceUserId) as {enabled:number}|undefined;if(preference?.enabled===0)return;
-  db.prepare(`INSERT OR IGNORE INTO reminders(board_id,task_id,created_by,channel_id,channel_name,message,remind_at,kind,event_type,dedupe_key)
-    VALUES(?,?,?,?,?,?,?,?,?,?)`).run(task.boardId,task.id,actorId,config.channel_id,config.channel_name||"discord",`${message}\n${taskLink(task)}`,when.toISOString(),"automatic",event,dedupeKey);
+  db.prepare(`INSERT OR IGNORE INTO reminders(board_id,task_id,created_by,recipient_user_id,channel_id,channel_name,message,remind_at,kind,event_type,dedupe_key)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(task.boardId,task.id,actorId,preferenceUserId,config.channel_id,config.channel_name||"discord",`${message}\n${taskLink(task)}`,when.toISOString(),"automatic",event,dedupeKey);
 }
 
 export function notifyTaskCreated(task:TaskContext,actorId:number){

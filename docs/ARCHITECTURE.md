@@ -20,7 +20,7 @@ The table describes logical responsibilities, not the production network map. In
 
 SQLite uses WAL mode and foreign keys. Board membership is owner, editor, or viewer; Admin is a workspace role. API routes authenticate the session and resolve permissions from the database before reading or mutating board data. Search and activity endpoints use the same accessible-board boundary. Random board IDs reduce enumeration but never replace authorization.
 
-Sessions use random browser tokens and stored SHA-256 digests. Local passwords use bcrypt. OIDC state and PKCE protect the Authentik callback. Integration secrets remain environment variables and are not returned to the browser.
+Sessions use random browser tokens and stored SHA-256 digests. Local passwords use bcrypt. OIDC state and PKCE protect the Authentik callback. Authentik directory UUIDs, OIDC subjects, and optional Discord user IDs are stored independently so linking a social profile cannot replace the office identity. Integration secrets remain environment variables and are not returned to the browser.
 
 A Next.js Proxy runs only for API routes and rejects foreign-origin mutations before route execution. It applies bounded per-client throttling to local sign-in and administrative mutations. This single-instance limiter is defense in depth for the current one-container deployment; Cloudflare or another upstream should provide distributed edge rate limiting when Northline scales horizontally.
 
@@ -28,7 +28,7 @@ Schema changes are forward-only and recorded in `schema_migrations`. Startup cre
 
 ## Notification flow
 
-Task mutations create deduplicated reminder records according to board and user preferences. A server worker polls due records, validates the configured guild channel through Discord, sends content with mentions and embeds disabled, updates status, and writes a durable delivery snapshot. Manual reminders use the same delivery path.
+Task mutations create deduplicated reminder records according to board and user preferences. A server worker polls due records, validates the configured guild channel through Discord, suppresses link embeds, and permits only the explicitly linked recipient's Discord ID to be mentioned. Everyone, role, and arbitrary mentions remain disabled. The worker then updates status and writes a durable delivery snapshot. Manual reminders use the same delivery path.
 
 ## Health and backup flow
 

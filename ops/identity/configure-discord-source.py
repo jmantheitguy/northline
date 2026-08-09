@@ -72,7 +72,7 @@ source_payload = {
     "name": "Discord",
     "slug": "discord",
     "enabled": True,
-    "promoted": True,
+    "promoted": False,
     "authentication_flow": "94eae4a3-b4a6-4699-8e46-40413848d9b3",
     "enrollment_flow": "0d06681e-6777-4911-bb42-4fce1c135d20",
     "user_property_mappings": [mapping["pk"]],
@@ -116,17 +116,26 @@ if not any(binding.get("stage") == write_stage["pk"] for binding in flow_binding
     )
 
 identification_stages = request("GET", "/api/v3/stages/identification/?page_size=100")["results"]
+password_stages = request("GET", "/api/v3/stages/password/?page_size=100")["results"]
+default_password = next(
+    (stage for stage in password_stages if stage["name"] == "default-authentication-password"),
+    None,
+)
 for stage in identification_stages:
     if stage["name"] != "default-authentication-identification":
         continue
     selected_sources = list(stage.get("sources", []))
-    if source["pk"] not in selected_sources:
-        selected_sources.append(source["pk"])
-        request(
-            "PATCH",
-            f"/api/v3/stages/identification/{stage['pk']}/",
-            {"sources": selected_sources},
-        )
+    if source["pk"] in selected_sources:
+        selected_sources.remove(source["pk"])
+    request(
+        "PATCH",
+        f"/api/v3/stages/identification/{stage['pk']}/",
+        {
+            "user_fields": ["username", "email"],
+            "sources": selected_sources,
+            **({"password_stage": default_password["pk"]} if default_password else {}),
+        },
+    )
 
 request(
     "PATCH",

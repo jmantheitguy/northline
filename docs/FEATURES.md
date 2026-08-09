@@ -8,11 +8,11 @@ Global search returns tasks only from boards the signed-in user can access. Dire
 
 ## Collaboration and identity
 
-Users sign in locally or through Authentik OIDC. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Profile images may come from Authentik, including a linked Discord source.
+Users sign in locally or through Authentik OIDC using their office identity. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Discord is an optional linked profile source—not a sign-in method—and supplies only the Discord ID/avatar used for profile pictures and targeted Task Buddy reminder mentions.
 
 ## Task Buddy
 
-Each board can select a Discord text channel and enable assignment, status, comment, mention, and due-date notifications. Users can manage personal notification preferences. Scheduled board/task reminders support editing, cancellation, failure display, and retry. Delivery messages include a direct clickable task link while suppressing Discord preview embeds and automatic mentions. Delivery snapshots preserve history after the original task or board is deleted.
+Each board can select a Discord text channel and enable assignment, status, comment, mention, and due-date notifications. Users can manage personal notification preferences. Scheduled board/task reminders support editing, cancellation, failure display, and retry. When a recipient has linked Discord, Task Buddy explicitly mentions only that recipient; arbitrary and role mentions remain disabled. Delivery messages include a direct clickable task link while suppressing Discord preview embeds. Delivery snapshots preserve history after the original task or board is deleted.
 
 ## Administration and operations
 
