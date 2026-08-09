@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Alpha v0.6.6 — Private board URLs and unified reminders**
+Current release: **Alpha v0.6.7 — Compact clickable reminders**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -54,6 +54,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Task-reminder scheduling workflow
 - One-click “Remind me” scheduling directly from Task details
 - Consistent rich Discord formatting for automatic and scheduled reminders
+- Clickable Northline links with Discord preview embeds suppressed
 - Channel selection and reminder-message composition
 - Per-board Task Buddy channel routing and notification controls
 - Automatic assignment, status-change, comment, mention, and due-date messages

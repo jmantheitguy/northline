@@ -24,5 +24,5 @@ export async function listDiscordChannels() {
 }
 
 export async function sendDiscordReminder(channelId: string, content: string) {
-  await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify({content,allowed_mentions:{parse:[]}}) });
+  await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify({content,flags:4,allowed_mentions:{parse:[]}}) });
 }

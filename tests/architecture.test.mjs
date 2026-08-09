@@ -49,7 +49,7 @@ test("Discord reminders are permission checked and secrets stay server-side",asy
   assert.match(route,/Channel is not available to the bot/);
   assert.match(discord,/process\.env\.NORTHLINE_DISCORD_BOT_TOKEN/);
   assert.doesNotMatch(route,/NORTHLINE_DISCORD_BOT_TOKEN/);
-  assert.match(discord,/allowed_mentions/);
+  assert.match(discord,/allowed_mentions/);assert.match(discord,/flags:4/);
   assert.match(worker,/setInterval/);
   assert.match(compose,/NORTHLINE_DISCORD_BOT_TOKEN/);
 });
