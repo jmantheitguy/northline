@@ -1526,7 +1526,13 @@ function BoardView({
         />
       )}{" "}
       {mode === "list" && (
-        <TaskList tasks={visibleTasks} columns={columns} openTask={openTask} />
+        <TaskList
+          tasks={visibleTasks}
+          columns={columns}
+          openTask={openTask}
+          canEdit={data.canEdit}
+          add={() => openModal("task-create")}
+        />
       )}{" "}
       {mode === "timeline" && (
         <Timeline tasks={visibleTasks} columns={columns} openTask={openTask} />
@@ -1639,44 +1645,109 @@ function TaskList({
   tasks,
   columns,
   openTask,
+  canEdit,
+  add,
 }: {
   tasks: Task[];
   columns: BoardColumn[];
   openTask: (task: Task) => void;
+  canEdit: boolean;
+  add: () => void;
 }) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggle = (key: string) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const dueLabel = (due: string | null) => {
+    if (!due) return "";
+    const date = new Date(`${due}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? due
+      : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
   return (
-    <div className="task-table">
-      <div className="task-row task-head">
-        <span>Task</span>
-        <span>Status</span>
-        <span>Owner</span>
-        <span>Due</span>
-        <span>Priority</span>
-      </div>
-      {tasks.map((t) => (
-        <button className="task-row" key={t.id} onClick={() => openTask(t)}>
-          <span>
-            <b>{t.title}</b>
-            <small>{t.tag}</small>
-          </span>
-          <span
-            className="status-dot"
-            style={
-              {
-                "--status-color": columns.find((c) => c.key === t.status)
-                  ?.color,
-              } as React.CSSProperties
-            }
+    <div className="grouped-list">
+      {columns.map((column) => {
+        const group = tasks.filter((task) => task.status === column.key);
+        const isCollapsed = collapsed.has(column.key);
+        return (
+          <section
+            className="list-group"
+            key={column.id}
+            style={{ "--group-color": column.color } as React.CSSProperties}
           >
-            {columns.find((c) => c.key === t.status)?.name || "Unknown"}
-          </span>
-          <span>{t.ownerName || "Unassigned"}</span>
-          <span>{t.due || "No date"}</span>
-          <span className={`priority ${t.priority.toLowerCase()}`}>
-            {t.priority}
-          </span>
-        </button>
-      ))}
+            <button
+              className="list-group-title"
+              aria-expanded={!isCollapsed}
+              onClick={() => toggle(column.key)}
+            >
+              <span className={isCollapsed ? "collapsed" : ""}>⌄</span>
+              <b>{column.name}</b>
+              <em>{group.length}</em>
+            </button>
+            {!isCollapsed && (
+              <div className="list-table-wrap">
+                <div className="list-table">
+                  <div className="list-table-row list-table-head">
+                    <span className="list-check" aria-hidden="true" />
+                    <span>Task</span>
+                    <span>Person</span>
+                    <span>Status</span>
+                    <span>Date</span>
+                    <span>Priority</span>
+                  </div>
+                  {group.map((task) => (
+                    <button
+                      className="list-table-row list-task-row"
+                      key={task.id}
+                      onClick={() => openTask(task)}
+                    >
+                      <span className="list-check" aria-hidden="true" />
+                      <span className="list-task-title">
+                        <b>{task.title}</b>
+                        {task.comments > 0 && (
+                          <small title={`${task.comments} comments`}>
+                            ◌ {task.comments}
+                          </small>
+                        )}
+                      </span>
+                      <span className="list-person">
+                        <Avatar
+                          name={task.ownerName || "Unassigned"}
+                          avatar={task.ownerAvatar}
+                        />
+                        <span>{task.ownerName || "Unassigned"}</span>
+                      </span>
+                      <span
+                        className="list-status"
+                        style={{ backgroundColor: column.color }}
+                      >
+                        {column.name}
+                      </span>
+                      <span>{dueLabel(task.due)}</span>
+                      <span
+                        className={`priority ${task.priority.toLowerCase()}`}
+                      >
+                        {task.priority}
+                      </span>
+                    </button>
+                  ))}
+                  {canEdit && (
+                    <button className="list-add-row" onClick={add}>
+                      <span className="list-check" aria-hidden="true" />
+                      <span>+ Add task</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

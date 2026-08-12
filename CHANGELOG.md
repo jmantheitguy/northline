@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.4.1 — Grouped workflow list
+
+- Redesign List view as collapsible, color-coded workflow sections with consistent table columns.
+- Show task titles, comment counts, assignee avatars, status, due date, and priority at a glance.
+- Add permission-aware task creation rows to each expanded section and responsive horizontal scrolling for smaller screens.
+
 ## Beta v0.4.0 — Safer editing, reminders, and task archiving
 
 - Protect unfinished task, board, workspace, and reminder forms from accidental backdrop dismissal and confirm before discarding changed values.

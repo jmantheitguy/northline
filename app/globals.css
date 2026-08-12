@@ -2274,6 +2274,168 @@ html[data-theme="dark"] .my-work-search {
 .archive-list article small {
   color: var(--muted);
 }
+.grouped-list {
+  display: grid;
+  gap: 30px;
+  margin-top: 20px;
+}
+.list-group {
+  min-width: 0;
+}
+.list-group-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--group-color);
+  font-size: 16px;
+  text-align: left;
+}
+.list-group-title > span {
+  display: inline-block;
+  font-size: 20px;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 150ms ease;
+}
+.list-group-title > span.collapsed {
+  transform: rotate(-90deg);
+}
+.list-group-title em {
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  text-align: center;
+}
+.list-table-wrap {
+  overflow-x: auto;
+  border-left: 5px solid var(--group-color);
+  border-radius: 7px 0 0 7px;
+}
+.list-table {
+  min-width: 760px;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+}
+.list-table-row {
+  display: grid;
+  grid-template-columns: 38px minmax(260px, 1fr) 170px 140px 120px 90px;
+  min-height: 42px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+}
+.list-table-row > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-right: 1px solid var(--line);
+}
+.list-table-row > span:last-child {
+  border-right: 0;
+}
+.list-table-head {
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+.list-table-head > span:not(:nth-child(2)) {
+  justify-content: center;
+}
+.list-check::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--subtle);
+}
+.list-task-row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.list-task-row:hover {
+  background: var(--subtle);
+}
+.list-task-title {
+  gap: 10px;
+}
+.list-task-title b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+.list-task-title small {
+  margin-left: auto;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.list-person {
+  gap: 8px;
+}
+.list-person .avatar {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  font-size: 8px;
+}
+.list-person > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list-status {
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.list-table-row > .priority {
+  align-self: center;
+  justify-self: center;
+  margin: 0;
+}
+.list-add-row {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  min-height: 38px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  text-align: left;
+}
+.list-add-row > span {
+  display: flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-right: 1px solid var(--line);
+}
+.list-add-row:hover {
+  background: var(--subtle);
+  color: var(--text);
+}
 @media (max-width: 950px) {
   .sidebar {
     transform: translateX(-100%);

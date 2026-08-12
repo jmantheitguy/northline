@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.4.0 — Safer editing, reminders, and task archiving**
+Current release: **Beta v0.4.1 — Grouped workflow list**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -10,21 +10,21 @@ The application combines visual task boards, private collaboration, user adminis
 
 ## Documentation
 
-| Guide | Purpose |
-| --- | --- |
-| [Features](docs/FEATURES.md) | Complete user-facing capability and permissions reference |
-| [Architecture](docs/ARCHITECTURE.md) | Components, data model, trust boundaries, and request flows |
-| [Operations](docs/OPERATIONS.md) | Deployment, updates, health monitoring, troubleshooting, and maintenance |
-| [Upgrading](docs/UPGRADING.md) | Migration policy, clean-install verification, and rollback procedure |
-| [Member onboarding](docs/ONBOARDING.md) | Authentik, Discord linking, profiles, access, and first-use steps |
-| [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release |
-| [Beta status](docs/BETA-STATUS.md) | Verified release evidence and remaining interactive validation |
-| [Future plans](docs/FUTURE-PLANS.md) | Streaming calendars, collaboration planning, and longer-term directions |
-| [Backup and recovery](ops/backup/README.md) | Encrypted VM/NAS backups and non-destructive restore testing |
-| [Authentik](infra/authentik/README.md) | Central identity and Northline security groups |
-| [Mail](infra/mail/README.md) | Stalwart, webmail, Cloudflare ingress, and Brevo relay |
-| [Security policy](SECURITY.md) | Supported versions, credential rules, and private reporting |
-| [Release history](CHANGELOG.md) | Version-by-version feature summary |
+| Guide                                          | Purpose                                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------ |
+| [Features](docs/FEATURES.md)                   | Complete user-facing capability and permissions reference                |
+| [Architecture](docs/ARCHITECTURE.md)           | Components, data model, trust boundaries, and request flows              |
+| [Operations](docs/OPERATIONS.md)               | Deployment, updates, health monitoring, troubleshooting, and maintenance |
+| [Upgrading](docs/UPGRADING.md)                 | Migration policy, clean-install verification, and rollback procedure     |
+| [Member onboarding](docs/ONBOARDING.md)        | Authentik, Discord linking, profiles, access, and first-use steps        |
+| [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release                       |
+| [Beta status](docs/BETA-STATUS.md)             | Verified release evidence and remaining interactive validation           |
+| [Future plans](docs/FUTURE-PLANS.md)           | Streaming calendars, collaboration planning, and longer-term directions  |
+| [Backup and recovery](ops/backup/README.md)    | Encrypted VM/NAS backups and non-destructive restore testing             |
+| [Authentik](infra/authentik/README.md)         | Central identity and Northline security groups                           |
+| [Mail](infra/mail/README.md)                   | Stalwart, webmail, Cloudflare ingress, and Brevo relay                   |
+| [Security policy](SECURITY.md)                 | Supported versions, credential rules, and private reporting              |
+| [Release history](CHANGELOG.md)                | Version-by-version feature summary                                       |
 
 ## Product capabilities
 
@@ -111,11 +111,11 @@ SQLite runs in WAL mode with foreign-key enforcement. The database contains user
 
 ## Roles
 
-| Role | Intended access |
-| --- | --- |
-| Admin | Manage users, roles, boards, integrations, security settings, and workspace-wide access |
-| Member | Create and manage permitted boards, tasks, and collaborations |
-| Guest | Access only boards that have been explicitly shared with the account |
+| Role   | Intended access                                                                         |
+| ------ | --------------------------------------------------------------------------------------- |
+| Admin  | Manage users, roles, boards, integrations, security settings, and workspace-wide access |
+| Member | Create and manage permitted boards, tasks, and collaborations                           |
+| Guest  | Access only boards that have been explicitly shared with the account                    |
 
 Authorization for administrative APIs is checked on the server. Hiding an interface element is never treated as the security boundary.
 

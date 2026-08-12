@@ -14,7 +14,7 @@
 # testing
 /coverage
 /.tmp-release-test/
-/.tmp-v*-test/
+/.tmp-*-test/
 __pycache__/
 *.py[cod]
 
