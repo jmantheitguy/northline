@@ -134,7 +134,7 @@ test("site administration does not bypass private board membership",async()=>{
   const [permissions,boards,detail,search,reminders,ui]=await Promise.all([read("lib/boards.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("app/api/search/route.ts"),read("app/api/reminders/route.ts"),read("app/northline-app.tsx")]);
   for(const source of [permissions,boards,search,reminders])assert.doesNotMatch(source,/\?='Admin'|role==="Admin"|permission==="admin"/);
   assert.match(detail,/const assignees=db\.prepare/);
-  assert.match(detail,/u\.id=b\.owner_id OR bm\.user_id IS NOT NULL/);
+  assert.match(detail,/u\.id=b\.owner_id OR u\.id=w\.owner_id OR bm\.user_id IS NOT NULL OR wm\.user_id IS NOT NULL/);
   assert.match(ui,/people=\{boardData\?\.assignees \|\| \[\]\}/);
   assert.match(ui,/directoryPeople=\{directoryUsers\}/);
 });
@@ -146,4 +146,13 @@ test("board workflow columns are persistent, mutable, and task safe",async()=>{
   assert.match(collection,/COLUMN\.REORDER/);assert.match(item,/destinationId/);assert.match(item,/UPDATE tasks SET status=/);assert.match(item,/A board must keep at least one column/);
   assert.match(detail,/column_key key/);assert.match(createTask,/SELECT 1 FROM board_columns/);assert.match(updateTask,/SELECT 1 FROM board_columns/);
   assert.match(ui,/function ColumnManager/);assert.match(ui,/Move tasks to/);assert.match(ui,/data\.columns\.map/);assert.match(styles,/\.task-actions/);
+});
+
+test("personal and shared workspaces inherit board access safely",async()=>{
+  const [schema,permissions,boards,workspaces,members,search,reminders,ui,announce]=await Promise.all([read("lib/db.ts"),read("lib/boards.ts"),read("app/api/boards/route.ts"),read("app/api/workspaces/route.ts"),read("app/api/workspaces/[id]/members/route.ts"),read("app/api/search/route.ts"),read("app/api/reminders/route.ts"),read("app/northline-app.tsx"),read("ops/release/announce-discord.mjs")]);
+  for(const table of ["workspaces","workspace_members"])assert.match(schema,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  assert.match(schema,/ensurePersonalWorkspace/);assert.match(schema,/personal and shared workspaces/);assert.match(permissions,/workspace_permission/);
+  assert.match(boards,/workspaceId/);assert.match(boards,/workspace_members/);assert.match(workspaces,/kind\).*shared|kind.*shared/s);assert.match(members,/WORKSPACE\.SHARE/);
+  assert.match(search,/workspace_members/);assert.match(reminders,/workspace_members/);assert.match(ui,/New shared workspace/);assert.match(ui,/Manage workspace/);
+  assert.match(announce,/New Push to/);assert.match(announce,/GitHub Push Event/);assert.match(announce,/allowed_mentions/);
 });

@@ -9,6 +9,7 @@ fs.mkdirSync(dataDirectory, { recursive: true });
 const db = new Database(path.join(dataDirectory, "northline.db"));
 export const createBoardPublicId=()=>`brd_${randomBytes(16).toString("hex")}`;
 export const createColumnKey=()=>`col_${randomBytes(8).toString("hex")}`;
+export const createWorkspacePublicId=()=>`wsp_${randomBytes(16).toString("hex")}`;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -43,6 +44,22 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS app_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS workspaces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK(kind IN ('personal','shared')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS workspace_members (
+    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL CHECK(permission IN ('viewer','editor')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(workspace_id,user_id)
   );
   CREATE TABLE IF NOT EXISTS boards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -161,6 +178,7 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS board_members_user_idx ON board_members(user_id);
+  CREATE INDEX IF NOT EXISTS workspace_members_user_idx ON workspace_members(user_id);
   CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
   CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
@@ -171,9 +189,21 @@ const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{nam
 const addBoardColumn=(name:string,definition:string)=>{if(!boardColumns.some(column=>column.name===name)){try{db.exec(`ALTER TABLE boards ADD COLUMN ${definition}`);boardColumns.push({name});}catch(error){if(!(error instanceof Error)||!error.message.includes("duplicate column name"))throw error;}}};
 addBoardColumn("public_id","public_id TEXT");
 addBoardColumn("created_by","created_by INTEGER");
+addBoardColumn("workspace_id","workspace_id INTEGER REFERENCES workspaces(id) ON DELETE CASCADE");
 db.prepare("UPDATE boards SET created_by=owner_id WHERE created_by IS NULL").run();
 for(const board of db.prepare("SELECT id FROM boards WHERE public_id IS NULL OR public_id LIKE 'u%-b%'").all() as Array<{id:number}>)db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(createBoardPublicId(),board.id);
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS boards_public_id_idx ON boards(public_id)");
+
+export function ensurePersonalWorkspace(userId:number,userName?:string){
+  const existing=db.prepare("SELECT id,public_id publicId,name,owner_id ownerId,kind FROM workspaces WHERE owner_id=? AND kind='personal'").get(userId) as {id:number;publicId:string;name:string;ownerId:number;kind:string}|undefined;
+  if(existing)return existing;
+  const displayName=userName||(db.prepare("SELECT name FROM users WHERE id=?").get(userId) as {name:string}|undefined)?.name||"Personal";
+  const publicId=createWorkspacePublicId();
+  const result=db.prepare("INSERT INTO workspaces(public_id,name,owner_id,kind) VALUES(?,?,?,'personal')").run(publicId,`${displayName}'s workspace`,userId);
+  return{id:Number(result.lastInsertRowid),publicId,name:`${displayName}'s workspace`,ownerId:userId,kind:"personal"};
+}
+for(const user of db.prepare("SELECT id,name FROM users").all() as Array<{id:number;name:string}>)ensurePersonalWorkspace(user.id,user.name);
+for(const board of db.prepare("SELECT id,owner_id FROM boards WHERE workspace_id IS NULL").all() as Array<{id:number;owner_id:number}>){const workspace=ensurePersonalWorkspace(board.owner_id);db.prepare("UPDATE boards SET workspace_id=? WHERE id=?").run(workspace.id,board.id)}
 
 const taskSchema=(db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get() as {sql:string}|undefined)?.sql||"";
 if(taskSchema.includes("CHECK(status IN ('ideas','ready','progress','hold','done'))")){
@@ -246,7 +276,7 @@ addSessionColumn("user_agent","user_agent TEXT");
 addSessionColumn("created_ip","created_ip TEXT");
 addSessionColumn("last_seen_at","last_seen_at TEXT");
 
-const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"],[10,"custom board workflow columns"]];
+const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"],[10,"custom board workflow columns"],[11,"personal and shared workspaces"]];
 const recordMigrations=db.transaction(()=>{const insert=db.prepare("INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)");for(const migration of migrations)insert.run(...migration)});recordMigrations();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;

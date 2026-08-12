@@ -1,16 +1,32 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import db,{createBoardPublicId,createDefaultBoardColumns} from "@/lib/db";
+import db,{createBoardPublicId,createDefaultBoardColumns,ensurePersonalWorkspace} from "@/lib/db";
+import { listWorkspaces,workspacePermission,canCreateBoards } from "@/lib/workspaces";
 
 export async function GET(){
-  const user=await currentUser(); if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
-  let boards=db.prepare(`SELECT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,
-    CASE WHEN b.owner_id=? THEN 'owner' ELSE bm.permission END permission,
+  const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
+  const personal=ensurePersonalWorkspace(user.id,user.name);
+  const personalBoardCount=(db.prepare("SELECT COUNT(*) count FROM boards WHERE workspace_id=?").get(personal.id) as {count:number}).count;
+  if(!personalBoardCount){const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id,personal.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id)}
+  const boards=db.prepare(`SELECT DISTINCT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,b.workspace_id workspaceId,
+    CASE WHEN b.owner_id=? OR w.owner_id=? THEN 'owner' WHEN bm.permission='editor' OR wm.permission='editor' THEN 'editor' ELSE 'viewer' END permission,
     (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id) taskCount
-    FROM boards b JOIN users u ON u.id=b.owner_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
-    WHERE b.owner_id=? OR bm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id);
-  if(!boards.length){const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by) VALUES(?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id);boards=[{id,boardKey,name:"My first board",description:"Plan your first project and invite collaborators.",ownerId:user.id,ownerName:user.name,permission:"owner",taskCount:0}];}
-  return NextResponse.json({boards});
+    FROM boards b JOIN users u ON u.id=b.owner_id JOIN workspaces w ON w.id=b.workspace_id
+    LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
+    LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
+    WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id);
+  return NextResponse.json({boards,workspaces:listWorkspaces(user)});
 }
 
-export async function POST(request:Request){const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const{name,description="",template="blank"}=await request.json();const cleanName=String(name||"").trim(),cleanDescription=String(description||"").trim();if(!cleanName)return NextResponse.json({error:"Board name is required"},{status:400});if(cleanName.length>100||cleanDescription.length>1000||!["blank","content","launch"].includes(template))return NextResponse.json({error:"Invalid board details"},{status:400});const presets:Record<string,Array<[string,string,string,string]>>={blank:[],content:[["Collect ideas","ideas","Medium","Planning"],["Draft content","ready","High","Production"],["Review and approve","hold","High","Review"],["Publish","done","Medium","Publishing"]],launch:[["Define launch goals","ideas","High","Strategy"],["Prepare assets","ready","High","Production"],["Run launch checklist","progress","High","Launch"],["Post-launch review","hold","Medium","Review"]]};const create=db.transaction(()=>{const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by) VALUES(?,?,?,?)").run(cleanName,cleanDescription,user.id,user.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id);for(const [title,status,priority,tag] of presets[template])db.prepare("INSERT INTO tasks(board_id,title,status,priority,tag,created_by) VALUES(?,?,?,?,?,?)").run(id,title,status,priority,tag,user.id);db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"BOARD.CREATE",boardKey);return{id,boardKey};});return NextResponse.json(create(),{status:201});}
+export async function POST(request:Request){
+  const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
+  const{name,description="",template="blank",workspaceId}=await request.json();
+  const cleanName=String(name||"").trim(),cleanDescription=String(description||"").trim();
+  if(!cleanName)return NextResponse.json({error:"Board name is required"},{status:400});
+  if(cleanName.length>100||cleanDescription.length>1000||!["blank","content","launch"].includes(template))return NextResponse.json({error:"Invalid board details"},{status:400});
+  const personal=ensurePersonalWorkspace(user.id,user.name),targetWorkspace=Number(workspaceId||personal.id);
+  if(!canCreateBoards(workspacePermission(user,targetWorkspace)))return NextResponse.json({error:"You cannot create boards in this workspace"},{status:403});
+  const presets:Record<string,Array<[string,string,string,string]>>={blank:[],content:[["Collect ideas","ideas","Medium","Planning"],["Draft content","ready","High","Production"],["Review and approve","hold","High","Review"],["Publish","done","Medium","Publishing"]],launch:[["Define launch goals","ideas","High","Strategy"],["Prepare assets","ready","High","Production"],["Run launch checklist","progress","High","Launch"],["Post-launch review","hold","Medium","Review"]]};
+  const create=db.transaction(()=>{const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run(cleanName,cleanDescription,user.id,user.id,targetWorkspace),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id);for(const [title,status,priority,tag] of presets[template])db.prepare("INSERT INTO tasks(board_id,title,status,priority,tag,created_by) VALUES(?,?,?,?,?,?)").run(id,title,status,priority,tag,user.id);db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"BOARD.CREATE",boardKey);return{id,boardKey};});
+  return NextResponse.json(create(),{status:201});
+}

@@ -670,6 +670,7 @@ button {
   margin: 5px 0 18px;
   gap: 9px;
 }
+.workspace-menu{position:absolute;z-index:20;top:119px;left:14px;width:216px;padding:7px;background:#24242d;border:1px solid #3a3945;border-radius:10px;box-shadow:0 16px 36px #0007;display:grid;gap:3px}.workspace-menu>button{border:0;background:transparent;color:#c9c8d3;border-radius:7px;padding:9px;display:grid;grid-template-columns:20px 1fr auto;align-items:center;text-align:left;gap:7px}.workspace-menu>button.active,.workspace-menu>button:hover{background:#343142;color:#fff}.workspace-menu>button b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.workspace-menu>button small{font-size:9px;color:#918e9c;text-transform:capitalize}.workspace-menu>div{border-top:1px solid #3a3945;margin-top:4px;padding-top:5px;display:grid}.workspace-menu>div button{border:0;background:transparent;color:#aaa8b6;text-align:left;border-radius:6px;padding:8px}.workspace-menu>div button:hover{background:#343142;color:#fff}
 .workspace-icon {
   width: 28px;
   height: 28px;

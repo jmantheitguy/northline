@@ -31,7 +31,9 @@ type BoardSummary = {
   ownerName: string;
   permission: "owner" | "editor" | "viewer";
   taskCount: number;
+  workspaceId: number;
 };
+type Workspace={id:number;workspaceKey:string;name:string;kind:"personal"|"shared";ownerId:number;ownerName:string;permission:"owner"|"editor"|"viewer";boardCount:number;memberCount:number};
 type Member = {
   id: number;
   name: string;
@@ -40,7 +42,7 @@ type Member = {
   permission: "viewer" | "editor";
 };
 type BoardDetail = {
-  board: { id: number; boardKey:string; name: string; description: string; ownerId: number; createdBy:number };
+  board: { id: number; boardKey:string; name: string; description: string; ownerId: number; createdBy:number; workspaceId:number };
   tasks: Task[];
   members: Member[];
   assignees: Array<{id:number;name:string;email:string;avatar:string|null}>;
@@ -77,6 +79,8 @@ type Modal =
   | "share"
   | "activity"
   | "columns"
+  | "workspace-create"
+  | "workspace-manage"
   | "reminder"
   | null;
 type View = "board" | "directory" | "reminders" | "settings" | "admin";
@@ -135,6 +139,9 @@ export function NorthlineApp() {
   const [authUser, setAuthUser] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [boards, setBoards] = useState<BoardSummary[]>([]);
+  const [workspaces,setWorkspaces]=useState<Workspace[]>([]);
+  const [activeWorkspaceId,setActiveWorkspaceId]=useState<number|null>(null);
+  const [workspaceMenu,setWorkspaceMenu]=useState(false);
   const [activeBoardId, setActiveBoardId] = useState<number | null>(null);
   const [boardData, setBoardData] = useState<BoardDetail | null>(null);
   const [view, setView] = useState<View>("board");
@@ -162,7 +169,9 @@ export function NorthlineApp() {
     try {
       const d = await jsonFetch("/api/boards");
       setBoards(d.boards);
+      setWorkspaces(d.workspaces||[]);
       const requested=new URLSearchParams(window.location.search).get("board"),requestedBoard=d.boards.find((board:BoardSummary)=>board.boardKey===requested||String(board.id)===requested);
+      setActiveWorkspaceId(current=>requestedBoard?.workspaceId||(current&&(d.workspaces||[]).some((workspace:Workspace)=>workspace.id===current)?current:(d.workspaces||[])[0]?.id||null));
       setActiveBoardId((current) =>
         requestedBoard?.id || (current && d.boards.some((b: BoardSummary) => b.id === current)
           ? current
@@ -222,6 +231,7 @@ export function NorthlineApp() {
     if (
       view === "directory" ||
       modal === "share" ||
+      modal === "workspace-manage" ||
       modal === "task-create" ||
       modal === "task-detail"
     )
@@ -251,6 +261,8 @@ export function NorthlineApp() {
       );
     return list;
   }, [boardData, search, statusFilter, priorityFilter, sort]);
+  const activeWorkspace=workspaces.find(workspace=>workspace.id===activeWorkspaceId)||workspaces[0];
+  const visibleBoards=boards.filter(board=>board.workspaceId===activeWorkspace?.id);
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;
     setBusy(true);
@@ -304,14 +316,15 @@ export function NorthlineApp() {
             ‹
           </button>
         </div>
-        <button className="workspace">
-          <span className="workspace-icon">V</span>
+        <button className="workspace" onClick={()=>setWorkspaceMenu(open=>!open)} aria-expanded={workspaceMenu}>
+          <span className="workspace-icon">{activeWorkspace?.kind==="personal"?"P":"W"}</span>
           <span>
-            <b>VTuber Offices</b>
-            <small>Private workspace</small>
+            <b>{activeWorkspace?.name||"Workspace"}</b>
+            <small>{activeWorkspace?.kind==="personal"?"Personal workspace":`${activeWorkspace?.memberCount||0} shared members`}</small>
           </span>
           <i>⌄</i>
         </button>
+        {workspaceMenu&&<div className="workspace-menu">{workspaces.map(workspace=><button className={workspace.id===activeWorkspace?.id?"active":""} key={workspace.id} onClick={()=>{setActiveWorkspaceId(workspace.id);const first=boards.find(board=>board.workspaceId===workspace.id);setActiveBoardId(first?.id||null);setView("board");setWorkspaceMenu(false)}}><span>{workspace.kind==="personal"?"♙":"♜"}</span><b>{workspace.name}</b><small>{workspace.permission}</small></button>)}<div><button onClick={()=>{setModal("workspace-create");setWorkspaceMenu(false)}}>＋ New shared workspace</button>{activeWorkspace?.kind==="shared"&&activeWorkspace.permission==="owner"&&<button onClick={()=>{setModal("workspace-manage");setWorkspaceMenu(false)}}>⚙ Manage workspace</button>}</div></div>}
         <nav>
           <button
             className={view === "board" ? "active" : ""}
@@ -334,10 +347,10 @@ export function NorthlineApp() {
         </nav>
         <div className="nav-label">
           <span>MY BOARDS</span>
-          <button onClick={() => setModal("board-create")}>＋</button>
+          {activeWorkspace?.permission!=="viewer"&&<button onClick={() => setModal("board-create")}>＋</button>}
         </div>
         <nav className="boards">
-          {boards
+          {visibleBoards
             .filter((b) => b.permission === "owner")
             .map((b) => (
               <BoardNav
@@ -355,7 +368,7 @@ export function NorthlineApp() {
           <span>SHARED WITH ME</span>
         </div>
         <nav className="boards">
-          {boards
+          {visibleBoards
             .filter(
               (b) => b.permission === "editor" || b.permission === "viewer",
             )
@@ -481,6 +494,9 @@ export function NorthlineApp() {
           task={selectedTask}
           people={boardData?.assignees || []}
           directoryPeople={directoryUsers}
+          workspaces={workspaces}
+          activeWorkspace={activeWorkspace}
+          setActiveWorkspaceId={setActiveWorkspaceId}
           busy={busy}
           run={mutate}
           refresh={refresh}
@@ -1587,6 +1603,9 @@ function NorthlineModal({
   task,
   people,
   directoryPeople,
+  workspaces,
+  activeWorkspace,
+  setActiveWorkspaceId,
   busy,
   run,
   refresh,
@@ -1611,12 +1630,16 @@ function NorthlineModal({
     name: board?.board.name || "",
     description: board?.board.description || "",
     template: "blank",
+    workspaceId: String(board?.board.workspaceId||activeWorkspace?.id||""),
   });
+  const [workspaceName,setWorkspaceName]=useState("");
+  const [workspaceDetail,setWorkspaceDetail]=useState<any>(null);
   const [selectedUser, setSelectedUser] = useState("");
   const [permission, setPermission] = useState("editor");
   const [comments, setComments] = useState<any[]>([]);
   const [comment, setComment] = useState("");
   const [activity,setActivity]=useState<Array<{id:number;action:string;detail:string;createdAt:string;actorName:string;actorAvatar:string|null}>>([]);
+  useEffect(()=>{if(type==="workspace-manage"&&activeWorkspace)jsonFetch(`/api/workspaces/${activeWorkspace.id}`).then(setWorkspaceDetail).catch((error)=>notify(error.message))},[type,activeWorkspace?.id]);
   const [notificationSettings, setNotificationSettings] = useState({
     assignmentEnabled: board?.notifications?.assignmentEnabled !== 0,
     statusEnabled: board?.notifications?.statusEnabled !== 0,
@@ -1918,7 +1941,8 @@ function NorthlineModal({
         {type === "board-create" && (
           <>
             <h2>Create board</h2>
-            <p>Start a private board and share it when ready.</p>
+            <p>Personal workspace boards start private. Shared workspace boards inherit that workspace&apos;s access.</p>
+            <label>Workspace<select value={boardForm.workspaceId} onChange={(e)=>setBoardForm({...boardForm,workspaceId:e.target.value})}>{(workspaces as Workspace[]).filter(workspace=>workspace.permission!=="viewer").map(workspace=><option key={workspace.id} value={workspace.id}>{workspace.name}{workspace.kind==="personal"?" (personal)":""}</option>)}</select></label>
             <label>
               Name
               <input
@@ -1959,6 +1983,8 @@ function NorthlineModal({
             </button>
           </>
         )}
+        {type==="workspace-create"&&<><h2>Create shared workspace</h2><p>Every board in this workspace will automatically be available to the members you invite.</p><label>Name<input autoFocus maxLength={80} value={workspaceName} onChange={(event)=>setWorkspaceName(event.target.value)}/></label><button className="primary wide" disabled={busy||!workspaceName.trim()} onClick={()=>run(async()=>{const created=await jsonFetch("/api/workspaces",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:workspaceName})});setActiveWorkspaceId(created.id);await refresh();close();notify("Shared workspace created")})}>Create workspace</button></>}
+        {type==="workspace-manage"&&workspaceDetail&&<><h2>Manage {workspaceDetail.workspace.name}</h2><p>Workspace members automatically receive access to every board kept here.</p><div className="modal-row"><label>Member<select value={selectedUser} onChange={(event)=>setSelectedUser(event.target.value)}><option value="">Choose a person…</option>{directoryPeople.filter((person:WorkspaceUser)=>person.id!==workspaceDetail.workspace.ownerId&&!workspaceDetail.members.some((member:Member)=>member.id===person.id)).map((person:WorkspaceUser)=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Permission<select value={permission} onChange={(event)=>setPermission(event.target.value)}><option value="editor">Editor</option><option value="viewer">Viewer</option></select></label></div><button className="primary wide" disabled={busy||!selectedUser} onClick={()=>run(async()=>{await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}/members`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:Number(selectedUser),permission})});setWorkspaceDetail(await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`));setSelectedUser("");await refresh();notify("Workspace access granted")})}>Add workspace member</button><div className="shared-list">{workspaceDetail.members.map((member:Member)=><div className="share-person" key={member.id}><Avatar name={member.name} avatar={member.avatar}/><span><b>{member.name}</b><small>{member.email}</small></span><em>{member.permission}</em><button className="icon-button" aria-label={`Remove ${member.name}`} onClick={()=>run(async()=>{await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}/members`,{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:member.id})});setWorkspaceDetail(await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`));await refresh();notify("Workspace member removed")})}>×</button></div>)}</div></>}
         {type==="activity"&&<><h2>Board activity</h2><p>The latest changes across this board.</p><div className="activity-feed">{activity.length?activity.map(item=><article key={item.id}><Avatar name={item.actorName} avatar={item.actorAvatar}/><span><b>{item.actorName}</b><p>{item.detail}</p><small>{new Date(`${item.createdAt}Z`).toLocaleString()}</small></span></article>):<div className="empty-state"><b>No activity yet</b><span>New task changes will appear here.</span></div>}</div></>}
         {type==="columns"&&<ColumnManager board={board} busy={busy} run={run} refresh={refresh} close={close} notify={notify}/>}
         {type === "board-settings" && (
@@ -1988,6 +2014,7 @@ function NorthlineModal({
                 }
               />
             </label>
+            <label>Workspace<select value={boardForm.workspaceId} onChange={(event)=>setBoardForm({...boardForm,workspaceId:event.target.value})}>{(workspaces as Workspace[]).filter(workspace=>workspace.permission!=="viewer").map(workspace=><option key={workspace.id} value={workspace.id}>{workspace.name}{workspace.kind==="personal"?" (personal)":""}</option>)}</select><small>Moving a board into a shared workspace grants access to every workspace member.</small></label>
             <div className="settings-callout"><b>Private Task Buddy delivery</b><span>Enabled notifications are sent by DM to the person who created each task.</span></div>
             <div className="notification-options">
               <h3>Automatic notifications</h3>

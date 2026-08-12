@@ -2,12 +2,13 @@
 
 ## Supported version
 
-Northline is currently in **Beta v0.1.1**. Only the latest tagged Beta release and latest commit on `main` receive security fixes during the Beta period.
+Northline is currently in **Beta v0.2.0**. Only the latest tagged Beta release and latest commit on `main` receive security fixes during the Beta period.
 
 ## Security model
 
 - Administrative routes require an active server-side Admin session.
 - Board routes resolve owner, editor, or viewer access on the server for every request.
+- Shared-workspace membership is resolved server-side and inherited by contained boards; personal workspaces cannot accept workspace members.
 - Opaque board IDs prevent easy enumeration but are not considered authorization secrets.
 - Sessions use random tokens; only SHA-256 token digests are stored in SQLite.
 - Cookies are HTTP-only, same-site, and marked secure in HTTPS deployments.

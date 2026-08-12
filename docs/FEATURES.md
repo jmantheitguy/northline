@@ -4,6 +4,10 @@
 
 Boards are private to their creator until shared. Every board has an opaque random public ID, while ownership remains a relational server-side permission. Each board owns an ordered workflow whose columns can be added, renamed, recolored, moved, marked as completed, or removed by an owner or editor. Removing a column requires choosing a destination for its tasks. Northline supports Kanban, list, timeline, and calendar-oriented views; drag-and-drop movement; priorities; categories; due dates; assignees; descriptions; comments; filtering; sorting; duplication; progress reporting; board activity; and blank, content-pipeline, or launch-plan templates.
 
+## Workspaces
+
+Every account receives one personal workspace. Its boards are private by default and can still be shared individually. Members can also create shared workspaces, invite viewers or editors, switch between workspaces from the sidebar, and create or move boards within workspaces they can edit. Shared-workspace membership automatically grants the corresponding access to every contained board; removing a member removes that inherited access without altering explicit board shares elsewhere.
+
 Global search returns tasks only from boards the signed-in user can access. Direct task links contain the opaque board ID and task ID, but the server still checks authorization.
 
 ## Collaboration and identity

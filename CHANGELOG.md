@@ -1,5 +1,14 @@
 # Northline release history
 
+## Beta v0.2.0 — Personal and shared workspaces
+
+- Give every member an automatic personal workspace whose boards remain private unless individually shared.
+- Add user-created shared workspaces with owner-managed viewer/editor membership inherited by every board in the workspace.
+- Turn the sidebar workspace control into a real switcher with shared-workspace creation and membership management.
+- Allow authorized members to create boards inside a workspace and board owners to move boards between workspaces they can edit.
+- Extend board discovery, task assignment, search, reminders, and server-side authorization to enforce workspace inheritance.
+- Add version-only Task Buddy release announcements using a GitHub-style push embed in the configured Discord updates channel.
+
 ## Beta v0.1.1 — Consistent task actions
 
 - Normalize the task action buttons to Northline's interface font, size, weight, and letter spacing.

@@ -40,7 +40,7 @@ export function notifyTaskChanges(before:TaskContext,after:TaskContext,actorId:n
 export function notifyComment(task:TaskContext,actorId:number,actorName:string,body:string){
   const excerpt=body.length>240?`${body.slice(0,237)}…`:body;
   enqueue(task,actorId,"comment",`💬 **${actorName}** commented on **${task.title}**:\n> ${excerpt.replace(/\n/g,"\n> ")}`,`comment:${task.id}:${Date.now()}`);
-  const candidates=db.prepare(`SELECT DISTINCT u.id,u.name,u.email FROM users u JOIN boards b ON b.id=? LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id WHERE u.status='Active' AND (u.id=b.owner_id OR bm.user_id IS NOT NULL OR u.id=?)`).all(task.boardId,task.assigneeId||-1) as Array<{id:number;name:string;email:string}>;
+  const candidates=db.prepare(`SELECT DISTINCT u.id,u.name,u.email FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL OR u.id=?)`).all(task.boardId,task.assigneeId||-1) as Array<{id:number;name:string;email:string}>;
   for(const person of candidates){const aliases=[person.email.split("@")[0],person.name.replace(/\s+/g,"")];if(aliases.some(alias=>new RegExp(`@${alias.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\b`,"i").test(body)))enqueue(task,actorId,"mention",`📣 **${actorName}** mentioned **${person.name}** on **${task.title}**.`,`mention:${task.id}:${person.id}:${Date.now()}`);}
 }
 
