@@ -2,7 +2,11 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.2.0
+## Current — Beta v0.3.0
+
+- Permission-aware My Work dashboard across accessible workspaces and boards
+- Urgency grouping for overdue, due-soon, later, unscheduled, and completed assignments
+- Cross-board filtering and safe quick updates for editable assigned tasks
 
 - Personal workspaces for private boards and optional board-level sharing
 - Shared workspace creation, switching, membership, and inherited board access
@@ -44,7 +48,6 @@ Northline is being built in public as a self-hosted project workspace for small 
 
 - Lightweight automation rules for status, due dates, and reminders
 - File attachments with configurable self-hosted storage
-- Personal task views across boards
 - Broader automated coverage for permissions and identity lifecycle events
 - Accessibility and responsive-design review
 - Performance testing for larger boards and member directories

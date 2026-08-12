@@ -103,7 +103,7 @@ Each phase should receive its own threat review, authorization tests, migration 
 ## Other longer-term directions
 
 - File attachments backed by configurable self-hosted storage
-- Personal cross-board task views
+- Expanded personal task planning beyond the delivered My Work dashboard
 - Workflow automation for task status, due dates, and reminders
 - Additional notification providers
 - Public API keys and scoped webhooks

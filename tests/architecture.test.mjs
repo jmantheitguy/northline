@@ -166,3 +166,16 @@ test("release announcements follow successful deployments without duplicates",as
   assert.ok(deploy.indexOf('health" = "healthy')<deploy.indexOf("announce-discord.mjs"));
   assert.ok(deploy.indexOf("announce-discord.mjs")<deploy.indexOf("printf '%s\\n'"));
 });
+
+test("My Work aggregates only accessible assignments and preserves edit permissions",async()=>{
+  const [route,ui,taskRoute,styles]=await Promise.all([read("app/api/my-work/route.ts"),read("app/northline-app.tsx"),read("app/api/tasks/[id]/route.ts"),read("app/globals.css")]);
+  assert.match(route,/t\.assignee_id=\?/);
+  assert.match(route,/b\.owner_id=\? OR w\.owner_id=\? OR bm\.user_id IS NOT NULL OR wm\.user_id IS NOT NULL/);
+  assert.match(route,/CASE[\s\S]*workspace_members/);
+  assert.match(await read("lib/db.ts"),/tasks_assignee_idx/);
+  assert.doesNotMatch(route,/role.*Admin|Admin.*role/);
+  assert.match(ui,/Overdue/);assert.match(ui,/Due soon/);assert.match(ui,/Unscheduled/);assert.match(ui,/Completed/);
+  assert.match(ui,/Filter by workspace|Filter by board/i);assert.match(ui,/task\.permission!=="viewer"/);
+  for(const field of ["status","priority","due_date"])assert.match(ui,new RegExp(field));
+  assert.match(taskRoute,/canEdit\(boardPermission/);assert.match(styles,/\.my-work-page/);
+});

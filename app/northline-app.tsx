@@ -83,9 +83,10 @@ type Modal =
   | "workspace-manage"
   | "reminder"
   | null;
-type View = "board" | "directory" | "reminders" | "settings" | "admin";
+type View = "board" | "my-work" | "directory" | "reminders" | "settings" | "admin";
 type BoardMode = "board" | "list" | "timeline" | "calendar";
 type SearchResult={id:number;title:string;status:string;priority:string;boardId:number;boardKey:string;boardName:string};
+type MyWorkTask={id:number;title:string;description:string;status:string;statusName:string;statusColor:string;isDone:number;priority:Priority;tag:string;due:string|null;updatedAt:string;boardId:number;boardKey:string;boardName:string;workspaceId:number;workspaceKey:string;workspaceName:string;permission:"owner"|"editor"|"viewer"};
 
 function BrandMark({ priority = false }: { priority?: boolean }) {
   return (
@@ -333,6 +334,12 @@ export function NorthlineApp() {
             <span>⌂</span>Boards
           </button>
           <button
+            className={view === "my-work" ? "active" : ""}
+            onClick={() => setView("my-work")}
+          >
+            <span>✓</span>My Work
+          </button>
+          <button
             className={view === "directory" ? "active" : ""}
             onClick={() => setView("directory")}
           >
@@ -477,6 +484,7 @@ export function NorthlineApp() {
             />
           ))}
         {view === "directory" && <Directory users={directoryUsers} />}
+        {view === "my-work" && <MyWork notify={notify} openTask={(task)=>{setActiveWorkspaceId(task.workspaceId);setActiveBoardId(task.boardId);setView("board");setDeepLinkTaskId(task.id)}} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "settings" && <Settings notify={notify} />}
         {view === "admin" && isAdmin && (
@@ -693,6 +701,41 @@ function Empty({
       </div>
     </section>
   );
+}
+
+function MyWork({notify,openTask}:{notify:(message:string)=>void;openTask:(task:MyWorkTask)=>void}){
+  const [tasks,setTasks]=useState<MyWorkTask[]>([]);
+  const [columns,setColumns]=useState<Array<{boardId:number;key:string;name:string;color:string;position:number;isDone:number}>>([]);
+  const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState<number|null>(null);
+  const [query,setQuery]=useState("");
+  const [workspace,setWorkspace]=useState("all");
+  const [board,setBoard]=useState("all");
+  const [priority,setPriority]=useState("all");
+  const [status,setStatus]=useState("all");
+  const load=async()=>{setLoading(true);try{const data=await jsonFetch("/api/my-work");setTasks(data.tasks||[]);setColumns(data.columns||[])}catch(error){notify((error as Error).message)}finally{setLoading(false)}};
+  useEffect(()=>{void load()},[]);
+  const update=async(task:MyWorkTask,changes:Record<string,unknown>)=>{setSaving(task.id);try{await jsonFetch(`/api/tasks/${task.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(changes)});await load();notify("Task updated")}catch(error){notify((error as Error).message)}finally{setSaving(null)}};
+  const workspaces=[...new Map(tasks.map(task=>[task.workspaceId,{id:task.workspaceId,name:task.workspaceName}])).values()];
+  const boards=[...new Map(tasks.filter(task=>workspace==="all"||String(task.workspaceId)===workspace).map(task=>[task.boardId,{id:task.boardId,name:task.boardName}])).values()];
+  const statuses=[...new Set(tasks.map(task=>task.statusName))].sort();
+  const filtered=tasks.filter(task=>(workspace==="all"||String(task.workspaceId)===workspace)&&(board==="all"||String(task.boardId)===board)&&(priority==="all"||task.priority===priority)&&(status==="all"||task.statusName===status)&&(task.title+task.description+task.tag+task.boardName+task.workspaceName).toLowerCase().includes(query.toLowerCase()));
+  const localDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  const today=localDate(new Date()),soonDate=new Date();soonDate.setDate(soonDate.getDate()+7);const soon=localDate(soonDate);
+  const groups=[
+    {key:"overdue",title:"Overdue",copy:"Past due and still open",tasks:filtered.filter(task=>!task.isDone&&!!task.due&&task.due<today)},
+    {key:"soon",title:"Due soon",copy:"Due in the next seven days",tasks:filtered.filter(task=>!task.isDone&&!!task.due&&task.due>=today&&task.due<=soon)},
+    {key:"later",title:"Later",copy:"Scheduled beyond the next seven days",tasks:filtered.filter(task=>!task.isDone&&!!task.due&&task.due>soon)},
+    {key:"unscheduled",title:"Unscheduled",copy:"Open work without a due date",tasks:filtered.filter(task=>!task.isDone&&!task.due)},
+    {key:"completed",title:"Completed",copy:"Finished assigned work",tasks:filtered.filter(task=>!!task.isDone)},
+  ];
+  if(loading)return <PageLoading/>;
+  return <div className="content my-work-page">
+    <div className="page-title"><div><span className="eyebrow">PERSONAL TASK VIEW</span><h1>My Work</h1><p>Everything assigned to you across the boards and workspaces you can access.</p></div><button className="secondary" onClick={()=>void load()}>↻ Refresh</button></div>
+    <div className="my-work-metrics"><article><b>{filtered.filter(task=>!task.isDone).length}</b><span>Open</span></article><article className="danger"><b>{filtered.filter(task=>!task.isDone&&!!task.due&&task.due<today).length}</b><span>Overdue</span></article><article><b>{filtered.filter(task=>!task.isDone&&!!task.due&&task.due>=today&&task.due<=soon).length}</b><span>Due soon</span></article><article><b>{filtered.filter(task=>!!task.isDone).length}</b><span>Completed</span></article></div>
+    <div className="my-work-filters"><label className="my-work-search">⌕<input aria-label="Search assigned tasks" placeholder="Search my tasks…" value={query} onChange={event=>setQuery(event.target.value)}/></label><select aria-label="Filter by workspace" value={workspace} onChange={event=>{setWorkspace(event.target.value);setBoard("all")}}><option value="all">All workspaces</option>{workspaces.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Filter by board" value={board} onChange={event=>setBoard(event.target.value)}><option value="all">All boards</option>{boards.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Filter by priority" value={priority} onChange={event=>setPriority(event.target.value)}><option value="all">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select><select aria-label="Filter by status" value={status} onChange={event=>setStatus(event.target.value)}><option value="all">All statuses</option>{statuses.map(item=><option key={item}>{item}</option>)}</select></div>
+    {!filtered.length?<div className="empty-state large"><span className="empty-icon">◎</span><b>No assigned tasks</b><span>Tasks assigned to you will appear here across every accessible workspace.</span></div>:<div className="my-work-groups">{groups.filter(group=>group.tasks.length).map(group=><section key={group.key} className={`my-work-group ${group.key}`}><header><div><h2>{group.title}</h2><p>{group.copy}</p></div><span>{group.tasks.length}</span></header><div>{group.tasks.map(task=>{const editable=task.permission!=="viewer",taskColumns=columns.filter(column=>column.boardId===task.boardId);return <article className="my-work-task" key={task.id}><button className="my-work-task-title" onClick={()=>openTask(task)}><i style={{background:task.statusColor}}/><span><b>{task.title}</b><small>{task.workspaceName} / {task.boardName} · {task.tag}</small></span></button><div className="my-work-task-controls"><select aria-label={`Status for ${task.title}`} value={task.status} disabled={!editable||saving===task.id} onChange={event=>void update(task,{status:event.target.value})}>{taskColumns.map(column=><option key={column.key} value={column.key}>{column.name}</option>)}</select><select aria-label={`Priority for ${task.title}`} value={task.priority} disabled={!editable||saving===task.id} onChange={event=>void update(task,{priority:event.target.value})}><option>High</option><option>Medium</option><option>Low</option></select><input aria-label={`Due date for ${task.title}`} type="date" value={task.due||""} disabled={!editable||saving===task.id} onChange={event=>void update(task,{due_date:event.target.value||null})}/><button className="icon-button" aria-label={`Open ${task.title}`} onClick={()=>openTask(task)}>›</button></div>{!editable&&<small className="read-only-note">View only</small>}</article>})}</div></section>)}</div>}
+  </div>;
 }
 
 function BoardView({

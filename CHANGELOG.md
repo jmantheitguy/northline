@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.3.0 — My Work across boards
+
+- Add a personal My Work dashboard that gathers tasks assigned to the signed-in user from every board and workspace they can access.
+- Group assigned work into overdue, due soon, later, unscheduled, and completed sections with at-a-glance totals.
+- Add workspace, board, priority, status, and text filtering without exposing inaccessible task or board data.
+- Allow owners and editors to update task status, priority, and due date from My Work while keeping viewer assignments read-only.
+- Open any assigned task in its source board using the existing opaque board URL and permission checks.
+
 ## Beta v0.2.1 — Deployment-aware release announcements
 
 - Add a production deployment workflow that announces the deployed version through Task Buddy only after the replacement container becomes healthy.

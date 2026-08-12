@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.2.1 — Deployment-aware release announcements**
+Current release: **Beta v0.3.0 — My Work across boards**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -32,6 +32,7 @@ The application combines visual task boards, private collaboration, user adminis
 
 - Kanban boards with fully customizable per-board workflow columns: add, rename, recolor, reorder, or safely remove stages
 - Automatic personal workspaces plus owner-managed shared workspaces whose members inherit access to every contained board
+- A personal My Work dashboard with urgency grouping, cross-board filters, and permission-aware quick edits
 - Drag-and-drop task movement
 - Task creation, priorities, categories, due dates, owners, and comments
 - Board, list, timeline, and calendar navigation concepts

@@ -180,6 +180,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS board_members_user_idx ON board_members(user_id);
   CREATE INDEX IF NOT EXISTS workspace_members_user_idx ON workspace_members(user_id);
   CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
+  CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date);
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
   CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
   CREATE INDEX IF NOT EXISTS board_activity_board_idx ON board_activity(board_id,created_at);
@@ -228,7 +229,7 @@ if(taskSchema.includes("CHECK(status IN ('ideas','ready','progress','hold','done
     ALTER TABLE tasks_dynamic RENAME TO tasks;
     COMMIT;`)}catch(error){if(db.inTransaction)db.exec("ROLLBACK");throw error}finally{db.pragma("foreign_keys = ON")}
 }
-db.exec("CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status)");
+db.exec("CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status); CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date)");
 
 export function createDefaultBoardColumns(boardId:number){
   const insert=db.prepare("INSERT OR IGNORE INTO board_columns(board_id,column_key,name,color,position,is_done) VALUES(?,?,?,?,?,?)");
