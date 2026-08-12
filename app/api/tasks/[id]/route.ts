@@ -1,15 +1,158 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import db from "@/lib/db";
-import { boardPermission,canEdit } from "@/lib/boards";
+import { boardPermission, canEdit } from "@/lib/boards";
 import { notifyTaskChanges } from "@/lib/task-notifications";
 import { recordBoardActivity } from "@/lib/activity";
 
-const priorities=["Low","Medium","High"];
-export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}){
-  const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const id=Number((await params).id),task=db.prepare("SELECT id,board_id boardId,title,status,assignee_id assigneeId,due_date dueDate,created_by createdBy FROM tasks WHERE id=?").get(id) as {id:number;boardId:number;title:string;status:string;assigneeId:number|null;dueDate:string|null;createdBy:number}|undefined;if(!task)return NextResponse.json({error:"Not found"},{status:404});if(!canEdit(boardPermission(user,task.boardId)))return NextResponse.json({error:"Forbidden"},{status:403});
-  const body=await request.json();if(body.title!==undefined&&!String(body.title).trim())return NextResponse.json({error:"Task title is required"},{status:400});const validStatus=body.status===undefined||db.prepare("SELECT 1 FROM board_columns WHERE board_id=? AND column_key=?").get(task.boardId,String(body.status));if(body.title&&String(body.title).length>200||body.description&&String(body.description).length>5000||body.tag&&String(body.tag).length>50||!validStatus||body.priority&&!priorities.includes(body.priority))return NextResponse.json({error:"Invalid task details"},{status:400});
-  if(body.assignee_id){const allowed=db.prepare("SELECT 1 FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.id=? AND u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)").get(task.boardId,Number(body.assignee_id));if(!allowed)return NextResponse.json({error:"Assignee does not have access to this board"},{status:400});}
-  const allowed=["title","description","status","priority","tag","due_date","assignee_id"] as const;const update=db.transaction(()=>{for(const key of allowed)if(Object.prototype.hasOwnProperty.call(body,key))db.prepare(`UPDATE tasks SET ${key}=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(body[key],id);db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(task.boardId);db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"TASK.UPDATE",String(id));recordBoardActivity(task.boardId,user.id,"TASK.UPDATE",`Updated ${task.title}`);});update();const after=db.prepare("SELECT id,board_id boardId,title,status,assignee_id assigneeId,due_date dueDate,created_by createdBy FROM tasks WHERE id=?").get(id) as typeof task;notifyTaskChanges(task,after!,user.id);return NextResponse.json({ok:true});
+const priorities = ["Low", "Medium", "High"];
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await currentUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const id = Number((await params).id),
+    task = db
+      .prepare(
+        "SELECT id,board_id boardId,title,status,assignee_id assigneeId,due_date dueDate,created_by createdBy FROM tasks WHERE id=?",
+      )
+      .get(id) as
+      | {
+          id: number;
+          boardId: number;
+          title: string;
+          status: string;
+          assigneeId: number | null;
+          dueDate: string | null;
+          createdBy: number;
+        }
+      | undefined;
+  if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canEdit(boardPermission(user, task.boardId)))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const body = await request.json();
+  if (body.archive !== undefined) {
+    const column = db
+      .prepare(
+        "SELECT is_done isDone FROM board_columns WHERE board_id=? AND column_key=?",
+      )
+      .get(task.boardId, task.status) as { isDone: number } | undefined;
+    if (body.archive === true && column?.isDone !== 1)
+      return NextResponse.json(
+        { error: "Only completed tasks can be archived" },
+        { status: 400 },
+      );
+    db.prepare(
+      "UPDATE tasks SET archived_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+    ).run(body.archive === true ? new Date().toISOString() : null, id);
+    if (body.archive === true)
+      db.prepare(
+        "UPDATE reminders SET status='cancelled',error='Task archived',updated_at=CURRENT_TIMESTAMP WHERE task_id=? AND status='pending'",
+      ).run(id);
+    recordBoardActivity(
+      task.boardId,
+      user.id,
+      body.archive === true ? "TASK.ARCHIVE" : "TASK.RESTORE",
+      `${body.archive === true ? "Archived" : "Restored"} ${task.title}`,
+    );
+    return NextResponse.json({ ok: true });
+  }
+  if (body.title !== undefined && !String(body.title).trim())
+    return NextResponse.json(
+      { error: "Task title is required" },
+      { status: 400 },
+    );
+  const validStatus =
+    body.status === undefined ||
+    db
+      .prepare("SELECT 1 FROM board_columns WHERE board_id=? AND column_key=?")
+      .get(task.boardId, String(body.status));
+  if (
+    (body.title && String(body.title).length > 200) ||
+    (body.description && String(body.description).length > 5000) ||
+    (body.tag && String(body.tag).length > 50) ||
+    !validStatus ||
+    (body.priority && !priorities.includes(body.priority))
+  )
+    return NextResponse.json(
+      { error: "Invalid task details" },
+      { status: 400 },
+    );
+  if (body.assignee_id) {
+    const allowed = db
+      .prepare(
+        "SELECT 1 FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.id=? AND u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)",
+      )
+      .get(task.boardId, Number(body.assignee_id));
+    if (!allowed)
+      return NextResponse.json(
+        { error: "Assignee does not have access to this board" },
+        { status: 400 },
+      );
+  }
+  const allowed = [
+    "title",
+    "description",
+    "status",
+    "priority",
+    "tag",
+    "due_date",
+    "assignee_id",
+  ] as const;
+  const update = db.transaction(() => {
+    for (const key of allowed)
+      if (Object.prototype.hasOwnProperty.call(body, key))
+        db.prepare(
+          `UPDATE tasks SET ${key}=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+        ).run(body[key], id);
+    db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(
+      task.boardId,
+    );
+    db.prepare(
+      "INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)",
+    ).run(user.id, "TASK.UPDATE", String(id));
+    recordBoardActivity(
+      task.boardId,
+      user.id,
+      "TASK.UPDATE",
+      `Updated ${task.title}`,
+    );
+  });
+  update();
+  const after = db
+    .prepare(
+      "SELECT id,board_id boardId,title,status,assignee_id assigneeId,due_date dueDate,created_by createdBy FROM tasks WHERE id=?",
+    )
+    .get(id) as typeof task;
+  notifyTaskChanges(task, after!, user.id);
+  return NextResponse.json({ ok: true });
 }
-export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const id=Number((await params).id),task=db.prepare("SELECT board_id,title FROM tasks WHERE id=?").get(id) as {board_id:number;title:string}|undefined;if(!task)return NextResponse.json({error:"Not found"},{status:404});if(!canEdit(boardPermission(user,task.board_id)))return NextResponse.json({error:"Forbidden"},{status:403});db.transaction(()=>{recordBoardActivity(task.board_id,user.id,"TASK.DELETE",`Deleted ${task.title}`);db.prepare("DELETE FROM tasks WHERE id=?").run(id);db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"TASK.DELETE",String(id));})();return NextResponse.json({ok:true});}
+export async function DELETE(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await currentUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const id = Number((await params).id),
+    task = db.prepare("SELECT board_id,title FROM tasks WHERE id=?").get(id) as
+      { board_id: number; title: string } | undefined;
+  if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canEdit(boardPermission(user, task.board_id)))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  db.transaction(() => {
+    recordBoardActivity(
+      task.board_id,
+      user.id,
+      "TASK.DELETE",
+      `Deleted ${task.title}`,
+    );
+    db.prepare("DELETE FROM tasks WHERE id=?").run(id);
+    db.prepare(
+      "INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)",
+    ).run(user.id, "TASK.DELETE", String(id));
+  })();
+  return NextResponse.json({ ok: true });
+}

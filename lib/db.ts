@@ -230,6 +230,9 @@ if(taskSchema.includes("CHECK(status IN ('ideas','ready','progress','hold','done
     COMMIT;`)}catch(error){if(db.inTransaction)db.exec("ROLLBACK");throw error}finally{db.pragma("foreign_keys = ON")}
 }
 db.exec("CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status); CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date)");
+const taskColumns=db.prepare("PRAGMA table_info(tasks)").all() as Array<{name:string}>;
+if(!taskColumns.some(column=>column.name==="archived_at"))db.exec("ALTER TABLE tasks ADD COLUMN archived_at TEXT");
+db.exec("CREATE INDEX IF NOT EXISTS tasks_archive_idx ON tasks(board_id,archived_at)");
 
 export function createDefaultBoardColumns(boardId:number){
   const insert=db.prepare("INSERT OR IGNORE INTO board_columns(board_id,column_key,name,color,position,is_done) VALUES(?,?,?,?,?,?)");
@@ -277,7 +280,7 @@ addSessionColumn("user_agent","user_agent TEXT");
 addSessionColumn("created_ip","created_ip TEXT");
 addSessionColumn("last_seen_at","last_seen_at TEXT");
 
-const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"],[10,"custom board workflow columns"],[11,"personal and shared workspaces"]];
+const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"],[10,"custom board workflow columns"],[11,"personal and shared workspaces"],[12,"recoverable task archive"]];
 const recordMigrations=db.transaction(()=>{const insert=db.prepare("INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)");for(const migration of migrations)insert.run(...migration)});recordMigrations();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;

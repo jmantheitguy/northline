@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.4.0 — Safer editing, reminders, and task archiving
+
+- Protect unfinished task, board, workspace, and reminder forms from accidental backdrop dismissal and confirm before discarding changed values.
+- Replace ambiguous reminder time spinners with explicit 1–12 hour, minute, and AM/PM controls for both creation and editing.
+- Hide completed tasks by default with a per-board Show completed control.
+- Allow editors to archive completed tasks without deleting comments or history, browse the board archive, and restore tasks later.
+- Exclude archived tasks from board counts, global search, and My Work while retaining their relational data.
+
 ## Beta v0.3.1 — Streamlined task actions
 
 - Remove decorative icons from the Duplicate and Remind me task buttons while preserving their behavior and visual hierarchy.

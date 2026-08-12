@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, jsx-a11y/no-autofocus, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-static-element-interactions */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, jsx-a11y/no-autofocus, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -8,7 +8,14 @@ import { ReminderCenter } from "./reminder-center";
 
 type Status = string;
 type Priority = "Low" | "Medium" | "High";
-type BoardColumn={id:number;key:string;name:string;color:string;position:number;isDone:number};
+type BoardColumn = {
+  id: number;
+  key: string;
+  name: string;
+  color: string;
+  position: number;
+  isDone: number;
+};
 type Task = {
   id: number;
   title: string;
@@ -33,7 +40,17 @@ type BoardSummary = {
   taskCount: number;
   workspaceId: number;
 };
-type Workspace={id:number;workspaceKey:string;name:string;kind:"personal"|"shared";ownerId:number;ownerName:string;permission:"owner"|"editor"|"viewer";boardCount:number;memberCount:number};
+type Workspace = {
+  id: number;
+  workspaceKey: string;
+  name: string;
+  kind: "personal" | "shared";
+  ownerId: number;
+  ownerName: string;
+  permission: "owner" | "editor" | "viewer";
+  boardCount: number;
+  memberCount: number;
+};
 type Member = {
   id: number;
   name: string;
@@ -42,15 +59,37 @@ type Member = {
   permission: "viewer" | "editor";
 };
 type BoardDetail = {
-  board: { id: number; boardKey:string; name: string; description: string; ownerId: number; createdBy:number; workspaceId:number };
+  board: {
+    id: number;
+    boardKey: string;
+    name: string;
+    description: string;
+    ownerId: number;
+    createdBy: number;
+    workspaceId: number;
+  };
   tasks: Task[];
   members: Member[];
-  assignees: Array<{id:number;name:string;email:string;avatar:string|null}>;
+  assignees: Array<{
+    id: number;
+    name: string;
+    email: string;
+    avatar: string | null;
+  }>;
   columns: BoardColumn[];
   permission: string;
   canEdit: boolean;
   canShare: boolean;
-  notifications?: {channelId:string;channelName:string;assignmentEnabled:number;statusEnabled:number;commentEnabled:number;mentionEnabled:number;dueEnabled:number;dueWarningHours:number};
+  notifications?: {
+    channelId: string;
+    channelName: string;
+    assignmentEnabled: number;
+    statusEnabled: number;
+    commentEnabled: number;
+    mentionEnabled: number;
+    dueEnabled: number;
+    dueWarningHours: number;
+  };
 };
 type WorkspaceUser = {
   id: number;
@@ -81,12 +120,41 @@ type Modal =
   | "columns"
   | "workspace-create"
   | "workspace-manage"
+  | "archive"
   | "reminder"
   | null;
-type View = "board" | "my-work" | "directory" | "reminders" | "settings" | "admin";
+type View =
+  "board" | "my-work" | "directory" | "reminders" | "settings" | "admin";
 type BoardMode = "board" | "list" | "timeline" | "calendar";
-type SearchResult={id:number;title:string;status:string;priority:string;boardId:number;boardKey:string;boardName:string};
-type MyWorkTask={id:number;title:string;description:string;status:string;statusName:string;statusColor:string;isDone:number;priority:Priority;tag:string;due:string|null;updatedAt:string;boardId:number;boardKey:string;boardName:string;workspaceId:number;workspaceKey:string;workspaceName:string;permission:"owner"|"editor"|"viewer"};
+type SearchResult = {
+  id: number;
+  title: string;
+  status: string;
+  priority: string;
+  boardId: number;
+  boardKey: string;
+  boardName: string;
+};
+type MyWorkTask = {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  statusName: string;
+  statusColor: string;
+  isDone: number;
+  priority: Priority;
+  tag: string;
+  due: string | null;
+  updatedAt: string;
+  boardId: number;
+  boardKey: string;
+  boardName: string;
+  workspaceId: number;
+  workspaceKey: string;
+  workspaceName: string;
+  permission: "owner" | "editor" | "viewer";
+};
 
 function BrandMark({ priority = false }: { priority?: boolean }) {
   return (
@@ -136,13 +204,15 @@ async function jsonFetch(url: string, options?: RequestInit) {
 }
 
 export function NorthlineApp() {
-  const [theme,setTheme]=useState<"light"|"dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [authUser, setAuthUser] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [boards, setBoards] = useState<BoardSummary[]>([]);
-  const [workspaces,setWorkspaces]=useState<Workspace[]>([]);
-  const [activeWorkspaceId,setActiveWorkspaceId]=useState<number|null>(null);
-  const [workspaceMenu,setWorkspaceMenu]=useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(
+    null,
+  );
+  const [workspaceMenu, setWorkspaceMenu] = useState(false);
   const [activeBoardId, setActiveBoardId] = useState<number | null>(null);
   const [boardData, setBoardData] = useState<BoardDetail | null>(null);
   const [view, setView] = useState<View>("board");
@@ -150,7 +220,7 @@ export function NorthlineApp() {
   const [modal, setModal] = useState<Modal>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
-  const [globalResults,setGlobalResults]=useState<SearchResult[]>([]);
+  const [globalResults, setGlobalResults] = useState<SearchResult[]>([]);
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [sort, setSort] = useState<"created" | "due" | "priority">("created");
@@ -160,7 +230,7 @@ export function NorthlineApp() {
   const [dragged, setDragged] = useState<number | null>(null);
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
-  const [deepLinkTaskId,setDeepLinkTaskId]=useState<number|null>(null);
+  const [deepLinkTaskId, setDeepLinkTaskId] = useState<number | null>(null);
   const isAdmin = authUser?.role === "Admin";
   const notify = (message: string) => {
     setToast(message);
@@ -170,13 +240,30 @@ export function NorthlineApp() {
     try {
       const d = await jsonFetch("/api/boards");
       setBoards(d.boards);
-      setWorkspaces(d.workspaces||[]);
-      const requested=new URLSearchParams(window.location.search).get("board"),requestedBoard=d.boards.find((board:BoardSummary)=>board.boardKey===requested||String(board.id)===requested);
-      setActiveWorkspaceId(current=>requestedBoard?.workspaceId||(current&&(d.workspaces||[]).some((workspace:Workspace)=>workspace.id===current)?current:(d.workspaces||[])[0]?.id||null));
-      setActiveBoardId((current) =>
-        requestedBoard?.id || (current && d.boards.some((b: BoardSummary) => b.id === current)
-          ? current
-          : d.boards[0]?.id || null),
+      setWorkspaces(d.workspaces || []);
+      const requested = new URLSearchParams(window.location.search).get(
+          "board",
+        ),
+        requestedBoard = d.boards.find(
+          (board: BoardSummary) =>
+            board.boardKey === requested || String(board.id) === requested,
+        );
+      setActiveWorkspaceId(
+        (current) =>
+          requestedBoard?.workspaceId ||
+          (current &&
+          (d.workspaces || []).some(
+            (workspace: Workspace) => workspace.id === current,
+          )
+            ? current
+            : (d.workspaces || [])[0]?.id || null),
+      );
+      setActiveBoardId(
+        (current) =>
+          requestedBoard?.id ||
+          (current && d.boards.some((b: BoardSummary) => b.id === current)
+            ? current
+            : d.boards[0]?.id || null),
       );
     } catch (e) {
       notify((e as Error).message);
@@ -210,15 +297,25 @@ export function NorthlineApp() {
     }
   };
   useEffect(() => {
-    const saved=window.localStorage.getItem("northline-theme");const preferred=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";setTheme(saved==="dark"||saved==="light"?saved:preferred);
+    const saved = window.localStorage.getItem("northline-theme");
+    const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    setTheme(saved === "dark" || saved === "light" ? saved : preferred);
     jsonFetch("/api/auth/me")
       .then((d) => setAuthUser(d.user))
       .finally(() => setAuthLoading(false));
   }, []);
-  useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;window.localStorage.setItem("northline-theme",theme)},[theme]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem("northline-theme", theme);
+  }, [theme]);
   useEffect(() => {
     if (window.matchMedia("(max-width: 950px)").matches) setSidebar(false);
-    const query=new URLSearchParams(window.location.search),task=Number(query.get("task"));if(task>0)setDeepLinkTaskId(task);
+    const query = new URLSearchParams(window.location.search),
+      task = Number(query.get("task"));
+    if (task > 0) setDeepLinkTaskId(task);
   }, []);
   useEffect(() => {
     if (authUser) void loadBoards();
@@ -226,8 +323,26 @@ export function NorthlineApp() {
   useEffect(() => {
     if (activeBoardId && view === "board") void loadBoard(activeBoardId);
   }, [activeBoardId, view]);
-  useEffect(()=>{const active=boards.find(board=>board.id===activeBoardId);if(!active||view!=="board")return;const query=new URLSearchParams(window.location.search);query.set("board",active.boardKey);window.history.replaceState({},"",`${window.location.pathname}?${query}`);},[activeBoardId,boards,view]);
-  useEffect(()=>{if(!deepLinkTaskId||!boardData)return;const linked=boardData.tasks.find(task=>task.id===deepLinkTaskId);if(linked){setSelectedTask(linked);setModal("task-detail");}setDeepLinkTaskId(null);const query=new URLSearchParams(window.location.search);query.delete("task");query.set("board",boardData.board.boardKey);window.history.replaceState({},"",`${window.location.pathname}?${query}`);},[boardData,deepLinkTaskId]);
+  useEffect(() => {
+    const active = boards.find((board) => board.id === activeBoardId);
+    if (!active || view !== "board") return;
+    const query = new URLSearchParams(window.location.search);
+    query.set("board", active.boardKey);
+    window.history.replaceState({}, "", `${window.location.pathname}?${query}`);
+  }, [activeBoardId, boards, view]);
+  useEffect(() => {
+    if (!deepLinkTaskId || !boardData) return;
+    const linked = boardData.tasks.find((task) => task.id === deepLinkTaskId);
+    if (linked) {
+      setSelectedTask(linked);
+      setModal("task-detail");
+    }
+    setDeepLinkTaskId(null);
+    const query = new URLSearchParams(window.location.search);
+    query.delete("task");
+    query.set("board", boardData.board.boardKey);
+    window.history.replaceState({}, "", `${window.location.pathname}?${query}`);
+  }, [boardData, deepLinkTaskId]);
   useEffect(() => {
     if (
       view === "directory" ||
@@ -241,8 +356,28 @@ export function NorthlineApp() {
   useEffect(() => {
     if (isAdmin && view === "admin") void loadAdminUsers();
   }, [isAdmin, view]);
-  useEffect(()=>{if(search.trim().length<2){setGlobalResults([]);return}const timer=window.setTimeout(()=>jsonFetch(`/api/search?q=${encodeURIComponent(search)}`).then(data=>setGlobalResults(data.results||[])).catch(()=>setGlobalResults([])),250);return()=>window.clearTimeout(timer)},[search]);
-  useEffect(()=>{if(statusFilter!=="all"&&boardData&&!boardData.columns.some(column=>column.key===statusFilter))setStatusFilter("all")},[boardData,statusFilter]);
+  useEffect(() => {
+    if (search.trim().length < 2) {
+      setGlobalResults([]);
+      return;
+    }
+    const timer = window.setTimeout(
+      () =>
+        jsonFetch(`/api/search?q=${encodeURIComponent(search)}`)
+          .then((data) => setGlobalResults(data.results || []))
+          .catch(() => setGlobalResults([])),
+      250,
+    );
+    return () => window.clearTimeout(timer);
+  }, [search]);
+  useEffect(() => {
+    if (
+      statusFilter !== "all" &&
+      boardData &&
+      !boardData.columns.some((column) => column.key === statusFilter)
+    )
+      setStatusFilter("all");
+  }, [boardData, statusFilter]);
   const tasks = useMemo(() => {
     const list = [...(boardData?.tasks || [])].filter(
       (t) =>
@@ -262,8 +397,12 @@ export function NorthlineApp() {
       );
     return list;
   }, [boardData, search, statusFilter, priorityFilter, sort]);
-  const activeWorkspace=workspaces.find(workspace=>workspace.id===activeWorkspaceId)||workspaces[0];
-  const visibleBoards=boards.filter(board=>board.workspaceId===activeWorkspace?.id);
+  const activeWorkspace =
+    workspaces.find((workspace) => workspace.id === activeWorkspaceId) ||
+    workspaces[0];
+  const visibleBoards = boards.filter(
+    (board) => board.workspaceId === activeWorkspace?.id,
+  );
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;
     setBusy(true);
@@ -300,9 +439,14 @@ export function NorthlineApp() {
     if (activeBoardId) await loadBoard(activeBoardId);
     await loadBoards();
   };
-  const toggleTheme=()=>setTheme(current=>current==="dark"?"light":"dark");
-  if (authLoading) return <LoadingScreen theme={theme} toggleTheme={toggleTheme}/>;
-  if (!authUser) return <Login onLogin={setAuthUser} theme={theme} toggleTheme={toggleTheme}/>;
+  const toggleTheme = () =>
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  if (authLoading)
+    return <LoadingScreen theme={theme} toggleTheme={toggleTheme} />;
+  if (!authUser)
+    return (
+      <Login onLogin={setAuthUser} theme={theme} toggleTheme={toggleTheme} />
+    );
   return (
     <div className="app-shell">
       <aside className={sidebar ? "sidebar" : "sidebar collapsed"}>
@@ -317,15 +461,68 @@ export function NorthlineApp() {
             ‹
           </button>
         </div>
-        <button className="workspace" onClick={()=>setWorkspaceMenu(open=>!open)} aria-expanded={workspaceMenu}>
-          <span className="workspace-icon">{activeWorkspace?.kind==="personal"?"P":"W"}</span>
+        <button
+          className="workspace"
+          onClick={() => setWorkspaceMenu((open) => !open)}
+          aria-expanded={workspaceMenu}
+        >
+          <span className="workspace-icon">
+            {activeWorkspace?.kind === "personal" ? "P" : "W"}
+          </span>
           <span>
-            <b>{activeWorkspace?.name||"Workspace"}</b>
-            <small>{activeWorkspace?.kind==="personal"?"Personal workspace":`${activeWorkspace?.memberCount||0} shared members`}</small>
+            <b>{activeWorkspace?.name || "Workspace"}</b>
+            <small>
+              {activeWorkspace?.kind === "personal"
+                ? "Personal workspace"
+                : `${activeWorkspace?.memberCount || 0} shared members`}
+            </small>
           </span>
           <i>⌄</i>
         </button>
-        {workspaceMenu&&<div className="workspace-menu">{workspaces.map(workspace=><button className={workspace.id===activeWorkspace?.id?"active":""} key={workspace.id} onClick={()=>{setActiveWorkspaceId(workspace.id);const first=boards.find(board=>board.workspaceId===workspace.id);setActiveBoardId(first?.id||null);setView("board");setWorkspaceMenu(false)}}><span>{workspace.kind==="personal"?"♙":"♜"}</span><b>{workspace.name}</b><small>{workspace.permission}</small></button>)}<div><button onClick={()=>{setModal("workspace-create");setWorkspaceMenu(false)}}>＋ New shared workspace</button>{activeWorkspace?.kind==="shared"&&activeWorkspace.permission==="owner"&&<button onClick={()=>{setModal("workspace-manage");setWorkspaceMenu(false)}}>⚙ Manage workspace</button>}</div></div>}
+        {workspaceMenu && (
+          <div className="workspace-menu">
+            {workspaces.map((workspace) => (
+              <button
+                className={workspace.id === activeWorkspace?.id ? "active" : ""}
+                key={workspace.id}
+                onClick={() => {
+                  setActiveWorkspaceId(workspace.id);
+                  const first = boards.find(
+                    (board) => board.workspaceId === workspace.id,
+                  );
+                  setActiveBoardId(first?.id || null);
+                  setView("board");
+                  setWorkspaceMenu(false);
+                }}
+              >
+                <span>{workspace.kind === "personal" ? "♙" : "♜"}</span>
+                <b>{workspace.name}</b>
+                <small>{workspace.permission}</small>
+              </button>
+            ))}
+            <div>
+              <button
+                onClick={() => {
+                  setModal("workspace-create");
+                  setWorkspaceMenu(false);
+                }}
+              >
+                ＋ New shared workspace
+              </button>
+              {activeWorkspace?.kind === "shared" &&
+                activeWorkspace.permission === "owner" && (
+                  <button
+                    onClick={() => {
+                      setModal("workspace-manage");
+                      setWorkspaceMenu(false);
+                    }}
+                  >
+                    ⚙ Manage workspace
+                  </button>
+                )}
+            </div>
+          </div>
+        )}
         <nav>
           <button
             className={view === "board" ? "active" : ""}
@@ -354,7 +551,9 @@ export function NorthlineApp() {
         </nav>
         <div className="nav-label">
           <span>MY BOARDS</span>
-          {activeWorkspace?.permission!=="viewer"&&<button onClick={() => setModal("board-create")}>＋</button>}
+          {activeWorkspace?.permission !== "viewer" && (
+            <button onClick={() => setModal("board-create")}>＋</button>
+          )}
         </div>
         <nav className="boards">
           {visibleBoards
@@ -444,10 +643,30 @@ export function NorthlineApp() {
               onChange={(e) => setSearch(e.target.value)}
             />
             <kbd>⌘ K</kbd>
-            {globalResults.length>0&&<div className="global-results">{globalResults.map(result=><button key={result.id} onClick={()=>{setActiveBoardId(result.boardId);setView("board");setDeepLinkTaskId(result.id);setGlobalResults([]);setSearch("")}}><b>{result.title}</b><span>{result.boardName} · {result.status}</span></button>)}</div>}
+            {globalResults.length > 0 && (
+              <div className="global-results">
+                {globalResults.map((result) => (
+                  <button
+                    key={result.id}
+                    onClick={() => {
+                      setActiveBoardId(result.boardId);
+                      setView("board");
+                      setDeepLinkTaskId(result.id);
+                      setGlobalResults([]);
+                      setSearch("");
+                    }}
+                  >
+                    <b>{result.title}</b>
+                    <span>
+                      {result.boardName} · {result.status}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="top-actions">
-            <ThemeToggle theme={theme} toggle={toggleTheme}/>
+            <ThemeToggle theme={theme} toggle={toggleTheme} />
             <span className="version-pill">{NORTHLINE_VERSION}</span>
             <Avatar name={authUser.name} avatar={authUser.avatar} />
           </div>
@@ -484,7 +703,17 @@ export function NorthlineApp() {
             />
           ))}
         {view === "directory" && <Directory users={directoryUsers} />}
-        {view === "my-work" && <MyWork notify={notify} openTask={(task)=>{setActiveWorkspaceId(task.workspaceId);setActiveBoardId(task.boardId);setView("board");setDeepLinkTaskId(task.id)}} />}
+        {view === "my-work" && (
+          <MyWork
+            notify={notify}
+            openTask={(task) => {
+              setActiveWorkspaceId(task.workspaceId);
+              setActiveBoardId(task.boardId);
+              setView("board");
+              setDeepLinkTaskId(task.id);
+            }}
+          />
+        )}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "settings" && <Settings notify={notify} />}
         {view === "admin" && isAdmin && (
@@ -522,11 +751,37 @@ export function NorthlineApp() {
   );
 }
 
-function ThemeToggle({theme,toggle}:{theme:"light"|"dark";toggle:()=>void}){return <button className="theme-toggle" onClick={toggle} aria-label={`Switch to ${theme==="dark"?"light":"dark"} mode`} title={`Switch to ${theme==="dark"?"light":"dark"} mode`}><span aria-hidden="true">{theme==="dark"?"☀":"☾"}</span><em>{theme==="dark"?"Light":"Dark"}</em></button>}
-function LoadingScreen({theme,toggleTheme}:{theme:"light"|"dark";toggleTheme:()=>void}) {
+function ThemeToggle({
+  theme,
+  toggle,
+}: {
+  theme: "light" | "dark";
+  toggle: () => void;
+}) {
+  return (
+    <button
+      className="theme-toggle"
+      onClick={toggle}
+      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+    >
+      <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+      <em>{theme === "dark" ? "Light" : "Dark"}</em>
+    </button>
+  );
+}
+function LoadingScreen({
+  theme,
+  toggleTheme,
+}: {
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+}) {
   return (
     <div className="auth-screen">
-      <div className="auth-theme"><ThemeToggle theme={theme} toggle={toggleTheme}/></div>
+      <div className="auth-theme">
+        <ThemeToggle theme={theme} toggle={toggleTheme} />
+      </div>
       <div className="auth-card">
         <div className="auth-brand">
           <BrandMark priority />
@@ -537,18 +792,38 @@ function LoadingScreen({theme,toggleTheme}:{theme:"light"|"dark";toggleTheme:()=
     </div>
   );
 }
-function Login({ onLogin,theme,toggleTheme }: { onLogin: (u: SessionUser) => void;theme:"light"|"dark";toggleTheme:()=>void }) {
+function Login({
+  onLogin,
+  theme,
+  toggleTheme,
+}: {
+  onLogin: (u: SessionUser) => void;
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(()=>{
-    const code=new URLSearchParams(window.location.search).get("auth_error");
-    if(!code)return;
-    const messages:Record<string,string>={invalid_state:"Your sign-in session expired. Please try again.",access_denied:"Your account does not have access to Northline.",identity_conflict:"Northline could not safely match this identity. Ask an administrator to review the account.",token_exchange:"Authentik could not complete sign-in. Please try again.",userinfo:"Authentik could not load your profile. Please try again.",incomplete_profile:"Your Authentik profile needs an email address before you can sign in.",oidc_not_configured:"Authentik sign-in is not configured."};
-    setError(messages[code]||"Sign-in could not be completed. Please try again.");
-    window.history.replaceState({},"",window.location.pathname);
-  },[]);
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("auth_error");
+    if (!code) return;
+    const messages: Record<string, string> = {
+      invalid_state: "Your sign-in session expired. Please try again.",
+      access_denied: "Your account does not have access to Northline.",
+      identity_conflict:
+        "Northline could not safely match this identity. Ask an administrator to review the account.",
+      token_exchange: "Authentik could not complete sign-in. Please try again.",
+      userinfo: "Authentik could not load your profile. Please try again.",
+      incomplete_profile:
+        "Your Authentik profile needs an email address before you can sign in.",
+      oidc_not_configured: "Authentik sign-in is not configured.",
+    };
+    setError(
+      messages[code] || "Sign-in could not be completed. Please try again.",
+    );
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -571,7 +846,9 @@ function Login({ onLogin,theme,toggleTheme }: { onLogin: (u: SessionUser) => voi
   };
   return (
     <div className="auth-screen">
-      <div className="auth-theme"><ThemeToggle theme={theme} toggle={toggleTheme}/></div>
+      <div className="auth-theme">
+        <ThemeToggle theme={theme} toggle={toggleTheme} />
+      </div>
       <div className="auth-aside">
         <div className="auth-brand light">
           <BrandMark priority />
@@ -703,39 +980,357 @@ function Empty({
   );
 }
 
-function MyWork({notify,openTask}:{notify:(message:string)=>void;openTask:(task:MyWorkTask)=>void}){
-  const [tasks,setTasks]=useState<MyWorkTask[]>([]);
-  const [columns,setColumns]=useState<Array<{boardId:number;key:string;name:string;color:string;position:number;isDone:number}>>([]);
-  const [loading,setLoading]=useState(true);
-  const [saving,setSaving]=useState<number|null>(null);
-  const [query,setQuery]=useState("");
-  const [workspace,setWorkspace]=useState("all");
-  const [board,setBoard]=useState("all");
-  const [priority,setPriority]=useState("all");
-  const [status,setStatus]=useState("all");
-  const load=async()=>{setLoading(true);try{const data=await jsonFetch("/api/my-work");setTasks(data.tasks||[]);setColumns(data.columns||[])}catch(error){notify((error as Error).message)}finally{setLoading(false)}};
-  useEffect(()=>{void load()},[]);
-  const update=async(task:MyWorkTask,changes:Record<string,unknown>)=>{setSaving(task.id);try{await jsonFetch(`/api/tasks/${task.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(changes)});await load();notify("Task updated")}catch(error){notify((error as Error).message)}finally{setSaving(null)}};
-  const workspaces=[...new Map(tasks.map(task=>[task.workspaceId,{id:task.workspaceId,name:task.workspaceName}])).values()];
-  const boards=[...new Map(tasks.filter(task=>workspace==="all"||String(task.workspaceId)===workspace).map(task=>[task.boardId,{id:task.boardId,name:task.boardName}])).values()];
-  const statuses=[...new Set(tasks.map(task=>task.statusName))].sort();
-  const filtered=tasks.filter(task=>(workspace==="all"||String(task.workspaceId)===workspace)&&(board==="all"||String(task.boardId)===board)&&(priority==="all"||task.priority===priority)&&(status==="all"||task.statusName===status)&&(task.title+task.description+task.tag+task.boardName+task.workspaceName).toLowerCase().includes(query.toLowerCase()));
-  const localDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  const today=localDate(new Date()),soonDate=new Date();soonDate.setDate(soonDate.getDate()+7);const soon=localDate(soonDate);
-  const groups=[
-    {key:"overdue",title:"Overdue",copy:"Past due and still open",tasks:filtered.filter(task=>!task.isDone&&!!task.due&&task.due<today)},
-    {key:"soon",title:"Due soon",copy:"Due in the next seven days",tasks:filtered.filter(task=>!task.isDone&&!!task.due&&task.due>=today&&task.due<=soon)},
-    {key:"later",title:"Later",copy:"Scheduled beyond the next seven days",tasks:filtered.filter(task=>!task.isDone&&!!task.due&&task.due>soon)},
-    {key:"unscheduled",title:"Unscheduled",copy:"Open work without a due date",tasks:filtered.filter(task=>!task.isDone&&!task.due)},
-    {key:"completed",title:"Completed",copy:"Finished assigned work",tasks:filtered.filter(task=>!!task.isDone)},
+function MyWork({
+  notify,
+  openTask,
+}: {
+  notify: (message: string) => void;
+  openTask: (task: MyWorkTask) => void;
+}) {
+  const [tasks, setTasks] = useState<MyWorkTask[]>([]);
+  const [columns, setColumns] = useState<
+    Array<{
+      boardId: number;
+      key: string;
+      name: string;
+      color: string;
+      position: number;
+      isDone: number;
+    }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const [workspace, setWorkspace] = useState("all");
+  const [board, setBoard] = useState("all");
+  const [priority, setPriority] = useState("all");
+  const [status, setStatus] = useState("all");
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await jsonFetch("/api/my-work");
+      setTasks(data.tasks || []);
+      setColumns(data.columns || []);
+    } catch (error) {
+      notify((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  const update = async (task: MyWorkTask, changes: Record<string, unknown>) => {
+    setSaving(task.id);
+    try {
+      await jsonFetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(changes),
+      });
+      await load();
+      notify("Task updated");
+    } catch (error) {
+      notify((error as Error).message);
+    } finally {
+      setSaving(null);
+    }
+  };
+  const workspaces = [
+    ...new Map(
+      tasks.map((task) => [
+        task.workspaceId,
+        { id: task.workspaceId, name: task.workspaceName },
+      ]),
+    ).values(),
   ];
-  if(loading)return <PageLoading/>;
-  return <div className="content my-work-page">
-    <div className="page-title"><div><span className="eyebrow">PERSONAL TASK VIEW</span><h1>My Work</h1><p>Everything assigned to you across the boards and workspaces you can access.</p></div><button className="secondary" onClick={()=>void load()}>↻ Refresh</button></div>
-    <div className="my-work-metrics"><article><b>{filtered.filter(task=>!task.isDone).length}</b><span>Open</span></article><article className="danger"><b>{filtered.filter(task=>!task.isDone&&!!task.due&&task.due<today).length}</b><span>Overdue</span></article><article><b>{filtered.filter(task=>!task.isDone&&!!task.due&&task.due>=today&&task.due<=soon).length}</b><span>Due soon</span></article><article><b>{filtered.filter(task=>!!task.isDone).length}</b><span>Completed</span></article></div>
-    <div className="my-work-filters"><label className="my-work-search">⌕<input aria-label="Search assigned tasks" placeholder="Search my tasks…" value={query} onChange={event=>setQuery(event.target.value)}/></label><select aria-label="Filter by workspace" value={workspace} onChange={event=>{setWorkspace(event.target.value);setBoard("all")}}><option value="all">All workspaces</option>{workspaces.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Filter by board" value={board} onChange={event=>setBoard(event.target.value)}><option value="all">All boards</option>{boards.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Filter by priority" value={priority} onChange={event=>setPriority(event.target.value)}><option value="all">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select><select aria-label="Filter by status" value={status} onChange={event=>setStatus(event.target.value)}><option value="all">All statuses</option>{statuses.map(item=><option key={item}>{item}</option>)}</select></div>
-    {!filtered.length?<div className="empty-state large"><span className="empty-icon">◎</span><b>No assigned tasks</b><span>Tasks assigned to you will appear here across every accessible workspace.</span></div>:<div className="my-work-groups">{groups.filter(group=>group.tasks.length).map(group=><section key={group.key} className={`my-work-group ${group.key}`}><header><div><h2>{group.title}</h2><p>{group.copy}</p></div><span>{group.tasks.length}</span></header><div>{group.tasks.map(task=>{const editable=task.permission!=="viewer",taskColumns=columns.filter(column=>column.boardId===task.boardId);return <article className="my-work-task" key={task.id}><button className="my-work-task-title" onClick={()=>openTask(task)}><i style={{background:task.statusColor}}/><span><b>{task.title}</b><small>{task.workspaceName} / {task.boardName} · {task.tag}</small></span></button><div className="my-work-task-controls"><select aria-label={`Status for ${task.title}`} value={task.status} disabled={!editable||saving===task.id} onChange={event=>void update(task,{status:event.target.value})}>{taskColumns.map(column=><option key={column.key} value={column.key}>{column.name}</option>)}</select><select aria-label={`Priority for ${task.title}`} value={task.priority} disabled={!editable||saving===task.id} onChange={event=>void update(task,{priority:event.target.value})}><option>High</option><option>Medium</option><option>Low</option></select><input aria-label={`Due date for ${task.title}`} type="date" value={task.due||""} disabled={!editable||saving===task.id} onChange={event=>void update(task,{due_date:event.target.value||null})}/><button className="icon-button" aria-label={`Open ${task.title}`} onClick={()=>openTask(task)}>›</button></div>{!editable&&<small className="read-only-note">View only</small>}</article>})}</div></section>)}</div>}
-  </div>;
+  const boards = [
+    ...new Map(
+      tasks
+        .filter(
+          (task) =>
+            workspace === "all" || String(task.workspaceId) === workspace,
+        )
+        .map((task) => [
+          task.boardId,
+          { id: task.boardId, name: task.boardName },
+        ]),
+    ).values(),
+  ];
+  const statuses = [...new Set(tasks.map((task) => task.statusName))].sort();
+  const filtered = tasks.filter(
+    (task) =>
+      (workspace === "all" || String(task.workspaceId) === workspace) &&
+      (board === "all" || String(task.boardId) === board) &&
+      (priority === "all" || task.priority === priority) &&
+      (status === "all" || task.statusName === status) &&
+      (
+        task.title +
+        task.description +
+        task.tag +
+        task.boardName +
+        task.workspaceName
+      )
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  const localDate = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const today = localDate(new Date()),
+    soonDate = new Date();
+  soonDate.setDate(soonDate.getDate() + 7);
+  const soon = localDate(soonDate);
+  const groups = [
+    {
+      key: "overdue",
+      title: "Overdue",
+      copy: "Past due and still open",
+      tasks: filtered.filter(
+        (task) => !task.isDone && !!task.due && task.due < today,
+      ),
+    },
+    {
+      key: "soon",
+      title: "Due soon",
+      copy: "Due in the next seven days",
+      tasks: filtered.filter(
+        (task) =>
+          !task.isDone && !!task.due && task.due >= today && task.due <= soon,
+      ),
+    },
+    {
+      key: "later",
+      title: "Later",
+      copy: "Scheduled beyond the next seven days",
+      tasks: filtered.filter(
+        (task) => !task.isDone && !!task.due && task.due > soon,
+      ),
+    },
+    {
+      key: "unscheduled",
+      title: "Unscheduled",
+      copy: "Open work without a due date",
+      tasks: filtered.filter((task) => !task.isDone && !task.due),
+    },
+    {
+      key: "completed",
+      title: "Completed",
+      copy: "Finished assigned work",
+      tasks: filtered.filter((task) => !!task.isDone),
+    },
+  ];
+  if (loading) return <PageLoading />;
+  return (
+    <div className="content my-work-page">
+      <div className="page-title">
+        <div>
+          <span className="eyebrow">PERSONAL TASK VIEW</span>
+          <h1>My Work</h1>
+          <p>
+            Everything assigned to you across the boards and workspaces you can
+            access.
+          </p>
+        </div>
+        <button className="secondary" onClick={() => void load()}>
+          ↻ Refresh
+        </button>
+      </div>
+      <div className="my-work-metrics">
+        <article>
+          <b>{filtered.filter((task) => !task.isDone).length}</b>
+          <span>Open</span>
+        </article>
+        <article className="danger">
+          <b>
+            {
+              filtered.filter(
+                (task) => !task.isDone && !!task.due && task.due < today,
+              ).length
+            }
+          </b>
+          <span>Overdue</span>
+        </article>
+        <article>
+          <b>
+            {
+              filtered.filter(
+                (task) =>
+                  !task.isDone &&
+                  !!task.due &&
+                  task.due >= today &&
+                  task.due <= soon,
+              ).length
+            }
+          </b>
+          <span>Due soon</span>
+        </article>
+        <article>
+          <b>{filtered.filter((task) => !!task.isDone).length}</b>
+          <span>Completed</span>
+        </article>
+      </div>
+      <div className="my-work-filters">
+        <label className="my-work-search">
+          ⌕
+          <input
+            aria-label="Search assigned tasks"
+            placeholder="Search my tasks…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <select
+          aria-label="Filter by workspace"
+          value={workspace}
+          onChange={(event) => {
+            setWorkspace(event.target.value);
+            setBoard("all");
+          }}
+        >
+          <option value="all">All workspaces</option>
+          {workspaces.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter by board"
+          value={board}
+          onChange={(event) => setBoard(event.target.value)}
+        >
+          <option value="all">All boards</option>
+          {boards.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter by priority"
+          value={priority}
+          onChange={(event) => setPriority(event.target.value)}
+        >
+          <option value="all">All priorities</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
+        <select
+          aria-label="Filter by status"
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
+        >
+          <option value="all">All statuses</option>
+          {statuses.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+      </div>
+      {!filtered.length ? (
+        <div className="empty-state large">
+          <span className="empty-icon">◎</span>
+          <b>No assigned tasks</b>
+          <span>
+            Tasks assigned to you will appear here across every accessible
+            workspace.
+          </span>
+        </div>
+      ) : (
+        <div className="my-work-groups">
+          {groups
+            .filter((group) => group.tasks.length)
+            .map((group) => (
+              <section key={group.key} className={`my-work-group ${group.key}`}>
+                <header>
+                  <div>
+                    <h2>{group.title}</h2>
+                    <p>{group.copy}</p>
+                  </div>
+                  <span>{group.tasks.length}</span>
+                </header>
+                <div>
+                  {group.tasks.map((task) => {
+                    const editable = task.permission !== "viewer",
+                      taskColumns = columns.filter(
+                        (column) => column.boardId === task.boardId,
+                      );
+                    return (
+                      <article className="my-work-task" key={task.id}>
+                        <button
+                          className="my-work-task-title"
+                          onClick={() => openTask(task)}
+                        >
+                          <i style={{ background: task.statusColor }} />
+                          <span>
+                            <b>{task.title}</b>
+                            <small>
+                              {task.workspaceName} / {task.boardName} ·{" "}
+                              {task.tag}
+                            </small>
+                          </span>
+                        </button>
+                        <div className="my-work-task-controls">
+                          <select
+                            aria-label={`Status for ${task.title}`}
+                            value={task.status}
+                            disabled={!editable || saving === task.id}
+                            onChange={(event) =>
+                              void update(task, { status: event.target.value })
+                            }
+                          >
+                            {taskColumns.map((column) => (
+                              <option key={column.key} value={column.key}>
+                                {column.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label={`Priority for ${task.title}`}
+                            value={task.priority}
+                            disabled={!editable || saving === task.id}
+                            onChange={(event) =>
+                              void update(task, {
+                                priority: event.target.value,
+                              })
+                            }
+                          >
+                            <option>High</option>
+                            <option>Medium</option>
+                            <option>Low</option>
+                          </select>
+                          <input
+                            aria-label={`Due date for ${task.title}`}
+                            type="date"
+                            value={task.due || ""}
+                            disabled={!editable || saving === task.id}
+                            onChange={(event) =>
+                              void update(task, {
+                                due_date: event.target.value || null,
+                              })
+                            }
+                          />
+                          <button
+                            className="icon-button"
+                            aria-label={`Open ${task.title}`}
+                            onClick={() => openTask(task)}
+                          >
+                            ›
+                          </button>
+                        </div>
+                        {!editable && (
+                          <small className="read-only-note">View only</small>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function BoardView({
@@ -755,8 +1350,18 @@ function BoardView({
   openTask,
   openModal,
 }: any) {
-  const columns=data.columns as BoardColumn[];
-  const done = tasks.filter((t: Task) => columns.find(column=>column.key===t.status)?.isDone===1).length;
+  const columns = data.columns as BoardColumn[];
+  const [showCompleted, setShowCompleted] = useState(false);
+  const done = tasks.filter(
+    (t: Task) =>
+      columns.find((column) => column.key === t.status)?.isDone === 1,
+  ).length;
+  const visibleTasks = showCompleted
+    ? tasks
+    : tasks.filter(
+        (t: Task) =>
+          columns.find((column) => column.key === t.status)?.isDone !== 1,
+      );
   const pct = Math.round((done / Math.max(tasks.length, 1)) * 100);
   return (
     <section className="content board-page">
@@ -788,7 +1393,11 @@ function BoardView({
               ♙ Share
             </button>
           )}
-          {data.canEdit && <button className="secondary" onClick={()=>openModal("columns")}>☷ Columns</button>}
+          {data.canEdit && (
+            <button className="secondary" onClick={() => openModal("columns")}>
+              ☷ Columns
+            </button>
+          )}
           {data.canShare && (
             <button
               className="secondary"
@@ -797,7 +1406,16 @@ function BoardView({
               ⚙
             </button>
           )}
-          <button className="secondary" onClick={() => openModal("activity")} aria-label="View board activity">◷ Activity</button>
+          <button
+            className="secondary"
+            onClick={() => openModal("activity")}
+            aria-label="View board activity"
+          >
+            ◷ Activity
+          </button>
+          <button className="secondary" onClick={() => openModal("archive")}>
+            Archive
+          </button>
           {data.canEdit && (
             <button
               className="primary"
@@ -880,6 +1498,14 @@ function BoardView({
           <i style={{ width: `${pct}%` }} />
         </div>
         <strong>{pct}%</strong>
+        <label className="completed-toggle">
+          <input
+            type="checkbox"
+            checked={showCompleted}
+            onChange={(event) => setShowCompleted(event.target.checked)}
+          />{" "}
+          Show completed
+        </label>
         <button
           className="reminder-link"
           disabled={!data.canEdit}
@@ -891,7 +1517,7 @@ function BoardView({
       {mode === "board" && (
         <Kanban
           data={data}
-          tasks={tasks}
+          tasks={visibleTasks}
           dragged={dragged}
           setDragged={setDragged}
           moveTask={moveTask}
@@ -899,10 +1525,16 @@ function BoardView({
           add={() => openModal("task-create")}
         />
       )}{" "}
-      {mode === "list" && <TaskList tasks={tasks} columns={columns} openTask={openTask} />}{" "}
-      {mode === "timeline" && <Timeline tasks={tasks} columns={columns} openTask={openTask} />}{" "}
-      {mode === "calendar" && <Calendar tasks={tasks} columns={columns} openTask={openTask} />}{" "}
-      {tasks.length === 0 && (
+      {mode === "list" && (
+        <TaskList tasks={visibleTasks} columns={columns} openTask={openTask} />
+      )}{" "}
+      {mode === "timeline" && (
+        <Timeline tasks={visibleTasks} columns={columns} openTask={openTask} />
+      )}{" "}
+      {mode === "calendar" && (
+        <Calendar tasks={visibleTasks} columns={columns} openTask={openTask} />
+      )}{" "}
+      {visibleTasks.length === 0 && (
         <div className="empty-state">
           <b>No tasks match this view</b>
           <span>Clear filters or create a new task.</span>
@@ -921,8 +1553,13 @@ function Kanban({
   add,
 }: any) {
   return (
-    <div className="kanban" style={{gridTemplateColumns:`repeat(${data.columns.length}, minmax(210px, 1fr))`}}>
-      {data.columns.map((col:BoardColumn) => (
+    <div
+      className="kanban"
+      style={{
+        gridTemplateColumns: `repeat(${data.columns.length}, minmax(210px, 1fr))`,
+      }}
+    >
+      {data.columns.map((col: BoardColumn) => (
         <div
           className="column"
           key={col.id}
@@ -1004,7 +1641,7 @@ function TaskList({
   openTask,
 }: {
   tasks: Task[];
-  columns:BoardColumn[];
+  columns: BoardColumn[];
   openTask: (task: Task) => void;
 }) {
   return (
@@ -1022,8 +1659,16 @@ function TaskList({
             <b>{t.title}</b>
             <small>{t.tag}</small>
           </span>
-          <span className="status-dot" style={{"--status-color":columns.find(c=>c.key===t.status)?.color} as React.CSSProperties}>
-            {columns.find((c) => c.key === t.status)?.name||"Unknown"}
+          <span
+            className="status-dot"
+            style={
+              {
+                "--status-color": columns.find((c) => c.key === t.status)
+                  ?.color,
+              } as React.CSSProperties
+            }
+          >
+            {columns.find((c) => c.key === t.status)?.name || "Unknown"}
           </span>
           <span>{t.ownerName || "Unassigned"}</span>
           <span>{t.due || "No date"}</span>
@@ -1041,7 +1686,7 @@ function Timeline({
   openTask,
 }: {
   tasks: Task[];
-  columns:BoardColumn[];
+  columns: BoardColumn[];
   openTask: (task: Task) => void;
 }) {
   const dated = tasks
@@ -1061,12 +1706,17 @@ function Timeline({
               day: "numeric",
             })}
           </time>
-          <i className="timeline-dot" style={{background:columns.find(c=>c.key===t.status)?.color}} />
+          <i
+            className="timeline-dot"
+            style={{
+              background: columns.find((c) => c.key === t.status)?.color,
+            }}
+          />
           <span>
             <b>{t.title}</b>
             <small>
               {t.ownerName || "Unassigned"} ·{" "}
-              {columns.find((c) => c.key === t.status)?.name||"Unknown"}
+              {columns.find((c) => c.key === t.status)?.name || "Unknown"}
             </small>
           </span>
           <em style={{ width: `${Math.max(15, 100 - index * 8)}%` }} />
@@ -1087,7 +1737,7 @@ function Calendar({
   openTask,
 }: {
   tasks: Task[];
-  columns:BoardColumn[];
+  columns: BoardColumn[];
   openTask: (task: Task) => void;
 }) {
   const groups = Object.entries(
@@ -1112,7 +1762,15 @@ function Calendar({
           <div>
             {list.map((t) => (
               <button key={t.id} onClick={() => openTask(t)}>
-                <i className="status-dot" style={{"--status-color":columns.find(c=>c.key===t.status)?.color} as React.CSSProperties} />
+                <i
+                  className="status-dot"
+                  style={
+                    {
+                      "--status-color": columns.find((c) => c.key === t.status)
+                        ?.color,
+                    } as React.CSSProperties
+                  }
+                />
                 <span>
                   <b>{t.title}</b>
                   <small>{t.ownerName || "Unassigned"}</small>
@@ -1201,16 +1859,46 @@ function Settings({ notify }: { notify: (s: string) => void }) {
     channels: { id: string; name: string }[];
     error?: string;
   } | null>(null);
-  const [preferences,setPreferences]=useState({assignmentEnabled:true,statusEnabled:true,commentEnabled:true,mentionEnabled:true,dueEnabled:true});
-  const [sessions,setSessions]=useState<Array<{id:string;createdAt:string;expiresAt:string;lastSeenAt:string|null;userAgent:string|null;createdIp:string|null;current:number}>>([]);
-  const loadSessions=()=>jsonFetch("/api/settings/sessions").then(data=>setSessions(data.sessions||[])).catch((error)=>notify(error.message));
+  const [preferences, setPreferences] = useState({
+    assignmentEnabled: true,
+    statusEnabled: true,
+    commentEnabled: true,
+    mentionEnabled: true,
+    dueEnabled: true,
+  });
+  const [sessions, setSessions] = useState<
+    Array<{
+      id: string;
+      createdAt: string;
+      expiresAt: string;
+      lastSeenAt: string | null;
+      userAgent: string | null;
+      createdIp: string | null;
+      current: number;
+    }>
+  >([]);
+  const loadSessions = () =>
+    jsonFetch("/api/settings/sessions")
+      .then((data) => setSessions(data.sessions || []))
+      .catch((error) => notify(error.message));
   useEffect(() => {
     jsonFetch("/api/discord/channels")
       .then(setDiscord)
       .catch((e) =>
         setDiscord({ configured: false, channels: [], error: e.message }),
       );
-    jsonFetch("/api/settings/notifications").then(data=>setPreferences(Object.fromEntries(Object.entries(data.settings).map(([key,value])=>[key,value!==0])) as typeof preferences)).catch(()=>{});
+    jsonFetch("/api/settings/notifications")
+      .then((data) =>
+        setPreferences(
+          Object.fromEntries(
+            Object.entries(data.settings).map(([key, value]) => [
+              key,
+              value !== 0,
+            ]),
+          ) as typeof preferences,
+        ),
+      )
+      .catch(() => {});
     void loadSessions();
   }, []);
   return (
@@ -1219,9 +1907,7 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         <div>
           <div className="eyebrow">WORKSPACE SETTINGS</div>
           <h1>Integrations</h1>
-          <p>
-            Connect community tools and manage private Northline updates.
-          </p>
+          <p>Connect community tools and manage private Northline updates.</p>
         </div>
       </div>
       <div className="settings-card">
@@ -1257,8 +1943,69 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         </button>
       </div>
       <div className="settings-body session-settings">
-        <div><h3>Active sessions</h3><p>Review browsers currently signed into your account and revoke any session you do not recognize.</p><div className="session-list">{sessions.map(session=><article key={session.id}><span><b>{session.current?"This browser":session.userAgent?.split(" ").slice(0,4).join(" ")||"Unknown browser"}</b><small>Started {new Date(`${session.createdAt}Z`).toLocaleString()} · expires {new Date(`${session.expiresAt}Z`).toLocaleDateString()}{session.createdIp?` · ${session.createdIp}`:""}</small></span>{session.current?<em>Current</em>:<button className="danger subtle" onClick={()=>jsonFetch("/api/settings/sessions",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:session.id})}).then(loadSessions).then(()=>notify("Session revoked")).catch(error=>notify(error.message))}>Revoke</button>}</article>)}</div></div>
-        {sessions.length>1&&<button className="secondary" onClick={()=>jsonFetch("/api/settings/sessions",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({allOthers:true})}).then(loadSessions).then(()=>notify("Other sessions revoked")).catch(error=>notify(error.message))}>Revoke all others</button>}
+        <div>
+          <h3>Active sessions</h3>
+          <p>
+            Review browsers currently signed into your account and revoke any
+            session you do not recognize.
+          </p>
+          <div className="session-list">
+            {sessions.map((session) => (
+              <article key={session.id}>
+                <span>
+                  <b>
+                    {session.current
+                      ? "This browser"
+                      : session.userAgent?.split(" ").slice(0, 4).join(" ") ||
+                        "Unknown browser"}
+                  </b>
+                  <small>
+                    Started {new Date(`${session.createdAt}Z`).toLocaleString()}{" "}
+                    · expires{" "}
+                    {new Date(`${session.expiresAt}Z`).toLocaleDateString()}
+                    {session.createdIp ? ` · ${session.createdIp}` : ""}
+                  </small>
+                </span>
+                {session.current ? (
+                  <em>Current</em>
+                ) : (
+                  <button
+                    className="danger subtle"
+                    onClick={() =>
+                      jsonFetch("/api/settings/sessions", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: session.id }),
+                      })
+                        .then(loadSessions)
+                        .then(() => notify("Session revoked"))
+                        .catch((error) => notify(error.message))
+                    }
+                  >
+                    Revoke
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        </div>
+        {sessions.length > 1 && (
+          <button
+            className="secondary"
+            onClick={() =>
+              jsonFetch("/api/settings/sessions", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ allOthers: true }),
+              })
+                .then(loadSessions)
+                .then(() => notify("Other sessions revoked"))
+                .catch((error) => notify(error.message))
+            }
+          >
+            Revoke all others
+          </button>
+        )}
       </div>
       <div className="settings-body">
         <div>
@@ -1271,8 +2018,46 @@ function Settings({ notify }: { notify: (s: string) => void }) {
         <span className="connected">● Server-side</span>
       </div>
       <div className="settings-body notification-preferences">
-        <div><h3>My Task Buddy preferences</h3><p>Choose which task events Task Buddy may deliver privately.</p><div className="notification-options">{([['assignmentEnabled','Assignments'],['statusEnabled','Status changes'],['commentEnabled','Comments'],['mentionEnabled','Mentions'],['dueEnabled','Due-date warnings']] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={preferences[key]} onChange={(e)=>setPreferences({...preferences,[key]:e.target.checked})}/><span>{label}</span></label>)}</div></div>
-        <button className="secondary" onClick={()=>jsonFetch('/api/settings/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(preferences)}).then(()=>notify('Notification preferences saved')).catch(e=>notify(e.message))}>Save preferences</button>
+        <div>
+          <h3>My Task Buddy preferences</h3>
+          <p>Choose which task events Task Buddy may deliver privately.</p>
+          <div className="notification-options">
+            {(
+              [
+                ["assignmentEnabled", "Assignments"],
+                ["statusEnabled", "Status changes"],
+                ["commentEnabled", "Comments"],
+                ["mentionEnabled", "Mentions"],
+                ["dueEnabled", "Due-date warnings"],
+              ] as const
+            ).map(([key, label]) => (
+              <label className="notification-toggle" key={key}>
+                <input
+                  type="checkbox"
+                  checked={preferences[key]}
+                  onChange={(e) =>
+                    setPreferences({ ...preferences, [key]: e.target.checked })
+                  }
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <button
+          className="secondary"
+          onClick={() =>
+            jsonFetch("/api/settings/notifications", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(preferences),
+            })
+              .then(() => notify("Notification preferences saved"))
+              .catch((e) => notify(e.message))
+          }
+        >
+          Save preferences
+        </button>
       </div>
       <div className="settings-body">
         <div>
@@ -1302,9 +2087,9 @@ function Admin({
   reloadUsers: () => Promise<void>;
   notify: (s: string) => void;
 }) {
-  const [tab, setTab] = useState<"users" | "boards" | "audit" | "security" | "health">(
-    "users",
-  );
+  const [tab, setTab] = useState<
+    "users" | "boards" | "audit" | "security" | "health"
+  >("users");
   const [query, setQuery] = useState("");
   const [create, setCreate] = useState(false);
   const [form, setForm] = useState({
@@ -1314,14 +2099,16 @@ function Admin({
     role: "Member",
   });
   const [overview, setOverview] = useState<any>(null);
-  const [health,setHealth]=useState<any>(null);
+  const [health, setHealth] = useState<any>(null);
   const loadOverview = () =>
     jsonFetch("/api/admin/overview")
       .then(setOverview)
       .catch((e) => notify(e.message));
   useEffect(() => {
     void loadOverview();
-    jsonFetch("/api/admin/health").then(setHealth).catch((e)=>notify(e.message));
+    jsonFetch("/api/admin/health")
+      .then(setHealth)
+      .catch((e) => notify(e.message));
   }, []);
   const updateUser = async (id: number, body: any) => {
     await jsonFetch(`/api/admin/users/${id}`, {
@@ -1377,15 +2164,17 @@ function Admin({
       </div>
       <div className="admin-panel">
         <div className="admin-tabs">
-          {(["users", "boards", "audit", "security", "health"] as const).map((name) => (
-            <button
-              key={name}
-              className={tab === name ? "active" : ""}
-              onClick={() => setTab(name)}
-            >
-              {name[0].toUpperCase() + name.slice(1)}
-            </button>
-          ))}
+          {(["users", "boards", "audit", "security", "health"] as const).map(
+            (name) => (
+              <button
+                key={name}
+                className={tab === name ? "active" : ""}
+                onClick={() => setTab(name)}
+              >
+                {name[0].toUpperCase() + name.slice(1)}
+              </button>
+            ),
+          )}
         </div>
         {tab === "users" && (
           <>
@@ -1528,21 +2317,115 @@ function Admin({
         )}
         {tab === "health" && (
           <div className="admin-section health-dashboard">
-            <div className="section-copy health-heading"><div><h2>System health</h2><p>Live application, identity, Discord, storage, and recovery signals.</p></div><button className="secondary" onClick={()=>jsonFetch('/api/admin/health').then(setHealth).then(()=>notify('Health data refreshed')).catch(e=>notify(e.message))}>↻ Refresh</button></div>
-            {!health?<div className="reminder-empty">Loading system health…</div>:<>
-              <div className="health-grid">
-                <HealthCard title="Application" status="healthy" detail={`Up ${Math.floor(health.application.uptimeSeconds/60)} min · ${formatBytes(health.application.rssBytes)} RAM`} />
-                <HealthCard title="Database" status={health.database.status} detail={`${health.database.integrity} · schema v${health.database.migrationVersion} · ${formatBytes(health.database.sizeBytes)}`} />
-                <HealthCard title="VM storage" status={health.storage.status} detail={`${formatBytes(health.storage.freeBytes)} free of ${formatBytes(health.storage.totalBytes)}`} />
-                <HealthCard title="Authentik" status={health.identity.status==='configured'?'healthy':'degraded'} detail={`${health.identity.activeSessions} active sessions`} />
-                <HealthCard title="Task Buddy" status={health.discord.status} detail={health.discord.error||`Private delivery ready · ${health.discord.channels} shared channels visible`} />
-                <HealthCard title="NAS backup" status={health.backup.status} detail={health.backup.message||health.backup.completedAt||'Awaiting report'} />
-                <HealthCard title="Restore test" status={health.restore.status} detail={health.restore.message||health.restore.completedAt||'Awaiting report'} />
-                <HealthCard title="Notifications" status={(health.reminders.counts.failed||0)>0?'degraded':'healthy'} detail={`${health.reminders.counts.sent||0} sent · ${health.reminders.counts.failed||0} failed`} />
+            <div className="section-copy health-heading">
+              <div>
+                <h2>System health</h2>
+                <p>
+                  Live application, identity, Discord, storage, and recovery
+                  signals.
+                </p>
               </div>
-              <div className="health-actions"><div><h3>Task Buddy delivery test</h3><p>Sends a compact, embed-free DM to your linked Discord account.</p></div><button className="discord-button" onClick={()=>jsonFetch('/api/admin/health',{method:'POST'}).then(()=>notify('Test delivered by DM')).catch(e=>notify(e.message))}>Send test DM</button></div>
-              <small className="health-generated">Updated {new Date(health.generatedAt).toLocaleString()}</small>
-            </>}
+              <button
+                className="secondary"
+                onClick={() =>
+                  jsonFetch("/api/admin/health")
+                    .then(setHealth)
+                    .then(() => notify("Health data refreshed"))
+                    .catch((e) => notify(e.message))
+                }
+              >
+                ↻ Refresh
+              </button>
+            </div>
+            {!health ? (
+              <div className="reminder-empty">Loading system health…</div>
+            ) : (
+              <>
+                <div className="health-grid">
+                  <HealthCard
+                    title="Application"
+                    status="healthy"
+                    detail={`Up ${Math.floor(health.application.uptimeSeconds / 60)} min · ${formatBytes(health.application.rssBytes)} RAM`}
+                  />
+                  <HealthCard
+                    title="Database"
+                    status={health.database.status}
+                    detail={`${health.database.integrity} · schema v${health.database.migrationVersion} · ${formatBytes(health.database.sizeBytes)}`}
+                  />
+                  <HealthCard
+                    title="VM storage"
+                    status={health.storage.status}
+                    detail={`${formatBytes(health.storage.freeBytes)} free of ${formatBytes(health.storage.totalBytes)}`}
+                  />
+                  <HealthCard
+                    title="Authentik"
+                    status={
+                      health.identity.status === "configured"
+                        ? "healthy"
+                        : "degraded"
+                    }
+                    detail={`${health.identity.activeSessions} active sessions`}
+                  />
+                  <HealthCard
+                    title="Task Buddy"
+                    status={health.discord.status}
+                    detail={
+                      health.discord.error ||
+                      `Private delivery ready · ${health.discord.channels} shared channels visible`
+                    }
+                  />
+                  <HealthCard
+                    title="NAS backup"
+                    status={health.backup.status}
+                    detail={
+                      health.backup.message ||
+                      health.backup.completedAt ||
+                      "Awaiting report"
+                    }
+                  />
+                  <HealthCard
+                    title="Restore test"
+                    status={health.restore.status}
+                    detail={
+                      health.restore.message ||
+                      health.restore.completedAt ||
+                      "Awaiting report"
+                    }
+                  />
+                  <HealthCard
+                    title="Notifications"
+                    status={
+                      (health.reminders.counts.failed || 0) > 0
+                        ? "degraded"
+                        : "healthy"
+                    }
+                    detail={`${health.reminders.counts.sent || 0} sent · ${health.reminders.counts.failed || 0} failed`}
+                  />
+                </div>
+                <div className="health-actions">
+                  <div>
+                    <h3>Task Buddy delivery test</h3>
+                    <p>
+                      Sends a compact, embed-free DM to your linked Discord
+                      account.
+                    </p>
+                  </div>
+                  <button
+                    className="discord-button"
+                    onClick={() =>
+                      jsonFetch("/api/admin/health", { method: "POST" })
+                        .then(() => notify("Test delivered by DM"))
+                        .catch((e) => notify(e.message))
+                    }
+                  >
+                    Send test DM
+                  </button>
+                </div>
+                <small className="health-generated">
+                  Updated {new Date(health.generatedAt).toLocaleString()}
+                </small>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1626,17 +2509,242 @@ function Security({ title, copy }: { title: string; copy: string }) {
     </div>
   );
 }
-function formatBytes(value:number){if(!Number.isFinite(value))return "Unknown";const units=["B","KB","MB","GB","TB"];let amount=value,index=0;while(amount>=1024&&index<units.length-1){amount/=1024;index++}return `${amount.toFixed(index>1?1:0)} ${units[index]}`}
-function HealthCard({title,status,detail}:{title:string;status:string;detail:string}){const normalized=status==="healthy"||status==="success"?"healthy":status==="unknown"?"unknown":"degraded";return <article className={`health-card ${normalized}`}><div><i/><span>{normalized}</span></div><h3>{title}</h3><p>{detail}</p></article>}
+function formatBytes(value: number) {
+  if (!Number.isFinite(value)) return "Unknown";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let amount = value,
+    index = 0;
+  while (amount >= 1024 && index < units.length - 1) {
+    amount /= 1024;
+    index++;
+  }
+  return `${amount.toFixed(index > 1 ? 1 : 0)} ${units[index]}`;
+}
+function HealthCard({
+  title,
+  status,
+  detail,
+}: {
+  title: string;
+  status: string;
+  detail: string;
+}) {
+  const normalized =
+    status === "healthy" || status === "success"
+      ? "healthy"
+      : status === "unknown"
+        ? "unknown"
+        : "degraded";
+  return (
+    <article className={`health-card ${normalized}`}>
+      <div>
+        <i />
+        <span>{normalized}</span>
+      </div>
+      <h3>{title}</h3>
+      <p>{detail}</p>
+    </article>
+  );
+}
 
-function ColumnManager({board,busy,run,refresh,notify}:{board:BoardDetail;busy:boolean;run:(action:()=>Promise<void>)=>void;refresh:()=>Promise<void>;close?:()=>void;notify:(message:string)=>void}){
-  const[drafts,setDrafts]=useState<BoardColumn[]>(board.columns);const[newName,setNewName]=useState("");const[newColor,setNewColor]=useState("#7c6ce7");const[destinations,setDestinations]=useState<Record<number,string>>({});
-  const add=()=>run(async()=>{const data=await jsonFetch(`/api/boards/${board.board.id}/columns`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:newName,color:newColor})});setDrafts(current=>[...current,data.column]);setNewName("");await refresh();notify("Column added")});
-  const save=(column:BoardColumn)=>run(async()=>{await jsonFetch(`/api/boards/${board.board.id}/columns/${column.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:column.name,color:column.color,isDone:column.isDone===1})});await refresh();notify("Column updated")});
-  const move=(index:number,direction:number)=>{const next=[...drafts],target=index+direction;if(target<0||target>=next.length)return;[next[index],next[target]]=[next[target],next[index]];setDrafts(next);run(async()=>{await jsonFetch(`/api/boards/${board.board.id}/columns`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({columnIds:next.map(column=>column.id)})});await refresh();notify("Columns reordered")})};
-  const remove=(column:BoardColumn)=>{const destinationId=destinations[column.id]||String(drafts.find(item=>item.id!==column.id)?.id||"");if(!destinationId)return;run(async()=>{await jsonFetch(`/api/boards/${board.board.id}/columns/${column.id}?destinationId=${destinationId}`,{method:"DELETE"});setDrafts(current=>current.filter(item=>item.id!==column.id));await refresh();notify("Column removed and tasks moved")})};
-  const change=(id:number,patch:Partial<BoardColumn>)=>setDrafts(current=>current.map(column=>column.id===id?{...column,...patch}:column));
-  return <><h2>Workflow columns</h2><p>Add, rename, reorder, or remove the stages on this board. Removing a column moves its tasks to the destination you choose.</p><div className="column-manager">{drafts.map((column,index)=><article key={column.id}><div className="column-editor-main"><input aria-label="Column color" type="color" value={column.color} onChange={event=>change(column.id,{color:event.target.value})}/><input aria-label="Column name" maxLength={50} value={column.name} onChange={event=>change(column.id,{name:event.target.value})}/><label className="done-column"><input type="checkbox" checked={column.isDone===1} onChange={event=>change(column.id,{isDone:event.target.checked?1:0})}/> Completed</label></div><div className="column-editor-actions"><button className="icon-button" disabled={busy||index===0} onClick={()=>move(index,-1)} aria-label={`Move ${column.name} left`}>←</button><button className="icon-button" disabled={busy||index===drafts.length-1} onClick={()=>move(index,1)} aria-label={`Move ${column.name} right`}>→</button><button className="secondary" disabled={busy||!column.name.trim()} onClick={()=>save(column)}>Save</button></div>{drafts.length>1&&<div className="column-delete"><select value={destinations[column.id]||""} onChange={event=>setDestinations({...destinations,[column.id]:event.target.value})}><option value="">Move tasks to…</option>{drafts.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="danger subtle" disabled={busy||!destinations[column.id]} onClick={()=>remove(column)}>Remove</button></div>}</article>)}</div><div className="column-create"><input type="color" value={newColor} onChange={event=>setNewColor(event.target.value)}/><input placeholder="New column name" maxLength={50} value={newName} onChange={event=>setNewName(event.target.value)}/><button className="primary" disabled={busy||!newName.trim()} onClick={add}>＋ Add column</button></div></>
+function ColumnManager({
+  board,
+  busy,
+  run,
+  refresh,
+  notify,
+}: {
+  board: BoardDetail;
+  busy: boolean;
+  run: (action: () => Promise<void>) => void;
+  refresh: () => Promise<void>;
+  close?: () => void;
+  notify: (message: string) => void;
+}) {
+  const [drafts, setDrafts] = useState<BoardColumn[]>(board.columns);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#7c6ce7");
+  const [destinations, setDestinations] = useState<Record<number, string>>({});
+  const add = () =>
+    run(async () => {
+      const data = await jsonFetch(`/api/boards/${board.board.id}/columns`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName, color: newColor }),
+      });
+      setDrafts((current) => [...current, data.column]);
+      setNewName("");
+      await refresh();
+      notify("Column added");
+    });
+  const save = (column: BoardColumn) =>
+    run(async () => {
+      await jsonFetch(`/api/boards/${board.board.id}/columns/${column.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: column.name,
+          color: column.color,
+          isDone: column.isDone === 1,
+        }),
+      });
+      await refresh();
+      notify("Column updated");
+    });
+  const move = (index: number, direction: number) => {
+    const next = [...drafts],
+      target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setDrafts(next);
+    run(async () => {
+      await jsonFetch(`/api/boards/${board.board.id}/columns`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columnIds: next.map((column) => column.id) }),
+      });
+      await refresh();
+      notify("Columns reordered");
+    });
+  };
+  const remove = (column: BoardColumn) => {
+    const destinationId =
+      destinations[column.id] ||
+      String(drafts.find((item) => item.id !== column.id)?.id || "");
+    if (!destinationId) return;
+    run(async () => {
+      await jsonFetch(
+        `/api/boards/${board.board.id}/columns/${column.id}?destinationId=${destinationId}`,
+        { method: "DELETE" },
+      );
+      setDrafts((current) => current.filter((item) => item.id !== column.id));
+      await refresh();
+      notify("Column removed and tasks moved");
+    });
+  };
+  const change = (id: number, patch: Partial<BoardColumn>) =>
+    setDrafts((current) =>
+      current.map((column) =>
+        column.id === id ? { ...column, ...patch } : column,
+      ),
+    );
+  return (
+    <>
+      <h2>Workflow columns</h2>
+      <p>
+        Add, rename, reorder, or remove the stages on this board. Removing a
+        column moves its tasks to the destination you choose.
+      </p>
+      <div className="column-manager">
+        {drafts.map((column, index) => (
+          <article key={column.id}>
+            <div className="column-editor-main">
+              <input
+                aria-label="Column color"
+                type="color"
+                value={column.color}
+                onChange={(event) =>
+                  change(column.id, { color: event.target.value })
+                }
+              />
+              <input
+                aria-label="Column name"
+                maxLength={50}
+                value={column.name}
+                onChange={(event) =>
+                  change(column.id, { name: event.target.value })
+                }
+              />
+              <label className="done-column">
+                <input
+                  type="checkbox"
+                  checked={column.isDone === 1}
+                  onChange={(event) =>
+                    change(column.id, { isDone: event.target.checked ? 1 : 0 })
+                  }
+                />{" "}
+                Completed
+              </label>
+            </div>
+            <div className="column-editor-actions">
+              <button
+                className="icon-button"
+                disabled={busy || index === 0}
+                onClick={() => move(index, -1)}
+                aria-label={`Move ${column.name} left`}
+              >
+                ←
+              </button>
+              <button
+                className="icon-button"
+                disabled={busy || index === drafts.length - 1}
+                onClick={() => move(index, 1)}
+                aria-label={`Move ${column.name} right`}
+              >
+                →
+              </button>
+              <button
+                className="secondary"
+                disabled={busy || !column.name.trim()}
+                onClick={() => save(column)}
+              >
+                Save
+              </button>
+            </div>
+            {drafts.length > 1 && (
+              <div className="column-delete">
+                <select
+                  value={destinations[column.id] || ""}
+                  onChange={(event) =>
+                    setDestinations({
+                      ...destinations,
+                      [column.id]: event.target.value,
+                    })
+                  }
+                >
+                  <option value="">Move tasks to…</option>
+                  {drafts
+                    .filter((item) => item.id !== column.id)
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  className="danger subtle"
+                  disabled={busy || !destinations[column.id]}
+                  onClick={() => remove(column)}
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+      <div className="column-create">
+        <input
+          type="color"
+          value={newColor}
+          onChange={(event) => setNewColor(event.target.value)}
+        />
+        <input
+          placeholder="New column name"
+          maxLength={50}
+          value={newName}
+          onChange={(event) => setNewName(event.target.value)}
+        />
+        <button
+          className="primary"
+          disabled={busy || !newName.trim()}
+          onClick={add}
+        >
+          ＋ Add column
+        </button>
+      </div>
+    </>
+  );
 }
 
 function NorthlineModal({
@@ -1655,7 +2763,7 @@ function NorthlineModal({
   notify,
   openTaskReminder,
 }: any) {
-  const columns=(board?.columns||[]) as BoardColumn[];
+  const columns = (board?.columns || []) as BoardColumn[];
   const [taskForm, setTaskForm] = useState(
     task
       ? {
@@ -1667,22 +2775,45 @@ function NorthlineModal({
           dueDate: task.due || "",
           assigneeId: task.ownerId ? String(task.ownerId) : "",
         }
-      : {...emptyTask,status:columns[0]?.key||""},
+      : { ...emptyTask, status: columns[0]?.key || "" },
   );
   const [boardForm, setBoardForm] = useState({
     name: board?.board.name || "",
     description: board?.board.description || "",
     template: "blank",
-    workspaceId: String(board?.board.workspaceId||activeWorkspace?.id||""),
+    workspaceId: String(board?.board.workspaceId || activeWorkspace?.id || ""),
   });
-  const [workspaceName,setWorkspaceName]=useState("");
-  const [workspaceDetail,setWorkspaceDetail]=useState<any>(null);
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaceDetail, setWorkspaceDetail] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState("");
   const [permission, setPermission] = useState("editor");
   const [comments, setComments] = useState<any[]>([]);
   const [comment, setComment] = useState("");
-  const [activity,setActivity]=useState<Array<{id:number;action:string;detail:string;createdAt:string;actorName:string;actorAvatar:string|null}>>([]);
-  useEffect(()=>{if(type==="workspace-manage"&&activeWorkspace)jsonFetch(`/api/workspaces/${activeWorkspace.id}`).then(setWorkspaceDetail).catch((error)=>notify(error.message))},[type,activeWorkspace?.id]);
+  const [activity, setActivity] = useState<
+    Array<{
+      id: number;
+      action: string;
+      detail: string;
+      createdAt: string;
+      actorName: string;
+      actorAvatar: string | null;
+    }>
+  >([]);
+  const [archivedTasks, setArchivedTasks] = useState<
+    Array<{
+      id: number;
+      title: string;
+      archivedAt: string;
+      priority: string;
+      statusName: string;
+    }>
+  >([]);
+  useEffect(() => {
+    if (type === "workspace-manage" && activeWorkspace)
+      jsonFetch(`/api/workspaces/${activeWorkspace.id}`)
+        .then(setWorkspaceDetail)
+        .catch((error) => notify(error.message));
+  }, [type, activeWorkspace?.id]);
   const [notificationSettings, setNotificationSettings] = useState({
     assignmentEnabled: board?.notifications?.assignmentEnabled !== 0,
     statusEnabled: board?.notifications?.statusEnabled !== 0,
@@ -1694,7 +2825,9 @@ function NorthlineModal({
   const [reminder, setReminder] = useState({
     taskId: task?.id ? String(task.id) : "",
     date: "",
-    time: "",
+    hour: "12",
+    minute: "00",
+    period: "PM",
     message: task?.title ? `Reminder: ${task.title}` : "",
   });
   useEffect(() => {
@@ -1702,8 +2835,38 @@ function NorthlineModal({
       jsonFetch(`/api/tasks/${task.id}/comments`).then((d) =>
         setComments(d.comments),
       );
-    if(type==="activity"&&board)jsonFetch(`/api/boards/${board.board.id}/activity`).then(data=>setActivity(data.activity||[])).catch((e)=>notify(e.message));
+    if (type === "activity" && board)
+      jsonFetch(`/api/boards/${board.board.id}/activity`)
+        .then((data) => setActivity(data.activity || []))
+        .catch((e) => notify(e.message));
+    if (type === "archive" && board)
+      jsonFetch(`/api/boards/${board.board.id}/archive`)
+        .then((data) => setArchivedTasks(data.tasks || []))
+        .catch((e) => notify(e.message));
   }, [type, task]);
+  const initialTask = task
+    ? {
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        tag: task.tag,
+        dueDate: task.due || "",
+        assigneeId: task.ownerId ? String(task.ownerId) : "",
+      }
+    : { ...emptyTask, status: columns[0]?.key || "" };
+  const dirty =
+    ((type === "task-create" || type === "task-detail") &&
+      JSON.stringify(taskForm) !== JSON.stringify(initialTask)) ||
+    (type === "reminder" &&
+      (!!reminder.date ||
+        reminder.message !== (task?.title ? `Reminder: ${task.title}` : ""))) ||
+    (type === "board-create" && !!boardForm.name) ||
+    (type === "workspace-create" && !!workspaceName);
+  const safeClose = () => {
+    if (dirty && !window.confirm("Discard your unsaved changes?")) return;
+    close();
+  };
   const saveTask = () =>
     run(async () => {
       if (type === "task-create") {
@@ -1747,7 +2910,24 @@ function NorthlineModal({
       close();
       notify("Task deleted");
     });
-  const duplicateTask=()=>run(async()=>{await jsonFetch(`/api/tasks/${task.id}/duplicate`,{method:"POST"});await refresh();close();notify("Task duplicated")});
+  const duplicateTask = () =>
+    run(async () => {
+      await jsonFetch(`/api/tasks/${task.id}/duplicate`, { method: "POST" });
+      await refresh();
+      close();
+      notify("Task duplicated");
+    });
+  const archiveTask = () =>
+    run(async () => {
+      await jsonFetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archive: true }),
+      });
+      await refresh();
+      close();
+      notify("Task archived");
+    });
   const addComment = () =>
     run(async () => {
       await jsonFetch(`/api/tasks/${task.id}/comments`, {
@@ -1813,19 +2993,20 @@ function NorthlineModal({
           boardId: board.board.id,
           taskId: reminder.taskId ? Number(reminder.taskId) : null,
           message: reminder.message,
-          remindAt: new Date(`${reminder.date}T${reminder.time}`).toISOString(),
+          remindAt: new Date(
+            `${reminder.date}T${String((Number(reminder.hour) % 12) + (reminder.period === "PM" ? 12 : 0)).padStart(2, "0")}:${reminder.minute}`,
+          ).toISOString(),
         }),
       });
       close();
       notify("Private Discord reminder scheduled");
     });
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(e) => e.target === e.currentTarget && close()}
-    >
-      <div className={`modal ${type === "task-detail"||type==="columns" ? "modal-large" : ""}`}>
-        <button className="modal-close" onClick={close}>
+    <div className="modal-backdrop">
+      <div
+        className={`modal ${type === "task-detail" || type === "columns" ? "modal-large" : ""}`}
+      >
+        <button className="modal-close" onClick={safeClose}>
           ×
         </button>
         {(type === "task-create" || type === "task-detail") && (
@@ -1936,7 +3117,23 @@ function NorthlineModal({
             </div>
             <div className="modal-actions task-actions">
               {type === "task-detail" && (
-                <><button className="danger" onClick={deleteTask}>Delete</button><button className="secondary" onClick={duplicateTask}>Duplicate</button><button className="discord-button" onClick={openTaskReminder}>Remind me</button></>
+                <>
+                  <button className="danger" onClick={deleteTask}>
+                    Delete
+                  </button>
+                  <button className="secondary" onClick={duplicateTask}>
+                    Duplicate
+                  </button>
+                  {columns.find((column) => column.key === taskForm.status)
+                    ?.isDone === 1 && (
+                    <button className="secondary" onClick={archiveTask}>
+                      Archive
+                    </button>
+                  )}
+                  <button className="discord-button" onClick={openTaskReminder}>
+                    Remind me
+                  </button>
+                </>
               )}
               <button
                 className="primary"
@@ -1984,8 +3181,28 @@ function NorthlineModal({
         {type === "board-create" && (
           <>
             <h2>Create board</h2>
-            <p>Personal workspace boards start private. Shared workspace boards inherit that workspace&apos;s access.</p>
-            <label>Workspace<select value={boardForm.workspaceId} onChange={(e)=>setBoardForm({...boardForm,workspaceId:e.target.value})}>{(workspaces as Workspace[]).filter(workspace=>workspace.permission!=="viewer").map(workspace=><option key={workspace.id} value={workspace.id}>{workspace.name}{workspace.kind==="personal"?" (personal)":""}</option>)}</select></label>
+            <p>
+              Personal workspace boards start private. Shared workspace boards
+              inherit that workspace&apos;s access.
+            </p>
+            <label>
+              Workspace
+              <select
+                value={boardForm.workspaceId}
+                onChange={(e) =>
+                  setBoardForm({ ...boardForm, workspaceId: e.target.value })
+                }
+              >
+                {(workspaces as Workspace[])
+                  .filter((workspace) => workspace.permission !== "viewer")
+                  .map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                      {workspace.kind === "personal" ? " (personal)" : ""}
+                    </option>
+                  ))}
+              </select>
+            </label>
             <label>
               Name
               <input
@@ -2005,7 +3222,22 @@ function NorthlineModal({
                 }
               />
             </label>
-            <label>Template<select value={boardForm.template} onChange={(e)=>setBoardForm({...boardForm,template:e.target.value})}><option value="blank">Blank board</option><option value="content">Content pipeline</option><option value="launch">Launch plan</option></select><small>Templates add a reusable starter workflow that you can edit.</small></label>
+            <label>
+              Template
+              <select
+                value={boardForm.template}
+                onChange={(e) =>
+                  setBoardForm({ ...boardForm, template: e.target.value })
+                }
+              >
+                <option value="blank">Blank board</option>
+                <option value="content">Content pipeline</option>
+                <option value="launch">Launch plan</option>
+              </select>
+              <small>
+                Templates add a reusable starter workflow that you can edit.
+              </small>
+            </label>
             <button
               className="primary wide"
               disabled={!boardForm.name.trim()}
@@ -2026,10 +3258,241 @@ function NorthlineModal({
             </button>
           </>
         )}
-        {type==="workspace-create"&&<><h2>Create shared workspace</h2><p>Every board in this workspace will automatically be available to the members you invite.</p><label>Name<input autoFocus maxLength={80} value={workspaceName} onChange={(event)=>setWorkspaceName(event.target.value)}/></label><button className="primary wide" disabled={busy||!workspaceName.trim()} onClick={()=>run(async()=>{const created=await jsonFetch("/api/workspaces",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:workspaceName})});setActiveWorkspaceId(created.id);await refresh();close();notify("Shared workspace created")})}>Create workspace</button></>}
-        {type==="workspace-manage"&&workspaceDetail&&<><h2>Manage {workspaceDetail.workspace.name}</h2><p>Workspace members automatically receive access to every board kept here.</p><div className="modal-row"><label>Member<select value={selectedUser} onChange={(event)=>setSelectedUser(event.target.value)}><option value="">Choose a person…</option>{directoryPeople.filter((person:WorkspaceUser)=>person.id!==workspaceDetail.workspace.ownerId&&!workspaceDetail.members.some((member:Member)=>member.id===person.id)).map((person:WorkspaceUser)=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label>Permission<select value={permission} onChange={(event)=>setPermission(event.target.value)}><option value="editor">Editor</option><option value="viewer">Viewer</option></select></label></div><button className="primary wide" disabled={busy||!selectedUser} onClick={()=>run(async()=>{await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}/members`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:Number(selectedUser),permission})});setWorkspaceDetail(await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`));setSelectedUser("");await refresh();notify("Workspace access granted")})}>Add workspace member</button><div className="shared-list">{workspaceDetail.members.map((member:Member)=><div className="share-person" key={member.id}><Avatar name={member.name} avatar={member.avatar}/><span><b>{member.name}</b><small>{member.email}</small></span><em>{member.permission}</em><button className="icon-button" aria-label={`Remove ${member.name}`} onClick={()=>run(async()=>{await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}/members`,{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:member.id})});setWorkspaceDetail(await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`));await refresh();notify("Workspace member removed")})}>×</button></div>)}</div></>}
-        {type==="activity"&&<><h2>Board activity</h2><p>The latest changes across this board.</p><div className="activity-feed">{activity.length?activity.map(item=><article key={item.id}><Avatar name={item.actorName} avatar={item.actorAvatar}/><span><b>{item.actorName}</b><p>{item.detail}</p><small>{new Date(`${item.createdAt}Z`).toLocaleString()}</small></span></article>):<div className="empty-state"><b>No activity yet</b><span>New task changes will appear here.</span></div>}</div></>}
-        {type==="columns"&&<ColumnManager board={board} busy={busy} run={run} refresh={refresh} close={close} notify={notify}/>}
+        {type === "workspace-create" && (
+          <>
+            <h2>Create shared workspace</h2>
+            <p>
+              Every board in this workspace will automatically be available to
+              the members you invite.
+            </p>
+            <label>
+              Name
+              <input
+                autoFocus
+                maxLength={80}
+                value={workspaceName}
+                onChange={(event) => setWorkspaceName(event.target.value)}
+              />
+            </label>
+            <button
+              className="primary wide"
+              disabled={busy || !workspaceName.trim()}
+              onClick={() =>
+                run(async () => {
+                  const created = await jsonFetch("/api/workspaces", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: workspaceName }),
+                  });
+                  setActiveWorkspaceId(created.id);
+                  await refresh();
+                  close();
+                  notify("Shared workspace created");
+                })
+              }
+            >
+              Create workspace
+            </button>
+          </>
+        )}
+        {type === "workspace-manage" && workspaceDetail && (
+          <>
+            <h2>Manage {workspaceDetail.workspace.name}</h2>
+            <p>
+              Workspace members automatically receive access to every board kept
+              here.
+            </p>
+            <div className="modal-row">
+              <label>
+                Member
+                <select
+                  value={selectedUser}
+                  onChange={(event) => setSelectedUser(event.target.value)}
+                >
+                  <option value="">Choose a person…</option>
+                  {directoryPeople
+                    .filter(
+                      (person: WorkspaceUser) =>
+                        person.id !== workspaceDetail.workspace.ownerId &&
+                        !workspaceDetail.members.some(
+                          (member: Member) => member.id === person.id,
+                        ),
+                    )
+                    .map((person: WorkspaceUser) => (
+                      <option key={person.id} value={person.id}>
+                        {person.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label>
+                Permission
+                <select
+                  value={permission}
+                  onChange={(event) => setPermission(event.target.value)}
+                >
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </label>
+            </div>
+            <button
+              className="primary wide"
+              disabled={busy || !selectedUser}
+              onClick={() =>
+                run(async () => {
+                  await jsonFetch(
+                    `/api/workspaces/${workspaceDetail.workspace.id}/members`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        userId: Number(selectedUser),
+                        permission,
+                      }),
+                    },
+                  );
+                  setWorkspaceDetail(
+                    await jsonFetch(
+                      `/api/workspaces/${workspaceDetail.workspace.id}`,
+                    ),
+                  );
+                  setSelectedUser("");
+                  await refresh();
+                  notify("Workspace access granted");
+                })
+              }
+            >
+              Add workspace member
+            </button>
+            <div className="shared-list">
+              {workspaceDetail.members.map((member: Member) => (
+                <div className="share-person" key={member.id}>
+                  <Avatar name={member.name} avatar={member.avatar} />
+                  <span>
+                    <b>{member.name}</b>
+                    <small>{member.email}</small>
+                  </span>
+                  <em>{member.permission}</em>
+                  <button
+                    className="icon-button"
+                    aria-label={`Remove ${member.name}`}
+                    onClick={() =>
+                      run(async () => {
+                        await jsonFetch(
+                          `/api/workspaces/${workspaceDetail.workspace.id}/members`,
+                          {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: member.id }),
+                          },
+                        );
+                        setWorkspaceDetail(
+                          await jsonFetch(
+                            `/api/workspaces/${workspaceDetail.workspace.id}`,
+                          ),
+                        );
+                        await refresh();
+                        notify("Workspace member removed");
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {type === "activity" && (
+          <>
+            <h2>Board activity</h2>
+            <p>The latest changes across this board.</p>
+            <div className="activity-feed">
+              {activity.length ? (
+                activity.map((item) => (
+                  <article key={item.id}>
+                    <Avatar name={item.actorName} avatar={item.actorAvatar} />
+                    <span>
+                      <b>{item.actorName}</b>
+                      <p>{item.detail}</p>
+                      <small>
+                        {new Date(`${item.createdAt}Z`).toLocaleString()}
+                      </small>
+                    </span>
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <b>No activity yet</b>
+                  <span>New task changes will appear here.</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        {type === "archive" && (
+          <>
+            <h2>Task archive</h2>
+            <p>
+              Archived tasks stay recoverable with their comments and activity
+              history.
+            </p>
+            <div className="archive-list">
+              {archivedTasks.length ? (
+                archivedTasks.map((item) => (
+                  <article key={item.id}>
+                    <span>
+                      <b>{item.title}</b>
+                      <small>
+                        {item.statusName} · {item.priority} · Archived{" "}
+                        {new Date(item.archivedAt).toLocaleDateString()}
+                      </small>
+                    </span>
+                    {board.canEdit && (
+                      <button
+                        className="secondary"
+                        onClick={() =>
+                          run(async () => {
+                            await jsonFetch(`/api/tasks/${item.id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ archive: false }),
+                            });
+                            setArchivedTasks((current) =>
+                              current.filter((task) => task.id !== item.id),
+                            );
+                            await refresh();
+                            notify("Task restored");
+                          })
+                        }
+                      >
+                        Restore
+                      </button>
+                    )}
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <b>No archived tasks</b>
+                  <span>
+                    Completed tasks can be archived from their task details.
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        {type === "columns" && (
+          <ColumnManager
+            board={board}
+            busy={busy}
+            run={run}
+            refresh={refresh}
+            close={close}
+            notify={notify}
+          />
+        )}
         {type === "board-settings" && (
           <>
             <h2>Board settings</h2>
@@ -2037,7 +3500,10 @@ function NorthlineModal({
             <label>
               Board ID
               <input value={board.board.boardKey} readOnly />
-              <small>Permanent random reference; creator ownership is stored privately.</small>
+              <small>
+                Permanent random reference; creator ownership is stored
+                privately.
+              </small>
             </label>
             <label>
               Name
@@ -2057,16 +3523,81 @@ function NorthlineModal({
                 }
               />
             </label>
-            <label>Workspace<select value={boardForm.workspaceId} onChange={(event)=>setBoardForm({...boardForm,workspaceId:event.target.value})}>{(workspaces as Workspace[]).filter(workspace=>workspace.permission!=="viewer").map(workspace=><option key={workspace.id} value={workspace.id}>{workspace.name}{workspace.kind==="personal"?" (personal)":""}</option>)}</select><small>Moving a board into a shared workspace grants access to every workspace member.</small></label>
-            <div className="settings-callout"><b>Private Task Buddy delivery</b><span>Enabled notifications are sent by DM to the person who created each task.</span></div>
+            <label>
+              Workspace
+              <select
+                value={boardForm.workspaceId}
+                onChange={(event) =>
+                  setBoardForm({
+                    ...boardForm,
+                    workspaceId: event.target.value,
+                  })
+                }
+              >
+                {(workspaces as Workspace[])
+                  .filter((workspace) => workspace.permission !== "viewer")
+                  .map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                      {workspace.kind === "personal" ? " (personal)" : ""}
+                    </option>
+                  ))}
+              </select>
+              <small>
+                Moving a board into a shared workspace grants access to every
+                workspace member.
+              </small>
+            </label>
+            <div className="settings-callout">
+              <b>Private Task Buddy delivery</b>
+              <span>
+                Enabled notifications are sent by DM to the person who created
+                each task.
+              </span>
+            </div>
             <div className="notification-options">
               <h3>Automatic notifications</h3>
-              {([["assignmentEnabled","Assignments"],["statusEnabled","Status changes"],["commentEnabled","Comments"],["mentionEnabled","Mentions"],["dueEnabled","Due-date warnings"]] as const).map(([key,label])=><label className="notification-toggle" key={key}><input type="checkbox" checked={notificationSettings[key] as boolean} onChange={(e)=>setNotificationSettings({...notificationSettings,[key]:e.target.checked})}/><span>{label}</span></label>)}
+              {(
+                [
+                  ["assignmentEnabled", "Assignments"],
+                  ["statusEnabled", "Status changes"],
+                  ["commentEnabled", "Comments"],
+                  ["mentionEnabled", "Mentions"],
+                  ["dueEnabled", "Due-date warnings"],
+                ] as const
+              ).map(([key, label]) => (
+                <label className="notification-toggle" key={key}>
+                  <input
+                    type="checkbox"
+                    checked={notificationSettings[key] as boolean}
+                    onChange={(e) =>
+                      setNotificationSettings({
+                        ...notificationSettings,
+                        [key]: e.target.checked,
+                      })
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
             </div>
             <label>
               Due-date warning
-              <select value={notificationSettings.dueWarningHours} onChange={(e)=>setNotificationSettings({...notificationSettings,dueWarningHours:Number(e.target.value)})}>
-                <option value={1}>1 hour before</option><option value={6}>6 hours before</option><option value={12}>12 hours before</option><option value={24}>1 day before</option><option value={48}>2 days before</option><option value={168}>1 week before</option>
+              <select
+                value={notificationSettings.dueWarningHours}
+                onChange={(e) =>
+                  setNotificationSettings({
+                    ...notificationSettings,
+                    dueWarningHours: Number(e.target.value),
+                  })
+                }
+              >
+                <option value={1}>1 hour before</option>
+                <option value={6}>6 hours before</option>
+                <option value={12}>12 hours before</option>
+                <option value={24}>1 day before</option>
+                <option value={48}>2 days before</option>
+                <option value={168}>1 week before</option>
               </select>
             </label>
             <div className="modal-actions">
@@ -2146,13 +3677,19 @@ function NorthlineModal({
           <>
             <span className="modal-icon discord-bg">#</span>
             <h2>Schedule private reminder</h2>
-            <p>Task Buddy will DM the task creator. Board-wide reminders are sent to you.</p>
+            <p>
+              Task Buddy will DM the task creator. Board-wide reminders are sent
+              to you.
+            </p>
             <label>
               Task (optional)
               <select
                 value={reminder.taskId}
                 onChange={(e) =>
-                  setReminder((current) => ({ ...current, taskId: e.target.value }))
+                  setReminder((current) => ({
+                    ...current,
+                    taskId: e.target.value,
+                  }))
                 }
               >
                 <option value="">Board-wide reminder</option>
@@ -2170,38 +3707,80 @@ function NorthlineModal({
                   type="date"
                   value={reminder.date}
                   onChange={(e) =>
-                    setReminder((current) => ({ ...current, date: e.target.value }))
+                    setReminder((current) => ({
+                      ...current,
+                      date: e.target.value,
+                    }))
                   }
                 />
               </label>
-              <label>
-                Time
-                <input
-                  type="time"
-                  value={reminder.time}
-                  onChange={(e) =>
-                    setReminder((current) => ({ ...current, time: e.target.value }))
-                  }
-                />
-              </label>
+              <fieldset className="time-field">
+                <legend>Time</legend>
+                <div>
+                  <select
+                    aria-label="Hour"
+                    value={reminder.hour}
+                    onChange={(event) =>
+                      setReminder((current) => ({
+                        ...current,
+                        hour: event.target.value,
+                      }))
+                    }
+                  >
+                    {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                      (hour) => (
+                        <option key={hour}>{hour}</option>
+                      ),
+                    )}
+                  </select>
+                  <select
+                    aria-label="Minute"
+                    value={reminder.minute}
+                    onChange={(event) =>
+                      setReminder((current) => ({
+                        ...current,
+                        minute: event.target.value,
+                      }))
+                    }
+                  >
+                    {Array.from({ length: 60 }, (_, index) =>
+                      String(index).padStart(2, "0"),
+                    ).map((minute) => (
+                      <option key={minute}>{minute}</option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="AM or PM"
+                    value={reminder.period}
+                    onChange={(event) =>
+                      setReminder((current) => ({
+                        ...current,
+                        period: event.target.value,
+                      }))
+                    }
+                  >
+                    <option>AM</option>
+                    <option>PM</option>
+                  </select>
+                </div>
+              </fieldset>
             </div>
             <label>
               Message
               <textarea
                 value={reminder.message}
                 onChange={(e) =>
-                  setReminder((current) => ({ ...current, message: e.target.value }))
+                  setReminder((current) => ({
+                    ...current,
+                    message: e.target.value,
+                  }))
                 }
                 placeholder="What should the team know?"
               />
             </label>
             <button
               className="discord-button wide"
-              disabled={
-                !reminder.date ||
-                !reminder.time ||
-                !reminder.message.trim()
-              }
+              disabled={!reminder.date || !reminder.message.trim()}
               onClick={schedule}
             >
               Schedule reminder

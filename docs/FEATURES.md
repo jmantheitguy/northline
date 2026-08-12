@@ -4,6 +4,8 @@
 
 Boards are private to their creator until shared. Every board has an opaque random public ID, while ownership remains a relational server-side permission. Each board owns an ordered workflow whose columns can be added, renamed, recolored, moved, marked as completed, or removed by an owner or editor. Removing a column requires choosing a destination for its tasks. Northline supports Kanban, list, timeline, and calendar-oriented views; drag-and-drop movement; priorities; categories; due dates; assignees; descriptions; comments; filtering; sorting; duplication; progress reporting; board activity; and blank, content-pipeline, or launch-plan templates.
 
+Completed tasks are hidden by default but can be shown per board. Editors can archive completed work without deleting its comments or activity history, inspect the board archive, and restore an archived task later.
+
 My Work gives each member a private cross-board view of tasks assigned to them. Results are limited to boards the member can currently access and are grouped by urgency. Members can filter by workspace, board, priority, status, or text; owners and editors can update status, priority, and due date without leaving the view, while viewer assignments remain read-only.
 
 ## Workspaces

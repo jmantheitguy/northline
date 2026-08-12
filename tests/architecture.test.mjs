@@ -6,7 +6,7 @@ const read=(path)=>readFile(new URL(`../${path}`,import.meta.url),"utf8");
 
 test("board mutations enforce server-side permissions",async()=>{
   const [taskRoute,memberRoute,permissions]=await Promise.all([read("app/api/tasks/[id]/route.ts"),read("app/api/boards/[id]/members/route.ts"),read("lib/boards.ts")]);
-  assert.match(taskRoute,/canEdit\(boardPermission\(user,task\.board_id\)\)/);
+  assert.match(taskRoute,/canEdit\(boardPermission\(user,\s*task\.(?:board_id|boardId)\)\)/);
   assert.match(memberRoute,/canShare\(boardPermission\(user,boardId\)\)/);
   assert.match(permissions,/permission==="owner"\|\|permission==="editor"/);
   assert.match(permissions,/canShare=.*permission==="owner"/);
@@ -31,7 +31,7 @@ test("board data is relational and cascade-safe",async()=>{
 
 test("board references are opaque while creator ownership remains relational",async()=>{
   const [schema,boards,detail,worker,ui,permissions]=await Promise.all([read("lib/db.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("lib/reminder-worker.ts"),read("app/northline-app.tsx"),read("lib/boards.ts")]);
-  assert.match(boards,/created_by/);assert.match(schema,/brd_\$\{randomBytes\(16\)/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);assert.match(ui,/query\.set\("board",active\.boardKey\)/);assert.match(permissions,/owner_id/);
+  assert.match(boards,/created_by/);assert.match(schema,/brd_\$\{randomBytes\(16\)/);assert.match(detail,/boardKey/);assert.match(worker,/creatorName/);assert.match(worker,/set a reminder/);assert.match(ui,/query\.set\("board",\s*active\.boardKey\)/);assert.match(permissions,/owner_id/);
 });
 
 test("Task Buddy automatic notifications are creator-routed and preference aware",async()=>{
@@ -133,7 +133,7 @@ test("authorization matrix is enforced at every board capability",async()=>{
 test("site administration does not bypass private board membership",async()=>{
   const [permissions,boards,detail,search,reminders,ui]=await Promise.all([read("lib/boards.ts"),read("app/api/boards/route.ts"),read("app/api/boards/[id]/route.ts"),read("app/api/search/route.ts"),read("app/api/reminders/route.ts"),read("app/northline-app.tsx")]);
   for(const source of [permissions,boards,search,reminders])assert.doesNotMatch(source,/\?='Admin'|role==="Admin"|permission==="admin"/);
-  assert.match(detail,/const assignees=db\.prepare/);
+  assert.match(detail,/const assignees\s*=\s*db/);
   assert.match(detail,/u\.id=b\.owner_id OR u\.id=w\.owner_id OR bm\.user_id IS NOT NULL OR wm\.user_id IS NOT NULL/);
   assert.match(ui,/people=\{boardData\?\.assignees \|\| \[\]\}/);
   assert.match(ui,/directoryPeople=\{directoryUsers\}/);
@@ -175,7 +175,15 @@ test("My Work aggregates only accessible assignments and preserves edit permissi
   assert.match(await read("lib/db.ts"),/tasks_assignee_idx/);
   assert.doesNotMatch(route,/role.*Admin|Admin.*role/);
   assert.match(ui,/Overdue/);assert.match(ui,/Due soon/);assert.match(ui,/Unscheduled/);assert.match(ui,/Completed/);
-  assert.match(ui,/Filter by workspace|Filter by board/i);assert.match(ui,/task\.permission!=="viewer"/);
+  assert.match(ui,/Filter by workspace|Filter by board/i);assert.match(ui,/task\.permission\s*!==\s*"viewer"/);
   for(const field of ["status","priority","due_date"])assert.match(ui,new RegExp(field));
   assert.match(taskRoute,/canEdit\(boardPermission/);assert.match(styles,/\.my-work-page/);
+});
+
+test("editing, reminder time, and completed task lifecycle are safe",async()=>{
+  const [schema,task,archive,board,search,myWork,ui,reminders]=await Promise.all([read("lib/db.ts"),read("app/api/tasks/[id]/route.ts"),read("app/api/boards/[id]/archive/route.ts"),read("app/api/boards/[id]/route.ts"),read("app/api/search/route.ts"),read("app/api/my-work/route.ts"),read("app/northline-app.tsx"),read("app/reminder-center.tsx")]);
+  assert.match(schema,/archived_at/);assert.match(schema,/recoverable task archive/);assert.match(task,/Only completed tasks can be archived/);assert.match(archive,/boardPermission/);
+  for(const source of [board,search,myWork])assert.match(source,/archived_at IS NULL/);
+  assert.match(ui,/Show completed/);assert.match(ui,/Task archive/);assert.match(ui,/Discard your unsaved changes/);assert.match(ui,/Array\.from\(\{\s*length:\s*12\s*\}/);assert.match(ui,/AM or PM/);
+  assert.match(reminders,/Discard your unsaved changes/);assert.match(reminders,/Array\.from\(\{\s*length:\s*12\s*\}/);assert.match(reminders,/AM or PM/);
 });

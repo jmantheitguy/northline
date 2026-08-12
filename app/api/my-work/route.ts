@@ -22,7 +22,7 @@ export async function GET(){
     JOIN board_columns c ON c.board_id=b.id AND c.column_key=t.status
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
     LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
-    WHERE t.assignee_id=?
+    WHERE t.assignee_id=? AND t.archived_at IS NULL
       AND (b.owner_id=? OR w.owner_id=? OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)
     ORDER BY c.is_done,t.due_date IS NULL,t.due_date,t.updated_at DESC
   `).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id) as Array<WorkTask&Record<string,unknown>>;
