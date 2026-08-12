@@ -1936,7 +1936,7 @@ function NorthlineModal({
             </div>
             <div className="modal-actions task-actions">
               {type === "task-detail" && (
-                <><button className="danger" onClick={deleteTask}>Delete</button><button className="secondary" onClick={duplicateTask}>⧉ Duplicate</button><button className="discord-button" onClick={openTaskReminder}>◷ Remind me</button></>
+                <><button className="danger" onClick={deleteTask}>Delete</button><button className="secondary" onClick={duplicateTask}>Duplicate</button><button className="discord-button" onClick={openTaskReminder}>Remind me</button></>
               )}
               <button
                 className="primary"

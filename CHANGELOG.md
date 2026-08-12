@@ -1,5 +1,9 @@
 # Northline release history
 
+## Beta v0.3.1 — Streamlined task actions
+
+- Remove decorative icons from the Duplicate and Remind me task buttons while preserving their behavior and visual hierarchy.
+
 ## Beta v0.3.0 — My Work across boards
 
 - Add a personal My Work dashboard that gathers tasks assigned to the signed-in user from every board and workspace they can access.
