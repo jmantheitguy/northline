@@ -156,3 +156,13 @@ test("personal and shared workspaces inherit board access safely",async()=>{
   assert.match(search,/workspace_members/);assert.match(reminders,/workspace_members/);assert.match(ui,/New shared workspace/);assert.match(ui,/Manage workspace/);
   assert.match(announce,/New Push to/);assert.match(announce,/GitHub Push Event/);assert.match(announce,/allowed_mentions/);
 });
+
+test("release announcements follow successful deployments without duplicates",async()=>{
+  const deploy=await read("ops/release/deploy-production.sh");
+  assert.match(deploy,/docker compose up -d --build/);
+  assert.match(deploy,/health.*healthy/s);
+  assert.match(deploy,/last-announced-deploy/);
+  assert.match(deploy,/announce-discord\.mjs/);
+  assert.ok(deploy.indexOf('health" = "healthy')<deploy.indexOf("announce-discord.mjs"));
+  assert.ok(deploy.indexOf("announce-discord.mjs")<deploy.indexOf("printf '%s\\n'"));
+});

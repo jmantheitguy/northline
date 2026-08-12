@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.2.1 — Deployment-aware release announcements
+
+- Add a production deployment workflow that announces the deployed version through Task Buddy only after the replacement container becomes healthy.
+- Add commit-based duplicate protection so retrying a deployment cannot repeat the Discord release message.
+- Keep routine commits and worker activity silent; notifications occur only when an operator runs the production deployment workflow.
+
 ## Beta v0.2.0 — Personal and shared workspaces
 
 - Give every member an automatic personal workspace whose boards remain private unless individually shared.

@@ -14,6 +14,7 @@
 
 ## After deployment
 
+- Confirm `ops/release/deploy-production.sh` reported both a healthy deployment and a successful Task Buddy release announcement. A retry of the same commit must not post a duplicate.
 - Verify the public health of the Northline sign-in page through Cloudflare Tunnel.
 - Create, duplicate, update, and delete a test task.
 - Search for that task from another board and inspect the board activity feed.

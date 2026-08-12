@@ -2,9 +2,9 @@
 
 ## Deploy and update
 
-Northline targets a Linux VM with Docker Compose. Keep SQLite and live mail data on local VM storage; use the NAS for encrypted backups. Configure the private `.env`, run `docker compose up -d --build`, publish port 3000 through Cloudflare Tunnel, and restrict direct origin access to the private network.
+Northline targets a Linux VM with Docker Compose. Keep SQLite and live mail data on local VM storage; use the NAS for encrypted backups. Configure the private `.env`, run `sh ops/release/deploy-production.sh`, publish port 3000 through Cloudflare Tunnel, and restrict direct origin access to the private network.
 
-For updates, review the release notes, confirm a current NAS backup, pull the tagged/current `main`, rebuild, and complete the release checklist. The application performs additive SQLite schema initialization at startup.
+For updates, review the release notes, confirm a current backup, and run `sh ops/release/deploy-production.sh`. The workflow fast-forwards to the current `main`, rebuilds the container, waits for a healthy deployment, and then sends one GitHub-style Task Buddy announcement for that deployed commit. Re-running the same deployment does not announce it twice. Ordinary pushes remain silent until that commit is actually deployed. The application performs additive SQLite schema initialization at startup.
 
 ## Health dashboard
 
