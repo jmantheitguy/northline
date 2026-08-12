@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { NORTHLINE_VERSION } from "@/lib/version";
 import { ReminderCenter } from "./reminder-center";
+import { TimeClock } from "./time-clock";
+import { TimeCard } from "./time-card";
+import { AdminTime } from "./admin-time";
 
 type Status = string;
 type Priority = "Low" | "Medium" | "High";
@@ -124,7 +127,13 @@ type Modal =
   | "reminder"
   | null;
 type View =
-  "board" | "my-work" | "directory" | "reminders" | "settings" | "admin";
+  | "board"
+  | "my-work"
+  | "time"
+  | "directory"
+  | "reminders"
+  | "settings"
+  | "admin";
 type BoardMode = "board" | "list" | "timeline" | "calendar";
 type SearchResult = {
   id: number;
@@ -537,6 +546,12 @@ export function NorthlineApp() {
             <span>✓</span>My Work
           </button>
           <button
+            className={view === "time" ? "active" : ""}
+            onClick={() => setView("time")}
+          >
+            <span>◷</span>My Time
+          </button>
+          <button
             className={view === "directory" ? "active" : ""}
             onClick={() => setView("directory")}
           >
@@ -714,12 +729,14 @@ export function NorthlineApp() {
             }}
           />
         )}
+        {view === "time" && <TimeCard notify={notify} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "settings" && <Settings notify={notify} />}
         {view === "admin" && isAdmin && (
           <Admin users={users} reloadUsers={loadAdminUsers} notify={notify} />
         )}
       </main>
+      <TimeClock notify={notify} />
       {modal && (
         <NorthlineModal
           type={modal}
@@ -2159,7 +2176,7 @@ function Admin({
   notify: (s: string) => void;
 }) {
   const [tab, setTab] = useState<
-    "users" | "boards" | "audit" | "security" | "health"
+    "users" | "boards" | "audit" | "time" | "security" | "health"
   >("users");
   const [query, setQuery] = useState("");
   const [create, setCreate] = useState(false);
@@ -2235,17 +2252,17 @@ function Admin({
       </div>
       <div className="admin-panel">
         <div className="admin-tabs">
-          {(["users", "boards", "audit", "security", "health"] as const).map(
-            (name) => (
-              <button
-                key={name}
-                className={tab === name ? "active" : ""}
-                onClick={() => setTab(name)}
-              >
-                {name[0].toUpperCase() + name.slice(1)}
-              </button>
-            ),
-          )}
+          {(
+            ["users", "boards", "audit", "time", "security", "health"] as const
+          ).map((name) => (
+            <button
+              key={name}
+              className={tab === name ? "active" : ""}
+              onClick={() => setTab(name)}
+            >
+              {name[0].toUpperCase() + name.slice(1)}
+            </button>
+          ))}
         </div>
         {tab === "users" && (
           <>
@@ -2328,6 +2345,7 @@ function Admin({
             </div>
           </>
         )}
+        {tab === "time" && <AdminTime notify={notify} />}
         {tab === "boards" && (
           <div className="admin-section">
             <div className="section-copy">

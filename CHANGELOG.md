@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.5.0 — Persistent time cards
+
+- Add a floating clock control that expands into Time In and Time Out actions and persists active timers through reloads and browser sessions.
+- Allow users to associate a timer with an accessible board and task, add a work note, and see the live elapsed duration.
+- Add a private My Time page with daily and weekly totals, entry history, manual time entry, and audited corrections.
+- Enforce one active timer per user, prevent overlapping entries, calculate durations on the server, and store timestamps in UTC.
+- Add an administrator Time panel with organization-wide totals, active timer visibility, and recent time-entry detail.
+
 ## Beta v0.4.1 — Grouped workflow list
 
 - Redesign List view as collapsible, color-coded workflow sections with consistent table columns.

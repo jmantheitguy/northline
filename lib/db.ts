@@ -4,12 +4,15 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { hashSync } from "bcryptjs";
 
-const dataDirectory = process.env.NORTHLINE_DATA_DIR || path.join(process.cwd(), "data");
+const dataDirectory =
+  process.env.NORTHLINE_DATA_DIR || path.join(process.cwd(), "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
 const db = new Database(path.join(dataDirectory, "northline.db"));
-export const createBoardPublicId=()=>`brd_${randomBytes(16).toString("hex")}`;
-export const createColumnKey=()=>`col_${randomBytes(8).toString("hex")}`;
-export const createWorkspacePublicId=()=>`wsp_${randomBytes(16).toString("hex")}`;
+export const createBoardPublicId = () =>
+  `brd_${randomBytes(16).toString("hex")}`;
+export const createColumnKey = () => `col_${randomBytes(8).toString("hex")}`;
+export const createWorkspacePublicId = () =>
+  `wsp_${randomBytes(16).toString("hex")}`;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -177,6 +180,32 @@ db.exec(`
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS time_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    workspace_id INTEGER REFERENCES workspaces(id) ON DELETE SET NULL,
+    board_id INTEGER REFERENCES boards(id) ON DELETE SET NULL,
+    task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    duration_seconds INTEGER,
+    note TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL CHECK(source IN ('timer','manual')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(ended_at IS NULL OR ended_at > started_at),
+    CHECK(duration_seconds IS NULL OR duration_seconds >= 0)
+  );
+  CREATE TABLE IF NOT EXISTS time_entry_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    time_entry_id INTEGER NOT NULL REFERENCES time_entries(id) ON DELETE CASCADE,
+    actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    previous_values TEXT,
+    new_values TEXT,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE INDEX IF NOT EXISTS board_members_user_idx ON board_members(user_id);
   CREATE INDEX IF NOT EXISTS workspace_members_user_idx ON workspace_members(user_id);
   CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
@@ -184,32 +213,118 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
   CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status,remind_at);
   CREATE INDEX IF NOT EXISTS board_activity_board_idx ON board_activity(board_id,created_at);
+  CREATE INDEX IF NOT EXISTS time_entries_user_started_idx ON time_entries(user_id,started_at DESC);
+  CREATE INDEX IF NOT EXISTS time_entries_board_idx ON time_entries(board_id,started_at DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS time_entries_one_active_user_idx ON time_entries(user_id) WHERE ended_at IS NULL;
+  CREATE INDEX IF NOT EXISTS time_entry_audit_entry_idx ON time_entry_audit(time_entry_id,created_at DESC);
 `);
 
-const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{name:string}>;
-const addBoardColumn=(name:string,definition:string)=>{if(!boardColumns.some(column=>column.name===name)){try{db.exec(`ALTER TABLE boards ADD COLUMN ${definition}`);boardColumns.push({name});}catch(error){if(!(error instanceof Error)||!error.message.includes("duplicate column name"))throw error;}}};
-addBoardColumn("public_id","public_id TEXT");
-addBoardColumn("created_by","created_by INTEGER");
-addBoardColumn("workspace_id","workspace_id INTEGER REFERENCES workspaces(id) ON DELETE CASCADE");
-db.prepare("UPDATE boards SET created_by=owner_id WHERE created_by IS NULL").run();
-for(const board of db.prepare("SELECT id FROM boards WHERE public_id IS NULL OR public_id LIKE 'u%-b%'").all() as Array<{id:number}>)db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(createBoardPublicId(),board.id);
-db.exec("CREATE UNIQUE INDEX IF NOT EXISTS boards_public_id_idx ON boards(public_id)");
+const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{
+  name: string;
+}>;
+const addBoardColumn = (name: string, definition: string) => {
+  if (!boardColumns.some((column) => column.name === name)) {
+    try {
+      db.exec(`ALTER TABLE boards ADD COLUMN ${definition}`);
+      boardColumns.push({ name });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes("duplicate column name")
+      )
+        throw error;
+    }
+  }
+};
+addBoardColumn("public_id", "public_id TEXT");
+addBoardColumn("created_by", "created_by INTEGER");
+addBoardColumn(
+  "workspace_id",
+  "workspace_id INTEGER REFERENCES workspaces(id) ON DELETE CASCADE",
+);
+db.prepare(
+  "UPDATE boards SET created_by=owner_id WHERE created_by IS NULL",
+).run();
+for (const board of db
+  .prepare(
+    "SELECT id FROM boards WHERE public_id IS NULL OR public_id LIKE 'u%-b%'",
+  )
+  .all() as Array<{ id: number }>)
+  db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(
+    createBoardPublicId(),
+    board.id,
+  );
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS boards_public_id_idx ON boards(public_id)",
+);
 
-export function ensurePersonalWorkspace(userId:number,userName?:string){
-  const existing=db.prepare("SELECT id,public_id publicId,name,owner_id ownerId,kind FROM workspaces WHERE owner_id=? AND kind='personal'").get(userId) as {id:number;publicId:string;name:string;ownerId:number;kind:string}|undefined;
-  if(existing)return existing;
-  const displayName=userName||(db.prepare("SELECT name FROM users WHERE id=?").get(userId) as {name:string}|undefined)?.name||"Personal";
-  const publicId=createWorkspacePublicId();
-  const result=db.prepare("INSERT INTO workspaces(public_id,name,owner_id,kind) VALUES(?,?,?,'personal')").run(publicId,`${displayName}'s workspace`,userId);
-  return{id:Number(result.lastInsertRowid),publicId,name:`${displayName}'s workspace`,ownerId:userId,kind:"personal"};
+export function ensurePersonalWorkspace(userId: number, userName?: string) {
+  const existing = db
+    .prepare(
+      "SELECT id,public_id publicId,name,owner_id ownerId,kind FROM workspaces WHERE owner_id=? AND kind='personal'",
+    )
+    .get(userId) as
+    | {
+        id: number;
+        publicId: string;
+        name: string;
+        ownerId: number;
+        kind: string;
+      }
+    | undefined;
+  if (existing) return existing;
+  const displayName =
+    userName ||
+    (
+      db.prepare("SELECT name FROM users WHERE id=?").get(userId) as
+        { name: string } | undefined
+    )?.name ||
+    "Personal";
+  const publicId = createWorkspacePublicId();
+  const result = db
+    .prepare(
+      "INSERT INTO workspaces(public_id,name,owner_id,kind) VALUES(?,?,?,'personal')",
+    )
+    .run(publicId, `${displayName}'s workspace`, userId);
+  return {
+    id: Number(result.lastInsertRowid),
+    publicId,
+    name: `${displayName}'s workspace`,
+    ownerId: userId,
+    kind: "personal",
+  };
 }
-for(const user of db.prepare("SELECT id,name FROM users").all() as Array<{id:number;name:string}>)ensurePersonalWorkspace(user.id,user.name);
-for(const board of db.prepare("SELECT id,owner_id FROM boards WHERE workspace_id IS NULL").all() as Array<{id:number;owner_id:number}>){const workspace=ensurePersonalWorkspace(board.owner_id);db.prepare("UPDATE boards SET workspace_id=? WHERE id=?").run(workspace.id,board.id)}
+for (const user of db.prepare("SELECT id,name FROM users").all() as Array<{
+  id: number;
+  name: string;
+}>)
+  ensurePersonalWorkspace(user.id, user.name);
+for (const board of db
+  .prepare("SELECT id,owner_id FROM boards WHERE workspace_id IS NULL")
+  .all() as Array<{ id: number; owner_id: number }>) {
+  const workspace = ensurePersonalWorkspace(board.owner_id);
+  db.prepare("UPDATE boards SET workspace_id=? WHERE id=?").run(
+    workspace.id,
+    board.id,
+  );
+}
 
-const taskSchema=(db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get() as {sql:string}|undefined)?.sql||"";
-if(taskSchema.includes("CHECK(status IN ('ideas','ready','progress','hold','done'))")){
+const taskSchema =
+  (
+    db
+      .prepare(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'",
+      )
+      .get() as { sql: string } | undefined
+  )?.sql || "";
+if (
+  taskSchema.includes(
+    "CHECK(status IN ('ideas','ready','progress','hold','done'))",
+  )
+) {
   db.pragma("foreign_keys = OFF");
-  try{db.exec(`BEGIN;
+  try {
+    db.exec(`BEGIN;
     CREATE TABLE tasks_dynamic (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
@@ -227,39 +342,84 @@ if(taskSchema.includes("CHECK(status IN ('ideas','ready','progress','hold','done
     INSERT INTO tasks_dynamic SELECT id,board_id,title,description,status,priority,tag,due_date,assignee_id,created_by,created_at,updated_at FROM tasks;
     DROP TABLE tasks;
     ALTER TABLE tasks_dynamic RENAME TO tasks;
-    COMMIT;`)}catch(error){if(db.inTransaction)db.exec("ROLLBACK");throw error}finally{db.pragma("foreign_keys = ON")}
+    COMMIT;`);
+  } catch (error) {
+    if (db.inTransaction) db.exec("ROLLBACK");
+    throw error;
+  } finally {
+    db.pragma("foreign_keys = ON");
+  }
 }
-db.exec("CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status); CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date)");
-const taskColumns=db.prepare("PRAGMA table_info(tasks)").all() as Array<{name:string}>;
-if(!taskColumns.some(column=>column.name==="archived_at"))db.exec("ALTER TABLE tasks ADD COLUMN archived_at TEXT");
-db.exec("CREATE INDEX IF NOT EXISTS tasks_archive_idx ON tasks(board_id,archived_at)");
+db.exec(
+  "CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status); CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date)",
+);
+const taskColumns = db.prepare("PRAGMA table_info(tasks)").all() as Array<{
+  name: string;
+}>;
+if (!taskColumns.some((column) => column.name === "archived_at"))
+  db.exec("ALTER TABLE tasks ADD COLUMN archived_at TEXT");
+db.exec(
+  "CREATE INDEX IF NOT EXISTS tasks_archive_idx ON tasks(board_id,archived_at)",
+);
 
-export function createDefaultBoardColumns(boardId:number){
-  const insert=db.prepare("INSERT OR IGNORE INTO board_columns(board_id,column_key,name,color,position,is_done) VALUES(?,?,?,?,?,?)");
-  [["ideas","Ideas","#a78bfa",0,0],["ready","Ready","#60a5fa",1,0],["progress","In progress","#f59e0b",2,0],["hold","On hold","#f472b6",3,0],["done","Done","#34d399",4,1]].forEach(column=>insert.run(boardId,...column));
+export function createDefaultBoardColumns(boardId: number) {
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO board_columns(board_id,column_key,name,color,position,is_done) VALUES(?,?,?,?,?,?)",
+  );
+  [
+    ["ideas", "Ideas", "#a78bfa", 0, 0],
+    ["ready", "Ready", "#60a5fa", 1, 0],
+    ["progress", "In progress", "#f59e0b", 2, 0],
+    ["hold", "On hold", "#f472b6", 3, 0],
+    ["done", "Done", "#34d399", 4, 1],
+  ].forEach((column) => insert.run(boardId, ...column));
 }
-for(const board of db.prepare("SELECT id FROM boards").all() as Array<{id:number}>)createDefaultBoardColumns(board.id);
+for (const board of db.prepare("SELECT id FROM boards").all() as Array<{
+  id: number;
+}>)
+  createDefaultBoardColumns(board.id);
 
-const reminderColumns = db.prepare("PRAGMA table_info(reminders)").all() as Array<{name:string}>;
-const addReminderColumn = (name:string, definition:string) => {
-  if (!reminderColumns.some(column => column.name === name)) {
-    try { db.exec(`ALTER TABLE reminders ADD COLUMN ${definition}`); reminderColumns.push({name}); }
-    catch (error) { if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error; }
+const reminderColumns = db
+  .prepare("PRAGMA table_info(reminders)")
+  .all() as Array<{ name: string }>;
+const addReminderColumn = (name: string, definition: string) => {
+  if (!reminderColumns.some((column) => column.name === name)) {
+    try {
+      db.exec(`ALTER TABLE reminders ADD COLUMN ${definition}`);
+      reminderColumns.push({ name });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes("duplicate column name")
+      )
+        throw error;
+    }
   }
 };
 addReminderColumn("kind", "kind TEXT NOT NULL DEFAULT 'scheduled'");
 addReminderColumn("event_type", "event_type TEXT");
 addReminderColumn("dedupe_key", "dedupe_key TEXT");
-addReminderColumn("recipient_user_id", "recipient_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL");
-db.exec("CREATE UNIQUE INDEX IF NOT EXISTS reminders_dedupe_idx ON reminders(dedupe_key) WHERE dedupe_key IS NOT NULL");
+addReminderColumn(
+  "recipient_user_id",
+  "recipient_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
+);
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS reminders_dedupe_idx ON reminders(dedupe_key) WHERE dedupe_key IS NOT NULL",
+);
 
-const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{name:string}>;
+const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{
+  name: string;
+}>;
 const addUserColumn = (name: string, definition: string) => {
   if (userColumns.some((column) => column.name === name)) return;
   try {
     db.exec(`ALTER TABLE users ADD COLUMN ${definition}`);
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
+    if (
+      !(error instanceof Error) ||
+      !error.message.includes("duplicate column name")
+    )
+      throw error;
   }
 };
 if (!userColumns.some((column) => column.name === "oidc_subject")) {
@@ -270,32 +430,79 @@ addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 addUserColumn("avatar", "avatar TEXT");
 addUserColumn("directory_id", "directory_id TEXT");
 addUserColumn("discord_user_id", "discord_user_id TEXT");
-db.prepare("UPDATE users SET directory_id=oidc_subject,oidc_subject=NULL WHERE directory_id IS NULL AND oidc_subject GLOB '????????-????-????-????-????????????'").run();
-db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL");
-db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_directory_id_idx ON users(directory_id) WHERE directory_id IS NOT NULL");
+db.prepare(
+  "UPDATE users SET directory_id=oidc_subject,oidc_subject=NULL WHERE directory_id IS NULL AND oidc_subject GLOB '????????-????-????-????-????????????'",
+).run();
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS users_oidc_subject_idx ON users(oidc_subject) WHERE oidc_subject IS NOT NULL",
+);
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS users_directory_id_idx ON users(directory_id) WHERE directory_id IS NOT NULL",
+);
 
-const sessionColumns=db.prepare("PRAGMA table_info(sessions)").all() as Array<{name:string}>;
-const addSessionColumn=(name:string,definition:string)=>{if(sessionColumns.some(column=>column.name===name))return;try{db.exec(`ALTER TABLE sessions ADD COLUMN ${definition}`);sessionColumns.push({name})}catch(error){if(!(error instanceof Error)||!error.message.includes("duplicate column name"))throw error}};
-addSessionColumn("user_agent","user_agent TEXT");
-addSessionColumn("created_ip","created_ip TEXT");
-addSessionColumn("last_seen_at","last_seen_at TEXT");
+const sessionColumns = db
+  .prepare("PRAGMA table_info(sessions)")
+  .all() as Array<{ name: string }>;
+const addSessionColumn = (name: string, definition: string) => {
+  if (sessionColumns.some((column) => column.name === name)) return;
+  try {
+    db.exec(`ALTER TABLE sessions ADD COLUMN ${definition}`);
+    sessionColumns.push({ name });
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !error.message.includes("duplicate column name")
+    )
+      throw error;
+  }
+};
+addSessionColumn("user_agent", "user_agent TEXT");
+addSessionColumn("created_ip", "created_ip TEXT");
+addSessionColumn("last_seen_at", "last_seen_at TEXT");
 
-const migrations:[number,string][]=[[1,"initial users and sessions"],[2,"relational boards and tasks"],[3,"opaque board identifiers"],[4,"authentik identity profiles"],[5,"scheduled reminders"],[6,"task buddy notification preferences"],[7,"notification snapshots and activity"],[8,"session inventory and beta hardening"],[9,"separate directory login and Discord identities"],[10,"custom board workflow columns"],[11,"personal and shared workspaces"],[12,"recoverable task archive"]];
-const recordMigrations=db.transaction(()=>{const insert=db.prepare("INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)");for(const migration of migrations)insert.run(...migration)});recordMigrations();
+const migrations: [number, string][] = [
+  [1, "initial users and sessions"],
+  [2, "relational boards and tasks"],
+  [3, "opaque board identifiers"],
+  [4, "authentik identity profiles"],
+  [5, "scheduled reminders"],
+  [6, "task buddy notification preferences"],
+  [7, "notification snapshots and activity"],
+  [8, "session inventory and beta hardening"],
+  [9, "separate directory login and Discord identities"],
+  [10, "custom board workflow columns"],
+  [11, "personal and shared workspaces"],
+  [12, "recoverable task archive"],
+  [13, "persistent time cards and audit history"],
+];
+const recordMigrations = db.transaction(() => {
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)",
+  );
+  for (const migration of migrations) insert.run(...migration);
+});
+recordMigrations();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;
 const password = process.env.NORTHLINE_ADMIN_PASSWORD;
 if (!email || !password) {
-  throw new Error("NORTHLINE_ADMIN_EMAIL and NORTHLINE_ADMIN_PASSWORD must be configured before Northline starts");
+  throw new Error(
+    "NORTHLINE_ADMIN_EMAIL and NORTHLINE_ADMIN_PASSWORD must be configured before Northline starts",
+  );
 }
 db.transaction(() => {
-  const claimed = db.prepare("INSERT OR IGNORE INTO app_meta (key,value) VALUES ('clean_slate_v1',CURRENT_TIMESTAMP)").run();
+  const claimed = db
+    .prepare(
+      "INSERT OR IGNORE INTO app_meta (key,value) VALUES ('clean_slate_v1',CURRENT_TIMESTAMP)",
+    )
+    .run();
   if (claimed.changes === 1) {
     db.prepare("DELETE FROM sessions").run();
     db.prepare("DELETE FROM audit_log").run();
     db.prepare("DELETE FROM users").run();
-    db.prepare("INSERT INTO users (name,email,password_hash,role,status) VALUES (?,?,?,?,?)")
-      .run("Administrator", email, hashSync(password, 12), "Admin", "Active");
+    db.prepare(
+      "INSERT INTO users (name,email,password_hash,role,status) VALUES (?,?,?,?,?)",
+    ).run("Administrator", email, hashSync(password, 12), "Admin", "Active");
   }
 })();
 

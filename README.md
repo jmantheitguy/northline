@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.4.1 — Grouped workflow list**
+Current release: **Beta v0.5.0 — Persistent time cards**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -45,6 +45,9 @@ The application combines visual task boards, private collaboration, user adminis
 - Long, random public board IDs used by task and reminder links while creator ownership remains private
 - Browser navigation uses random board IDs without treating URL secrecy as authorization
 - Persistent light and dark themes that honor the browser preference on first use
+- A persistent floating Time In/Time Out clock with optional board and task association
+- Personal time cards with daily and weekly totals, manual entries, and audited corrections
+- Organization-wide time reporting for administrators without exposing timer controls across accounts
 
 ### Members and access
 

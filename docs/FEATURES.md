@@ -26,6 +26,10 @@ Each board can enable assignment, status, comment, mention, and due-date notific
 
 Admins can create and manage accounts, review roles/status, inspect board ownership and access, search audit records, configure workspace policies, synchronize Authentik, and open a health dashboard. Health reports application uptime and memory, Node version, SQLite integrity and size, VM capacity, active sessions, Task Buddy connectivity/channels, reminder outcomes, NAS backup status, and restore-test status. A health action sends a real Task Buddy test message.
 
+## Time cards
+
+Every user has a persistent personal time clock available from the floating clock control and a My Time page. Timers continue on the server through reloads, can be associated with accessible boards and tasks, and are limited to one active timer per user. Users can add manual entries and correct completed entries with a required audit reason. Northline prevents overlapping entries and calculates durations server-side. Administrators can review time totals and entry history for all active users from the Administration Time panel.
+
 ## Experience
 
 Northline has responsive desktop/mobile layouts, structured empty/loading/error states, and persistent light/dark themes. The initial appearance follows the operating-system preference; a browser-local preference takes precedence after the user changes it.
