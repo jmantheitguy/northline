@@ -1,5 +1,14 @@
 # Northline release history
 
+## Beta v0.7.5 — Team reminders and task discussions
+
+- Fan out board-wide reminders as private Task Buddy deliveries to every active member with access through ownership, direct board sharing, or shared-workspace membership.
+- Track each board-wide recipient independently so successful deliveries continue when another member has not linked Discord, with failures remaining visible for retry or review.
+- Limit Reminder Center visibility to reminders created by or addressed to the current member while preserving scheduler management of the fan-out records.
+- Add a dedicated discussion button to Kanban cards so collaborators can read and post comments without opening the complete task editor.
+- Permit viewers, editors, and owners with board access to participate in task discussion while retaining the existing server-side board permission check.
+- Add a focused discussion panel with avatars, localized timestamps, an empty state, and a 5,000-character server-enforced comment limit.
+
 ## Beta v0.7.4 — Per-user time zones
 
 - Detect each signed-in member's IANA time zone from their browser and persist it to their Northline account.

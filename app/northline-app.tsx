@@ -119,6 +119,7 @@ type SessionUser = {
 type Modal =
   | "task-create"
   | "task-detail"
+  | "task-comments"
   | "board-create"
   | "board-settings"
   | "share"
@@ -740,6 +741,10 @@ export function NorthlineApp() {
               openTask={(task: Task) => {
                 setSelectedTask(task);
                 setModal("task-detail");
+              }}
+              openDiscussion={(task: Task) => {
+                setSelectedTask(task);
+                setModal("task-comments");
               }}
               openModal={setModal}
             />
@@ -1394,6 +1399,7 @@ function BoardView({
   setDragged,
   moveTask,
   openTask,
+  openDiscussion,
   openModal,
 }: any) {
   const columns = data.columns as BoardColumn[];
@@ -1557,7 +1563,7 @@ function BoardView({
           disabled={!data.canEdit}
           onClick={() => openModal("reminder")}
         >
-          ◷ Schedule private reminder
+          ◷ Schedule reminder
         </button>
       </div>
       {mode === "board" && (
@@ -1568,6 +1574,7 @@ function BoardView({
           setDragged={setDragged}
           moveTask={moveTask}
           openTask={openTask}
+          openComments={openDiscussion}
           add={() => openModal("task-create")}
         />
       )}{" "}
@@ -1605,6 +1612,7 @@ function Kanban({
   setDragged,
   moveTask,
   openTask,
+  openComments,
   add,
 }: any) {
   return (
@@ -1639,6 +1647,7 @@ function Kanban({
                   canEdit={data.canEdit}
                   setDragged={setDragged}
                   open={() => openTask(task)}
+                  openComments={() => openComments(task)}
                 />
               ))}
           </div>
@@ -1657,11 +1666,13 @@ function TaskCard({
   canEdit,
   setDragged,
   open,
+  openComments,
 }: {
   task: Task;
   canEdit: boolean;
   setDragged: (id: number) => void;
   open: () => void;
+  openComments: () => void;
 }) {
   return (
     <article
@@ -1685,7 +1696,17 @@ function TaskCard({
           avatar={task.ownerAvatar}
         />
         <span>◷ {task.due || "No date"}</span>
-        <span className="comments">◌ {task.comments}</span>
+        <button
+          className="comments comment-quick-button"
+          aria-label={`Open discussion for ${task.title}`}
+          title="Open discussion"
+          onClick={(event) => {
+            event.stopPropagation();
+            openComments();
+          }}
+        >
+          ◌ {task.comments}
+        </button>
       </div>
     </article>
   );
@@ -3187,7 +3208,7 @@ function NorthlineModal({
     message: task?.title ? `Reminder: ${task.title}` : "",
   });
   useEffect(() => {
-    if (type === "task-detail" && task)
+    if ((type === "task-detail" || type === "task-comments") && task)
       jsonFetch(`/api/tasks/${task.id}/comments`).then((d) =>
         setComments(d.comments),
       );
@@ -3342,7 +3363,7 @@ function NorthlineModal({
     });
   const schedule = () =>
     run(async () => {
-      await jsonFetch("/api/reminders", {
+      const result=await jsonFetch("/api/reminders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3355,12 +3376,16 @@ function NorthlineModal({
         }),
       });
       close();
-      notify("Private Discord reminder scheduled");
+      notify(
+        reminder.taskId
+          ? "Private task reminder scheduled"
+          : `Board-wide reminder scheduled for ${result.recipients} member${result.recipients === 1 ? "" : "s"}`,
+      );
     });
   return (
     <div className="modal-backdrop">
       <div
-        className={`modal ${type === "task-detail" || type === "columns" ? "modal-large" : ""}`}
+        className={`modal ${type === "task-detail" || type === "task-comments" || type === "columns" ? "modal-large" : ""}`}
       >
         <button className="modal-close" onClick={safeClose}>
           ×
@@ -3549,6 +3574,49 @@ function NorthlineModal({
                 </div>
               </div>
             )}
+          </>
+        )}
+        {type === "task-comments" && task && (
+          <>
+            <span className="modal-icon purple-bg">◌</span>
+            <h2>{task.title}</h2>
+            <p>Discuss this task with everyone who can access the board.</p>
+            <div className="comment-panel focused-discussion">
+              <h3>
+                Discussion <span>{comments.length}</span>
+              </h3>
+              {!comments.length && (
+                <div className="comment-empty">
+                  No comments yet. Start the conversation below.
+                </div>
+              )}
+              {comments.map((c) => (
+                <div className="comment" key={c.id}>
+                  <Avatar name={c.authorName} avatar={c.authorAvatar} />
+                  <span>
+                    <b>{c.authorName}</b>
+                    <small>{new Date(`${c.createdAt}Z`).toLocaleString()}</small>
+                    <p>{c.body}</p>
+                  </span>
+                </div>
+              ))}
+              <div className="comment-compose">
+                <textarea
+                  autoFocus
+                  maxLength={5000}
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Write a comment…"
+                />
+                <button
+                  className="primary"
+                  disabled={busy || !comment.trim()}
+                  onClick={addComment}
+                >
+                  {busy ? "Posting…" : "Comment"}
+                </button>
+              </div>
+            </div>
           </>
         )}
         {type === "board-create" && (
@@ -4049,10 +4117,10 @@ function NorthlineModal({
         {type === "reminder" && (
           <>
             <span className="modal-icon discord-bg">#</span>
-            <h2>Schedule private reminder</h2>
+            <h2>Schedule reminder</h2>
             <p>
-              Task Buddy will DM the task creator. Board-wide reminders are sent
-              to you.
+              Task reminders are sent to the task creator. Board-wide reminders
+              are privately delivered to every active member with board access.
             </p>
             <label>
               Task (optional)

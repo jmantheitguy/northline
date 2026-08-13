@@ -110,6 +110,21 @@ test("Discord reminders are permission checked and secrets stay server-side", as
   assert.match(compose, /NORTHLINE_DISCORD_BOT_TOKEN/);
 });
 
+test("board-wide reminders fan out privately to every board member", async () => {
+  const [route, worker, ui] = await Promise.all([
+    read("app/api/reminders/route.ts"),
+    read("lib/reminder-worker.ts"),
+    read("app/northline-app.tsx"),
+  ]);
+  assert.match(route, /SELECT DISTINCT u\.id/);
+  assert.match(route, /u\.id=b\.owner_id/);
+  assert.match(route, /bm\.user_id IS NOT NULL/);
+  assert.match(route, /wm\.user_id IS NOT NULL/);
+  assert.match(route, /recipients:ids\.length/);
+  assert.match(worker, /recipient\.discord_user_id/);
+  assert.match(ui, /privately delivered to every active member/);
+});
+
 test("reminder management supports controlled updates, cancellation, and retry", async () => {
   const [collection, item, retry, ui] = await Promise.all([
     read("app/api/reminders/route.ts"),
@@ -515,6 +530,20 @@ test("editing, reminder time, and completed task lifecycle are safe", async () =
   assert.match(reminders, /Discard your unsaved changes/);
   assert.match(reminders, /Array\.from\(\{\s*length:\s*12\s*\}/);
   assert.match(reminders, /AM or PM/);
+});
+
+test("shared task discussions are available without opening the editor", async () => {
+  const [comments, ui, styles] = await Promise.all([
+    read("app/api/tasks/[id]/comments/route.ts"),
+    read("app/northline-app.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(comments, /boardPermission/);
+  assert.match(comments, /5,000 characters or fewer/);
+  assert.match(ui, /task-comments/);
+  assert.match(ui, /Open discussion for/);
+  assert.match(ui, /Discuss this task with everyone who can access the board/);
+  assert.match(styles, /comment-quick-button/);
 });
 
 test("persistent personal time cards remain auditable and administrator visible", async () => {

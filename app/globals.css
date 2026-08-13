@@ -1571,6 +1571,33 @@ button {
 .comments {
   margin-left: auto;
 }
+.comment-quick-button {
+  min-width: 30px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.comment-quick-button:hover,
+.comment-quick-button:focus-visible {
+  background: var(--subtle);
+  color: var(--text);
+}
+.focused-discussion {
+  margin-top: 8px;
+  border-top: 0;
+  padding-top: 0;
+}
+.comment-empty {
+  margin: 14px 0;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+}
 .add-inline {
   border: 0;
   background: transparent;

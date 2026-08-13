@@ -1,8 +1,8 @@
 # Beta validation status
 
-Beta v0.7.4 continues controlled production validation with a small team. This document distinguishes verified release evidence from work that requires an interactive browser or deliberate failure simulation.
+Beta v0.7.5 continues controlled production validation with a small team. This document distinguishes verified release evidence from work that requires an interactive browser or deliberate failure simulation.
 
-## Verified for Beta v0.7.4
+## Verified for Beta v0.7.5
 
 - Production containers report healthy operation for Northline, Authentik, its database and worker, and the mail server.
 - The public Northline route responds successfully through the configured edge tunnel.
@@ -12,6 +12,7 @@ Beta v0.7.4 continues controlled production validation with a small team. This d
 - Board owners and editors can change task status by dragging List-view rows between workflow categories; viewers remain read-only.
 - Each browser synchronizes its IANA time zone to the signed-in account; shared instants remain UTC and personal reporting boundaries plus due warnings use the relevant user's zone.
 - Direct board shares remain discoverable through a virtual Shared with me workspace without granting visibility into the owner's private workspace.
+- Board-wide reminders create independent private deliveries for all active board members, and shared-task discussions are accessible directly from Kanban cards.
 - Northline-only local backups are encrypted, verified, and retained for the latest four generations.
 - The latest recorded non-destructive restore drill completed successfully.
 - VM storage has safe operating headroom after unused container-build artifacts were removed.

@@ -28,7 +28,9 @@ Users sign in locally or through Authentik OIDC using their office identity. Aut
 
 ## Task Buddy
 
-Each board can enable assignment, status, comment, mention, and due-date notifications, and users can manage their personal notification preferences. Task Buddy privately DMs automatic events and task-specific reminders to the member who created the task; board-wide manual reminders go to the member who schedules them. Scheduled reminders support editing, cancellation, failure display, and retry. Delivery fails visibly when the intended recipient has not linked Discord. Messages include a direct clickable task link while suppressing Discord preview embeds, and delivery snapshots preserve history after the original task or board is deleted.
+Each board can enable assignment, status, comment, mention, and due-date notifications, and users can manage their personal notification preferences. Task Buddy privately DMs automatic events and task-specific reminders to the member who created the task. Board-wide manual reminders create an independent private delivery for every active member with board access. Scheduled reminders support editing, cancellation, failure display, and retry. Delivery fails visibly per recipient when that person has not linked Discord without blocking other members. Messages include a direct clickable task link while suppressing Discord preview embeds, and delivery snapshots preserve history after the original task or board is deleted.
+
+Every task has a permission-aware discussion thread. Owners, editors, and viewers who can access the board can read and post comments. Kanban cards provide a direct discussion control so collaborators do not need to open the full task editor merely to participate in the conversation.
 
 ## Administration and operations
 
