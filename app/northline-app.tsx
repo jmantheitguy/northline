@@ -368,18 +368,7 @@ export function NorthlineApp() {
       .then((d) => setAuthUser(d.user))
       .finally(() => setAuthLoading(false));
   }, []);
-  useEffect(() => {
-    if (!authUser) return;
-    setShowWelcome(
-      window.localStorage.getItem(`northline-welcome-${authUser.id}`) !== "dismissed",
-    );
-  }, [authUser?.id]);
   const navigateFromHelp = (destination: HelpDestination) => setView(destination);
-  const dismissWelcome = (remember: boolean) => {
-    if (remember && authUser)
-      window.localStorage.setItem(`northline-welcome-${authUser.id}`, "dismissed");
-    setShowWelcome(false);
-  };
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
@@ -859,7 +848,7 @@ export function NorthlineApp() {
           name={authUser.name}
           navigate={navigateFromHelp}
           openHelp={() => setView("help")}
-          dismiss={dismissWelcome}
+          dismiss={() => setShowWelcome(false)}
         />
       )}
       {modal && (

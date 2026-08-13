@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.9.1 — On-demand welcome guide
+
+- Stop opening the welcome guide automatically after sign-in.
+- Show the guide only when a user deliberately opens it from the Help Center.
+- Remove the unnecessary dismissal preference and explain where the guide can be reopened.
+
 ## Beta v0.9.0 — User Help Center and welcome guide
 
 - Add a searchable, plain-language Help Center covering every member-facing Northline workflow.

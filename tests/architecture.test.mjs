@@ -217,12 +217,12 @@ test("member help is searchable, actionable, and excludes administration", async
     read("app/globals.css"),
   ]);
   assert.match(app, /Help Center/);
-  assert.match(app, /northline-welcome-/);
+  assert.doesNotMatch(app, /northline-welcome-/);
   assert.match(help, /Search help topics/);
   assert.match(help, /Create and organize a board/);
   assert.match(help, /Request and manage a collab/);
   assert.match(help, /Task Buddy reminders/);
-  assert.match(help, /Don&apos;t show this welcome screen again/);
+  assert.match(help, /Open this guide any time from the Help Center/);
   assert.doesNotMatch(help, /Administration/);
   assert.doesNotMatch(help, /Linux|Docker|Cloudflare|database health/i);
   assert.match(styles, /\.help-page/);

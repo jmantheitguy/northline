@@ -2037,8 +2037,7 @@ button {
 .welcome-actions span { grid-column:1; color:var(--muted); font-size:10px; line-height:1.5; }
 .welcome-actions i { grid-column:2; grid-row:1 / span 2; align-self:center; color:var(--purple); font-size:18px; font-style:normal; }
 .welcome-guide footer { display:flex; align-items:center; justify-content:space-between; gap:18px; padding-top:20px; border-top:1px solid var(--line); }
-.welcome-guide footer label { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:10px; }
-.welcome-guide footer label input { accent-color:var(--purple); }
+.welcome-guide footer>p { margin:0; color:var(--muted); font-size:10px; }
 .welcome-guide footer>div { display:flex; gap:9px; }
 @media(max-width:760px){.help-topic-grid,.welcome-actions{grid-template-columns:1fr}.help-hero-heading,.welcome-guide footer{align-items:stretch;flex-direction:column}.help-hero-heading>button{align-self:flex-start}.welcome-guide{padding:26px 18px}.welcome-guide footer>div{display:grid;grid-template-columns:1fr}.welcome-guide footer button{width:100%}}
 .modal-close {
