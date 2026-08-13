@@ -2195,6 +2195,7 @@ function Admin({
   const [overview, setOverview] = useState<any>(null);
   const [health, setHealth] = useState<any>(null);
   const [adminTime, setAdminTime] = useState<any>(null);
+  const [healthLive, setHealthLive] = useState(true);
   const loadOverview = () =>
     jsonFetch("/api/admin/overview")
       .then(setOverview)
@@ -2208,6 +2209,14 @@ function Admin({
       .then(setAdminTime)
       .catch((e) => notify(e.message));
   }, []);
+  useEffect(() => {
+    if (tab !== "health" || !healthLive) return;
+    const timer = window.setInterval(
+      () => jsonFetch("/api/admin/health").then(setHealth).catch(() => undefined),
+      5000,
+    );
+    return () => window.clearInterval(timer);
+  }, [tab, healthLive]);
   const updateUser = async (id: number, body: any) => {
     await jsonFetch(`/api/admin/users/${id}`, {
       method: "PATCH",
@@ -2446,10 +2455,10 @@ function Admin({
             </div>
             {overview?.audit.map((a: any) => (
               <div className="audit-row" key={a.id}>
-                <code>{a.action}</code>
+                <span className="audit-event-icon">{a.action.split(".")[0].slice(0, 1)}</span>
                 <span>
-                  <b>{a.actorName}</b>
-                  <small>{a.target || "Workspace"}</small>
+                  <b>{a.description}</b>
+                  <small>{a.actorName} · <code>{a.action}</code></small>
                 </span>
                 <time>{new Date(`${a.createdAt}Z`).toLocaleString()}</time>
               </div>
@@ -2497,6 +2506,10 @@ function Admin({
               >
                 ↻ Refresh
               </button>
+              <label className="live-health-toggle">
+                <input type="checkbox" checked={healthLive} onChange={(event) => setHealthLive(event.target.checked)} />
+                Live updates
+              </label>
             </div>
             {!health ? (
               <div className="reminder-empty">Loading system health…</div>
@@ -2562,6 +2575,24 @@ function Admin({
                     }
                     detail={`${health.reminders.counts.sent || 0} sent · ${health.reminders.counts.failed || 0} failed`}
                   />
+                </div>
+                <div className="linux-health-panel">
+                  <div className="linux-health-heading">
+                    <div><span className="eyebrow">LINUX HOST</span><h3>Real-time system resources</h3></div>
+                    <small>{health.linux.platform} · {health.linux.architecture} · {health.linux.cpuCores} vCPU</small>
+                  </div>
+                  <div className="linux-stat-grid">
+                    <LinuxStat label="CPU" value={`${health.linux.cpuUsagePercent}%`} percent={health.linux.cpuUsagePercent} detail={health.linux.cpuModel} />
+                    <LinuxStat label="Memory" value={`${health.linux.memoryUsedPercent}%`} percent={health.linux.memoryUsedPercent} detail={`${formatBytes(health.linux.memoryTotalBytes - health.linux.memoryAvailableBytes)} used of ${formatBytes(health.linux.memoryTotalBytes)}`} />
+                    <LinuxStat label="Disk" value={`${Math.round((1 - health.storage.freeBytes / health.storage.totalBytes) * 1000) / 10}%`} percent={(1 - health.storage.freeBytes / health.storage.totalBytes) * 100} detail={`${formatBytes(health.storage.freeBytes)} available`} />
+                    <LinuxStat label="Swap" value={health.linux.swapTotalBytes ? `${Math.round(health.linux.swapUsedBytes / health.linux.swapTotalBytes * 1000) / 10}%` : "Disabled"} percent={health.linux.swapTotalBytes ? health.linux.swapUsedBytes / health.linux.swapTotalBytes * 100 : 0} detail={health.linux.swapTotalBytes ? `${formatBytes(health.linux.swapUsedBytes)} used of ${formatBytes(health.linux.swapTotalBytes)}` : "No swap configured"} />
+                  </div>
+                  <div className="linux-host-details">
+                    <span><small>LOAD AVERAGE</small><b>{health.linux.loadAverage.join(" · ")}</b></span>
+                    <span><small>HOST UPTIME</small><b>{formatUptime(health.linux.uptimeSeconds)}</b></span>
+                    <span><small>HOSTNAME</small><b>{health.linux.hostname}</b></span>
+                    <span><small>NODE PROCESS</small><b>{formatBytes(health.application.rssBytes)} RSS</b></span>
+                  </div>
                 </div>
                 <div className="health-actions">
                   <div>
@@ -2728,6 +2759,31 @@ function formatBytes(value: number) {
     index++;
   }
   return `${amount.toFixed(index > 1 ? 1 : 0)} ${units[index]}`;
+}
+function formatUptime(seconds: number) {
+  const days = Math.floor(seconds / 86400),
+    hours = Math.floor((seconds % 86400) / 3600),
+    minutes = Math.floor((seconds % 3600) / 60);
+  return `${days ? `${days}d ` : ""}${hours}h ${minutes}m`;
+}
+function LinuxStat({
+  label,
+  value,
+  percent,
+  detail,
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  detail: string;
+}) {
+  return (
+    <article className="linux-stat">
+      <div><span>{label}</span><b>{value}</b></div>
+      <div className="linux-meter"><i style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>
+      <small>{detail}</small>
+    </article>
+  );
 }
 function HealthCard({
   title,

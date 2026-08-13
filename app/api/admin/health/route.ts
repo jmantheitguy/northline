@@ -8,6 +8,36 @@ import {
 import db from "@/lib/db";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+
+function cpuSample() {
+  return os.cpus().reduce(
+    (sum, cpu) => {
+      const total = Object.values(cpu.times).reduce((value, time) => value + time, 0);
+      return { idle: sum.idle + cpu.times.idle, total: sum.total + total };
+    },
+    { idle: 0, total: 0 },
+  );
+}
+let previousCpu = cpuSample();
+function linuxMemory() {
+  try {
+    const values = Object.fromEntries(
+      fs.readFileSync("/proc/meminfo", "utf8").trim().split("\n").map((line) => {
+        const [key, raw = "0"] = line.split(":");
+        return [key, Number(raw.trim().split(/\s+/)[0]) * 1024];
+      }),
+    );
+    return {
+      totalBytes: values.MemTotal || os.totalmem(),
+      availableBytes: values.MemAvailable || os.freemem(),
+      swapTotalBytes: values.SwapTotal || 0,
+      swapFreeBytes: values.SwapFree || 0,
+    };
+  } catch {
+    return { totalBytes: os.totalmem(), availableBytes: os.freemem(), swapTotalBytes: 0, swapFreeBytes: 0 };
+  }
+}
 
 function statusFile(name: string) {
   try {
@@ -39,6 +69,12 @@ export async function GET() {
     integrity =
       (db.pragma("quick_check") as Array<{ quick_check: string }>)[0]
         ?.quick_check || "unknown";
+  const currentCpu = cpuSample(),
+    cpuTotalDelta = currentCpu.total - previousCpu.total,
+    cpuIdleDelta = currentCpu.idle - previousCpu.idle,
+    cpuUsagePercent = cpuTotalDelta > 0 ? Math.max(0, Math.min(100, (1 - cpuIdleDelta / cpuTotalDelta) * 100)) : 0,
+    hostMemory = linuxMemory();
+  previousCpu = currentCpu;
   const delivery =
     db
       .prepare(
@@ -79,7 +115,7 @@ export async function GET() {
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     application: {
-      version: process.env.npm_package_version || "0.6.1-beta.0",
+      version: process.env.npm_package_version || "0.6.2-beta.0",
       uptimeSeconds: Math.round(process.uptime()),
       rssBytes: memory.rss,
       heapBytes: memory.heapUsed,
@@ -87,7 +123,7 @@ export async function GET() {
     },
     database: {
       status:
-        integrity === "ok" && migration.version >= 14 ? "healthy" : "degraded",
+        integrity === "ok" && migration.version >= 15 ? "healthy" : "degraded",
       integrity,
       sizeBytes: fs.statSync(databasePath).size,
       migrationVersion: migration.version,
@@ -97,6 +133,21 @@ export async function GET() {
       status: disk.bavail / disk.blocks > 0.1 ? "healthy" : "degraded",
       freeBytes: disk.bavail * disk.bsize,
       totalBytes: disk.blocks * disk.bsize,
+    },
+    linux: {
+      platform: `${os.type()} ${os.release()}`,
+      hostname: os.hostname(),
+      architecture: os.arch(),
+      uptimeSeconds: Math.round(os.uptime()),
+      cpuModel: os.cpus()[0]?.model || "Unknown CPU",
+      cpuCores: os.cpus().length,
+      cpuUsagePercent: Math.round(cpuUsagePercent * 10) / 10,
+      loadAverage: os.loadavg().map((value) => Math.round(value * 100) / 100),
+      memoryTotalBytes: hostMemory.totalBytes,
+      memoryAvailableBytes: hostMemory.availableBytes,
+      memoryUsedPercent: Math.round((1 - hostMemory.availableBytes / hostMemory.totalBytes) * 1000) / 10,
+      swapTotalBytes: hostMemory.swapTotalBytes,
+      swapUsedBytes: Math.max(0, hostMemory.swapTotalBytes - hostMemory.swapFreeBytes),
     },
     identity: {
       status: process.env.NORTHLINE_OIDC_ISSUER ? "configured" : "local-only",

@@ -57,6 +57,12 @@ export async function PATCH(
       body.archive === true ? "TASK.ARCHIVE" : "TASK.RESTORE",
       `${body.archive === true ? "Archived" : "Restored"} ${task.title}`,
     );
+    db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(
+      user.id,
+      body.archive === true ? "TASK.ARCHIVE" : "TASK.RESTORE",
+      String(id),
+      `${body.archive === true ? "Archived" : "Restored"} task “${task.title}”`,
+    );
     return NextResponse.json({ ok: true });
   }
   if (body.title !== undefined && !String(body.title).trim())
@@ -101,6 +107,9 @@ export async function PATCH(
     "due_date",
     "assignee_id",
   ] as const;
+  const changedFields = allowed
+    .filter((key) => Object.prototype.hasOwnProperty.call(body, key))
+    .map((key) => key.replace("assignee_id", "assignee").replace("due_date", "due date").replaceAll("_", " "));
   const update = db.transaction(() => {
     for (const key of allowed)
       if (Object.prototype.hasOwnProperty.call(body, key))
@@ -111,8 +120,8 @@ export async function PATCH(
       task.boardId,
     );
     db.prepare(
-      "INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)",
-    ).run(user.id, "TASK.UPDATE", String(id));
+      "INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)",
+    ).run(user.id, "TASK.UPDATE", String(id), `Updated ${changedFields.join(", ") || "task details"} on “${task.title}”`);
     recordBoardActivity(
       task.boardId,
       user.id,
@@ -151,8 +160,8 @@ export async function DELETE(
     );
     db.prepare("DELETE FROM tasks WHERE id=?").run(id);
     db.prepare(
-      "INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)",
-    ).run(user.id, "TASK.DELETE", String(id));
+      "INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)",
+    ).run(user.id, "TASK.DELETE", String(id), `Deleted task “${task.title}”`);
   })();
   return NextResponse.json({ ok: true });
 }

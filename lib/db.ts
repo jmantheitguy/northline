@@ -467,6 +467,12 @@ addSessionColumn("user_agent", "user_agent TEXT");
 addSessionColumn("created_ip", "created_ip TEXT");
 addSessionColumn("last_seen_at", "last_seen_at TEXT");
 
+const auditColumns = db
+  .prepare("PRAGMA table_info(audit_log)")
+  .all() as Array<{ name: string }>;
+if (!auditColumns.some((column) => column.name === "detail"))
+  db.exec("ALTER TABLE audit_log ADD COLUMN detail TEXT");
+
 const migrations: [number, string][] = [
   [1, "initial users and sessions"],
   [2, "relational boards and tasks"],
@@ -482,6 +488,7 @@ const migrations: [number, string][] = [
   [12, "recoverable task archive"],
   [13, "persistent time cards and audit history"],
   [14, "audited time entry deletion"],
+  [15, "descriptive administration audit events"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

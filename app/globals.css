@@ -391,6 +391,87 @@
   align-items: center;
   gap: 13px;
 }
+.audit-event-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 10px;
+  background: #7c65e21c;
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 900;
+}
+.audit-row > span:nth-child(2) b { font-size: 12px; }
+.audit-row code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: 8px;
+}
+.live-health-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.live-health-toggle input { accent-color: var(--purple); }
+.linux-health-panel {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--subtle);
+}
+.linux-health-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.linux-health-heading h3 { margin: 4px 0 0; }
+.linux-health-heading > small { color: var(--muted); }
+.linux-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.linux-stat {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.linux-stat > div:first-child { display: flex; align-items: center; justify-content: space-between; }
+.linux-stat span { color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.linux-stat b { font-size: 17px; }
+.linux-stat small { display: block; overflow: hidden; margin-top: 8px; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.linux-meter { height: 5px; margin-top: 10px; overflow: hidden; border-radius: 99px; background: var(--line); }
+.linux-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2bbd89, var(--purple)); transition: width .4s ease; }
+.linux-host-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.linux-host-details span { display: grid; gap: 4px; }
+.linux-host-details small { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+.linux-host-details b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+html[data-theme="dark"] .linux-health-panel { background: #18181e; }
+@media (max-width: 900px) {
+  .linux-stat-grid,
+  .linux-host-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .linux-health-heading { align-items: flex-start; flex-direction: column; }
+  .linux-stat-grid { grid-template-columns: 1fr; }
+}
 .access-row > i {
   width: 10px;
   height: 32px;

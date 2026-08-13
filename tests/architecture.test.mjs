@@ -137,6 +137,8 @@ test("administration metrics and audit history come from the database", async ()
   assert.match(overview, /FROM audit_log a/);
   assert.match(overview, /activeTimers/);
   assert.match(overview, /failedReminders/);
+  assert.match(overview, /describeAudit/);
+  assert.match(overview, /private or removed board/);
   assert.match(ui, /Administration overview/);
   assert.match(ui, /Currently clocked in/);
   assert.match(ui, /Local backup/);
@@ -157,6 +159,8 @@ test("release health and workflow tools remain permission constrained", async ()
   assert.match(health, /requireAdmin\(\)/);
   assert.match(health, /quick_check/);
   assert.match(health, /sendDiscordDirectMessage/);
+  assert.match(health, /cpuUsagePercent/);
+  assert.match(health, /memoryUsedPercent/);
   assert.match(search, /b\.owner_id=\?/);
   assert.match(search, /bm\.user_id=\?/);
   assert.match(duplicate, /canEdit\(boardPermission/);

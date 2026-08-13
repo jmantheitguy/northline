@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.6.2 — Descriptive audit and live Linux health
+
+- Replace raw audit action codes and numeric targets with readable descriptions, actors, affected objects, timestamps, and retained diagnostic codes.
+- Respect private-board access when resolving task and board names in the administration audit feed.
+- Record descriptive details for new task creation, updates, deletion, archive/restore, and account role or status changes.
+- Add live Linux CPU, load average, memory, swap, disk, uptime, architecture, kernel, and Node process statistics.
+- Refresh Health automatically every five seconds while its tab is open, with a user-controlled live-updates switch and the existing manual refresh button.
+
 ## Beta v0.6.1 — Administration dashboard
 
 - Make a live operations overview the default Administration landing page.
