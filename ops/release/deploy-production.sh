@@ -37,6 +37,12 @@ if [ "$health" != "healthy" ]; then
   exit 1
 fi
 
+# The production image is fully built and healthy at this point. Build cache is
+# disposable and grows quickly on a small self-hosted VM, so release it after
+# every successful deployment. This does not remove running images, containers,
+# named volumes, or application data.
+docker builder prune --all --force >/dev/null || echo "Warning: unable to prune Docker build cache" >&2
+
 mkdir -p runtime-status
 marker="runtime-status/last-announced-deploy"
 announced="$(cat "$marker" 2>/dev/null || true)"

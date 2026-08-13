@@ -29,6 +29,8 @@ sudo journalctl -u northline-backup.service --since today
 sudo /usr/local/sbin/northline-restore-test
 ```
 
+Successful production deployments remove unused Docker build cache after the replacement container becomes healthy. Running images, containers, named volumes, and application data are not part of that cleanup. The host also runs periodic filesystem TRIM so discarded guest blocks can be reclaimed by compatible thin-provisioned virtualization storage.
+
 Never paste live environment values, OAuth secrets, bot tokens, mail keys, backup keys, or NAS credentials into issues or logs. Rotate any secret that is exposed.
 
 ## Remaining Beta acceptance gate
