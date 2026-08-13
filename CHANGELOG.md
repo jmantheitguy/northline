@@ -1,12 +1,18 @@
 # Northline release history
 
+## Beta v0.8.7 — Authentik-managed directory visibility
+
+- Let Northline access-group membership determine which Authentik identities appear throughout the product.
+- Keep authorized Authentik superusers and Domain Admins visible as normal directory profiles.
+- Continue hiding only Northline's configured local emergency Administrator from member-facing directories and collaboration flows.
+
 ## Beta v0.8.6 — Public streamer profiles and schedules
 
 - Redesign the People directory with consistent profile hierarchy, responsive cards, and stable identity metadata.
 - Add a public stream schedule action to every profile with a clear unavailable state when no public calendar exists.
 - Present upcoming public streams in a focused agenda viewer using the viewer's device time zone.
 - Enforce public-calendar boundaries server-side so team, private, busy, deleted, and cancelled schedule data remains hidden.
-- Keep the configured local emergency administrator and Authentik superusers out of user-facing directories and collaboration pickers without disabling management access.
+- Keep the configured local emergency administrator out of user-facing directories and collaboration pickers without disabling management access.
 
 ## Beta v0.8.5 — Streamer selection dropdown
 

@@ -4,7 +4,7 @@ import { discordMemberProfile } from "./discord";
 type AuthentikGroup=string|{name?:string};
 type DiscordAttributes={id?:string;username?:string|null;global_name?:string|null;avatar_url?:string|null};
 type AuthentikAttributes=Record<string,unknown>&{discord?:DiscordAttributes;avatar?:string};
-type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?:string;avatar?:string;is_active?:boolean;is_superuser?:boolean;groups?:AuthentikGroup[];groups_obj?:AuthentikGroup[];attributes?:AuthentikAttributes};
+type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?:string;avatar?:string;is_active?:boolean;groups?:AuthentikGroup[];groups_obj?:AuthentikGroup[];attributes?:AuthentikAttributes};
 type SourceConnection={user?:number;identifier?:string;source?:string};
 type DiscordProfile={id:string;username:string|null;globalName:string|null;avatarUrl:string|null};
 
@@ -70,8 +70,8 @@ export async function syncAuthentikDirectory(force=false){
       const linked=remote.pk?discordProfiles.get(remote.pk):undefined;
       const discordId=linked?.id||remote.attributes?.discord?.id||null;
       const avatar=linked?.avatarUrl||remote.attributes?.discord?.avatar_url||remote.avatar||null;
-      if(existing)db.prepare("UPDATE users SET name=?,email=?,role=?,status=?,directory_id=?,discord_user_id=?,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,avatar=COALESCE(?,avatar),directory_visible=? WHERE id=?").run(remote.name||remote.username||email,email,isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,discordId,avatar,remote.is_superuser?0:1,existing.id);
-      else db.prepare("INSERT INTO users(name,email,password_hash,role,status,directory_id,discord_user_id,auth_source,identity_synced_at,avatar,directory_visible) VALUES(?,?,?,?,?,?,?,'oidc',CURRENT_TIMESTAMP,?,?)").run(remote.name||remote.username||email,email,"oidc-managed-account",isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,discordId,avatar,remote.is_superuser?0:1);
+      if(existing)db.prepare("UPDATE users SET name=?,email=?,role=?,status=?,directory_id=?,discord_user_id=?,auth_source='oidc',identity_synced_at=CURRENT_TIMESTAMP,avatar=COALESCE(?,avatar),directory_visible=1 WHERE id=?").run(remote.name||remote.username||email,email,isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,discordId,avatar,existing.id);
+      else db.prepare("INSERT INTO users(name,email,password_hash,role,status,directory_id,discord_user_id,auth_source,identity_synced_at,avatar,directory_visible) VALUES(?,?,?,?,?,?,?,'oidc',CURRENT_TIMESTAMP,?,1)").run(remote.name||remote.username||email,email,"oidc-managed-account",isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,discordId,avatar);
     }
     const managed=db.prepare("SELECT id,directory_id directoryId FROM users WHERE auth_source='oidc' AND directory_id IS NOT NULL").all() as Array<{id:number;directoryId:string}>;
     for(const local of managed)if(!activeDirectoryIds.includes(local.directoryId)){db.prepare("UPDATE users SET status='Suspended',identity_synced_at=CURRENT_TIMESTAMP WHERE id=?").run(local.id);db.prepare("DELETE FROM sessions WHERE user_id=?").run(local.id);}

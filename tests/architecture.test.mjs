@@ -779,8 +779,8 @@ test("emergency management identities remain outside member-facing directories",
   assert.match(schema, /directory_visible/);
   assert.match(schema, /management identity directory visibility/);
   assert.match(schema, /auth_source='local' AND role='Admin'/);
-  assert.match(sync, /is_superuser/);
-  assert.match(sync, /remote\.is_superuser\?0:1/);
+  assert.doesNotMatch(sync, /is_superuser/);
+  assert.match(sync, /directory_visible=1/);
   assert.match(directory, /u\.directory_visible=1/);
   assert.match(collabDirectory, /directory_visible=1/);
   assert.match(collabRequests, /directory_visible=1/);
