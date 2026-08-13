@@ -19,6 +19,7 @@ export const createCalendarEventPublicId = () =>
   `evt_${randomBytes(16).toString("hex")}`;
 export const createCollabRequestPublicId = () =>
   `clb_${randomBytes(16).toString("hex")}`;
+db.pragma("busy_timeout = 10000");
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
