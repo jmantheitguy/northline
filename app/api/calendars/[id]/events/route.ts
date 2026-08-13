@@ -33,6 +33,8 @@ export async function POST(
     const status = ["tentative", "confirmed", "cancelled"].includes(body.status)
       ? body.status
       : "confirmed";
+    const kind = ["event","stream","availability","collab"].includes(body.kind) ? body.kind : "event";
+    const visibility = ["calendar","private","team","public","busy"].includes(body.visibility) ? body.visibility : "calendar";
     if (!title || title.length > 160)
       throw new Error("Event title must be between 1 and 160 characters");
     if (
@@ -43,7 +45,7 @@ export async function POST(
       throw new Error("Event end must be after its start");
     const key = createCalendarEventPublicId();
     db.prepare(
-      "INSERT INTO calendar_events(public_id,calendar_id,title,description,location,start_at,end_at,timezone,all_day,status,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO calendar_events(public_id,calendar_id,title,description,location,start_at,end_at,timezone,all_day,status,created_by,event_kind,visibility,platform,game,stream_url,collab_enabled) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       key,
       calendarId,
@@ -60,6 +62,12 @@ export async function POST(
       body.allDay ? 1 : 0,
       status,
       user.id,
+      kind,
+      visibility,
+      String(body.platform||"").trim().slice(0,80),
+      String(body.game||"").trim().slice(0,120),
+      String(body.streamUrl||"").trim().slice(0,500),
+      body.collabEnabled ? 1 : 0,
     );
     recordCalendarActivity(
       calendarId,

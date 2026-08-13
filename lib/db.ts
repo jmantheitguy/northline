@@ -17,6 +17,8 @@ export const createCalendarPublicId = () =>
   `cal_${randomBytes(16).toString("hex")}`;
 export const createCalendarEventPublicId = () =>
   `evt_${randomBytes(16).toString("hex")}`;
+export const createCollabRequestPublicId = () =>
+  `clb_${randomBytes(16).toString("hex")}`;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -295,6 +297,14 @@ if (!calendarColumns.some((column) => column.name === "deleted_at")) {
     if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
   }
 }
+const addCalendarColumn = (name: string, definition: string) => {
+  if (!calendarColumns.some((column) => column.name === name)) {
+    db.exec(`ALTER TABLE calendars ADD COLUMN ${definition}`);
+    calendarColumns.push({ name });
+  }
+};
+addCalendarColumn("calendar_type", "calendar_type TEXT NOT NULL DEFAULT 'personal'");
+addCalendarColumn("visibility", "visibility TEXT NOT NULL DEFAULT 'private'");
 const calendarEventColumns = db.prepare("PRAGMA table_info(calendar_events)").all() as Array<{ name: string }>;
 if (!calendarEventColumns.some((column) => column.name === "deleted_at")) {
   try {
@@ -303,6 +313,52 @@ if (!calendarEventColumns.some((column) => column.name === "deleted_at")) {
     if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
   }
 }
+const addCalendarEventColumn = (name: string, definition: string) => {
+  if (!calendarEventColumns.some((column) => column.name === name)) {
+    db.exec(`ALTER TABLE calendar_events ADD COLUMN ${definition}`);
+    calendarEventColumns.push({ name });
+  }
+};
+addCalendarEventColumn("event_kind", "event_kind TEXT NOT NULL DEFAULT 'event'");
+addCalendarEventColumn("visibility", "visibility TEXT NOT NULL DEFAULT 'calendar'");
+addCalendarEventColumn("platform", "platform TEXT NOT NULL DEFAULT ''");
+addCalendarEventColumn("game", "game TEXT NOT NULL DEFAULT ''");
+addCalendarEventColumn("stream_url", "stream_url TEXT NOT NULL DEFAULT ''");
+addCalendarEventColumn("collab_enabled", "collab_enabled INTEGER NOT NULL DEFAULT 0");
+addCalendarEventColumn("collab_request_id", "collab_request_id INTEGER");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS collab_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT NOT NULL UNIQUE,
+    source_event_id INTEGER REFERENCES calendar_events(id) ON DELETE SET NULL,
+    requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    requester_calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+    recipient_calendar_id INTEGER REFERENCES calendars(id) ON DELETE SET NULL,
+    proposed_start_at TEXT NOT NULL,
+    proposed_end_at TEXT NOT NULL,
+    timezone TEXT NOT NULL DEFAULT 'UTC',
+    title TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    response_message TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS collab_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    collab_request_id INTEGER NOT NULL REFERENCES collab_requests(id) ON DELETE CASCADE,
+    recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS collab_requests_parties_idx ON collab_requests(recipient_id,requester_id,status);
+  CREATE INDEX IF NOT EXISTS collab_notifications_due_idx ON collab_notifications(status,created_at);
+`);
 
 const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{
   name: string;
@@ -571,6 +627,7 @@ const migrations: [number, string][] = [
   [16, "private calendars and selective sharing"],
   [17, "calendar reminders and recoverable deletion"],
   [18, "per-user time zones"],
+  [19, "stream schedules and collaboration requests"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

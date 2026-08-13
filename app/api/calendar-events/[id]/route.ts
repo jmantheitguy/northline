@@ -45,6 +45,8 @@ export async function PATCH(
     const status = ["tentative", "confirmed", "cancelled"].includes(body.status)
       ? body.status
       : "confirmed";
+    const kind = ["event","stream","availability","collab"].includes(body.kind) ? body.kind : "event";
+    const visibility = ["calendar","private","team","public","busy"].includes(body.visibility) ? body.visibility : "calendar";
     if (
       !title ||
       title.length > 160 ||
@@ -54,7 +56,7 @@ export async function PATCH(
     )
       throw new Error("Enter a valid title and time range");
     db.prepare(
-      "UPDATE calendar_events SET title=?,description=?,location=?,start_at=?,end_at=?,timezone=?,all_day=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+      "UPDATE calendar_events SET title=?,description=?,location=?,start_at=?,end_at=?,timezone=?,all_day=?,status=?,event_kind=?,visibility=?,platform=?,game=?,stream_url=?,collab_enabled=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
     ).run(
       title,
       String(body.description || "")
@@ -68,6 +70,12 @@ export async function PATCH(
       timezone,
       body.allDay ? 1 : 0,
       status,
+      kind,
+      visibility,
+      String(body.platform||"").trim().slice(0,80),
+      String(body.game||"").trim().slice(0,120),
+      String(body.streamUrl||"").trim().slice(0,500),
+      body.collabEnabled ? 1 : 0,
       found.event!.id,
     );
     recordCalendarActivity(

@@ -25,12 +25,12 @@ export async function GET(
     to = url.searchParams.get("to") || "2999-01-01T00:00:00.000Z";
   const calendar = db
     .prepare(
-      "SELECT c.public_id id,c.name,c.color,c.description,c.timezone,c.owner_id ownerId,u.name ownerName FROM calendars c JOIN users u ON u.id=c.owner_id WHERE c.id=?",
+      "SELECT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,c.owner_id ownerId,u.name ownerName FROM calendars c JOIN users u ON u.id=c.owner_id WHERE c.id=?",
     )
     .get(id);
   const events = db
     .prepare(
-      `SELECT e.public_id id,e.title,e.description,e.location,e.start_at startAt,e.end_at endAt,e.timezone,e.all_day allDay,e.status,e.created_by createdBy,u.name creatorName
+      `SELECT e.public_id id,e.title,e.description,e.location,e.start_at startAt,e.end_at endAt,e.timezone,e.all_day allDay,e.status,e.event_kind kind,e.visibility,e.platform,e.game,e.stream_url streamUrl,e.collab_enabled collabEnabled,e.created_by createdBy,u.name creatorName
     FROM calendar_events e JOIN users u ON u.id=e.created_by WHERE e.calendar_id=? AND e.deleted_at IS NULL AND e.start_at<? AND e.end_at>? ORDER BY e.start_at`,
     )
     .all(id, to, from);
@@ -88,10 +88,12 @@ export async function PATCH(
         ? String(body.color)
         : null,
       timezone = validTimezone(body.timezone);
+    const calendarType = body.calendarType === "streaming" ? "streaming" : "personal";
+    const visibility = calendarType === "streaming" && ["team","public"].includes(body.visibility) ? body.visibility : "private";
     if (!name || name.length > 80 || !color)
       throw new Error("Enter a valid name and color");
     db.prepare(
-      "UPDATE calendars SET name=?,color=?,description=?,timezone=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+      "UPDATE calendars SET name=?,color=?,description=?,timezone=?,calendar_type=?,visibility=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
     ).run(
       name,
       color,
@@ -99,6 +101,8 @@ export async function PATCH(
         .trim()
         .slice(0, 500),
       timezone,
+      calendarType,
+      visibility,
       id,
     );
     recordCalendarActivity(

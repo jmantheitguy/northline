@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.7.5 — Team reminders and task discussions**
+Current release: **Beta v0.8.0 — Stream schedules and collaboration planning**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -58,6 +58,16 @@ The application combines visual task boards, private collaboration, user adminis
 - Owner-only sharing, settings, and deletion; editors may manage events and viewers remain read-only
 - Audited event and sharing changes without granting site administrators implicit access to private calendar content
 - Day view, private Task Buddy event reminders, owner-visible activity, and 30-day calendar/event recovery
+
+### Stream schedules and collabs
+
+- Explicit streaming calendars with private, Northline-team, or public-ready visibility; personal calendars remain private by default
+- Stream, availability, and confirmed-collab entries with platform, game/category, destination link, local-time rendering, and per-entry detail controls
+- A combined 90-day team schedule that exposes only eligible streaming entries and can reduce an entry to a generic busy window
+- Collaboration requests with proposed times, private messages, accept, decline, counterproposal, and cancellation states
+- Accepted requests create independent confirmed events on both participants' selected calendars without sharing either full calendar
+- Task Buddy sends private Discord updates for collaboration invitations and responses when the recipient has linked Discord
+- “Public-ready” is an authenticated visibility policy in this release; anonymous schedule pages and calendar feeds remain future work
 
 ### Members and access
 
@@ -225,7 +235,7 @@ Environment files, local databases, generated builds, and dependencies are exclu
 
 ## Roadmap
 
-The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). Beta v0.0.x focuses on real-user validation, accessibility, visual and responsive review, failure recovery, and complete role journeys before broader feature expansion. Private multi-calendar support remains deferred until a later release.
+The current and planned milestones are maintained in [ROADMAP.md](ROADMAP.md). The Beta line combines real-user validation, accessibility, visual and responsive review, failure recovery, and complete role journeys with carefully scoped creator-team features. Private calendars and authenticated stream-collaboration planning are active; anonymous public schedule pages and external calendar interoperability remain later work.
 
 ## License
 

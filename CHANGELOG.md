@@ -1,5 +1,15 @@
 # Northline release history
 
+## Beta v0.8.0 — Stream schedules and collaboration planning
+
+- Add streaming-calendar purpose and private, team, or public-ready visibility without changing the private default.
+- Add stream, availability, and collab event types with platform, category, destination link, request eligibility, and busy-only redaction.
+- Add an authenticated combined team schedule rendered in each viewer's local time zone.
+- Add opaque collaboration requests with proposed times, private messages, accept, decline, counterproposal, cancellation, and incoming/outgoing tracking.
+- Create confirmed events independently on both participants' selected calendars when a request is accepted, without sharing either whole calendar.
+- Add private Task Buddy Discord notifications for collaboration invitations and responses.
+- Record schema migration 19 and extend public architecture, feature, roadmap, and Beta validation documentation.
+
 ## Beta v0.7.5 — Team reminders and task discussions
 
 - Fan out board-wide reminders as private Task Buddy deliveries to every active member with access through ownership, direct board sharing, or shared-workspace membership.

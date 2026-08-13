@@ -38,6 +38,20 @@ async function deliverDueReminders() {
       db.prepare("UPDATE calendar_reminders SET status='failed',error=? WHERE id=?").run(message,reminder.id);
     }
   }
+  const collabDue = db.prepare(`SELECT n.id,n.message,r.public_id requestKey,u.discord_user_id discordUserId
+    FROM collab_notifications n JOIN collab_requests r ON r.id=n.collab_request_id JOIN users u ON u.id=n.recipient_user_id
+    WHERE n.status='pending' ORDER BY n.created_at LIMIT 20`).all() as Array<{id:number;message:string;requestKey:string;discordUserId:string|null}>;
+  for (const notification of collabDue) {
+    try {
+      if (!notification.discordUserId) throw new Error("Collaboration recipient has not linked Discord");
+      const base=(process.env.NORTHLINE_PUBLIC_URL||"https://northline.vtuberoffices.com").replace(/\/$/,"");
+      await sendDiscordDirectMessage(notification.discordUserId, `📅 **Northline collab update**\n${notification.message}\n${base}/?view=calendars&collab=${encodeURIComponent(notification.requestKey)}`);
+      db.prepare("UPDATE collab_notifications SET status='sent',sent_at=CURRENT_TIMESTAMP,error=NULL WHERE id=?").run(notification.id);
+    } catch (error) {
+      const message=error instanceof Error?error.message.slice(0,300):"Delivery failed";
+      db.prepare("UPDATE collab_notifications SET status='failed',error=? WHERE id=?").run(message,notification.id);
+    }
+  }
 }
 
 export function startReminderWorker() {

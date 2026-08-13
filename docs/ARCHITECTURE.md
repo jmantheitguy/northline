@@ -28,6 +28,8 @@ A Next.js Proxy runs only for API routes and rejects foreign-origin mutations be
 
 Schema changes are forward-only and recorded in `schema_migrations`. Startup creates missing tables/columns/indexes before recording the corresponding version. Downgrades across schema versions require restoration of the matching pre-upgrade database rather than destructive down migrations.
 
+Streaming discovery is a separate read model over calendars and calendar events. It requires an authenticated active Northline session, includes the current user's own entries, and otherwise requires both a streaming calendar with team/public-ready visibility and an eligible event visibility. Busy-only rows are redacted server-side. Collaboration requests reference users and calendars internally while exposing opaque request IDs. Accepting a request transactionally creates one event in each selected calendar rather than adding calendar membership, so collaboration does not widen access to unrelated events.
+
 ## Time-zone model
 
 Northline stores shared instants as ISO 8601 UTC values and stores an IANA time-zone identifier on each user account. The browser refreshes that identifier from the signed-in device. Presentation uses the viewer's local zone, server-side local-day calculations use the persisted zone, and task deadlines remain date-only values. The Linux VM may remain configured for UTC and never determines a member's local wall-clock time.
@@ -38,7 +40,7 @@ Time entries are owned by a user and optionally reference a workspace, board, an
 
 ## Notification flow
 
-Task mutations create deduplicated reminder records according to board and task-creator preferences. A server worker polls due records, resolves the task creator's linked Discord ID, opens a private bot conversation, suppresses link embeds, and disables everyone, role, and arbitrary mentions. The worker then updates status and writes a durable delivery snapshot. Manual task reminders use the same creator-DM path; board-wide manual reminders go privately to the member who schedules them.
+Task mutations create deduplicated reminder records according to board and task-creator preferences. A server worker polls due records, resolves the task creator's linked Discord ID, opens a private bot conversation, suppresses link embeds, and disables everyone, role, and arbitrary mentions. The worker then updates status and writes a durable delivery snapshot. Manual task reminders use the same creator-DM path; board-wide manual reminders fan out privately to every active board member. The same worker drains a separate collaboration-notification queue so stream invitations and responses never rely on Discord for authorization or transaction completion.
 
 ## Health and backup flow
 

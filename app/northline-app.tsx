@@ -330,6 +330,8 @@ export function NorthlineApp() {
     const query = new URLSearchParams(window.location.search),
       task = Number(query.get("task"));
     if (task > 0) setDeepLinkTaskId(task);
+    if (query.get("view") === "calendars" || query.has("collab"))
+      setView("calendars");
   }, []);
   useEffect(() => {
     if (authUser) void loadBoards();

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CollabPlanner } from "./collab-planner";
 
 type CalendarSummary = {
   id: string;
@@ -13,6 +14,8 @@ type CalendarSummary = {
   ownerName: string;
   permission: "owner" | "editor" | "viewer";
   eventCount: number;
+  calendarType: "personal" | "streaming";
+  visibility: "private" | "team" | "public";
 };
 type CalendarEvent = {
   id: string;
@@ -26,6 +29,12 @@ type CalendarEvent = {
   status: string;
   createdBy: number;
   creatorName: string;
+  kind: "event" | "stream" | "availability" | "collab";
+  visibility: "calendar" | "private" | "team" | "public" | "busy";
+  platform: string;
+  game: string;
+  streamUrl: string;
+  collabEnabled: number;
 };
 type Member = {
   userId: number;
@@ -86,6 +95,8 @@ const initialCalendar = {
   color: "#7c6ce7",
   description: "",
   timezone,
+  calendarType: "personal" as "personal" | "streaming",
+  visibility: "private" as "private" | "team" | "public",
 };
 const initialEvent = {
   title: "",
@@ -96,6 +107,12 @@ const initialEvent = {
   allDay: false,
   status: "confirmed",
   timezone,
+  kind: "event" as "event" | "stream" | "availability" | "collab",
+  visibility: "calendar" as "calendar" | "private" | "team" | "public" | "busy",
+  platform: "",
+  game: "",
+  streamUrl: "",
+  collabEnabled: false,
 };
 
 export function CalendarHub({ notify }: { notify: (message: string) => void }) {
@@ -118,6 +135,10 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
     [busy, setBusy] = useState(false),
     [showActivity, setShowActivity] = useState(false),
     [showTrash, setShowTrash] = useState(false);
+  const [showPlanner,setShowPlanner]=useState(false);
+  useEffect(()=>{
+    if(new URLSearchParams(window.location.search).has("collab")) setShowPlanner(true);
+  },[]);
   const loadCalendars = () =>
     api("/api/calendars")
       .then((data) => {
@@ -228,6 +249,12 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
             allDay: event.allDay === 1,
             status: event.status,
             timezone: event.timezone,
+            kind: event.kind,
+            visibility: event.visibility,
+            platform: event.platform,
+            game: event.game,
+            streamUrl: event.streamUrl,
+            collabEnabled: event.collabEnabled === 1,
           }
         : {
             ...initialEvent,
@@ -308,17 +335,9 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
           <h1>My calendars</h1>
           <p>Plan privately, then share only the calendars you choose.</p>
         </div>
-        <button
-          className="primary"
-          onClick={() => {
-            setCalendarForm(initialCalendar);
-            setCalendarModal("create");
-          }}
-        >
-          ＋ New calendar
-        </button>
+        <div className="calendar-page-actions"><button className={showPlanner?"secondary":"primary"} onClick={()=>setShowPlanner(false)}>My calendars</button><button className={showPlanner?"primary":"secondary"} onClick={()=>setShowPlanner(true)}>Collab planner</button>{!showPlanner&&<button className="primary" onClick={() => {setCalendarForm(initialCalendar);setCalendarModal("create");}}>＋ New calendar</button>}</div>
       </div>
-      <div className="calendar-shell">
+      {showPlanner?<CollabPlanner notify={notify}/>:<div className="calendar-shell">
         <aside className="calendar-list">
           <header>
             <b>Calendars</b>
@@ -400,6 +419,8 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
                             color: detail.calendar.color,
                             description: detail.calendar.description,
                             timezone: detail.calendar.timezone,
+                            calendarType: detail.calendar.calendarType,
+                            visibility: detail.calendar.visibility,
                           });
                           setCalendarModal("settings");
                         }}
@@ -482,7 +503,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
             </>
           )}
         </main>
-      </div>
+      </div>}
       {calendarModal && (
         <CalendarModal
           kind={calendarModal}
@@ -861,6 +882,24 @@ function CalendarModal({
             />
           </label>
         </div>
+        <div className="modal-row">
+          <label>
+            Calendar purpose
+            <select value={form.calendarType} onChange={(event)=>setForm({...form,calendarType:event.target.value as "personal"|"streaming",visibility:event.target.value==="streaming"?form.visibility:"private"})}>
+              <option value="personal">Personal calendar</option>
+              <option value="streaming">Streaming schedule</option>
+            </select>
+          </label>
+          <label>
+            Schedule visibility
+            <select disabled={form.calendarType!=="streaming"} value={form.visibility} onChange={(event)=>setForm({...form,visibility:event.target.value as "private"|"team"|"public"})}>
+              <option value="private">Private</option>
+              <option value="team">Northline team</option>
+              <option value="public">Public-ready</option>
+            </select>
+          </label>
+        </div>
+        {form.calendarType==="streaming"&&<p className="field-note">Team visibility exposes only eligible entries from this streaming calendar in the Collab planner. Direct calendar sharing remains separate.</p>}
         <label>
           Description
           <textarea
@@ -971,6 +1010,28 @@ function EventModal({
             />
           </label>
         </div>
+        <div className="modal-row">
+          <label>
+            Entry type
+            <select value={form.kind} onChange={(event)=>setForm({...form,kind:event.target.value as typeof form.kind})}>
+              <option value="event">Standard event</option>
+              <option value="stream">Scheduled stream</option>
+              <option value="availability">Available for collabs</option>
+              <option value="collab">Confirmed collab</option>
+            </select>
+          </label>
+          <label>
+            Team detail visibility
+            <select value={form.visibility} onChange={(event)=>setForm({...form,visibility:event.target.value as typeof form.visibility})}>
+              <option value="calendar">Use calendar visibility</option>
+              <option value="private">Private</option>
+              <option value="team">Northline team</option>
+              <option value="public">Public-ready</option>
+              <option value="busy">Busy only</option>
+            </select>
+          </label>
+        </div>
+        {form.kind!=="event"&&<><div className="modal-row"><label>Platform<input maxLength={80} value={form.platform} onChange={(event)=>setForm({...form,platform:event.target.value})} placeholder="Twitch, YouTube…"/></label><label>Game or category<input maxLength={120} value={form.game} onChange={(event)=>setForm({...form,game:event.target.value})}/></label></div><label>Stream link<input maxLength={500} value={form.streamUrl} onChange={(event)=>setForm({...form,streamUrl:event.target.value})}/></label><label className="calendar-check"><input type="checkbox" checked={form.collabEnabled} onChange={(event)=>setForm({...form,collabEnabled:event.target.checked})}/> Allow teammates to request a collab for this entry</label></>}
         <div className="modal-row">
           <label>
             Time zone

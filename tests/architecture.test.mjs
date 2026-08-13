@@ -652,3 +652,31 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
   assert.match(styles, /\.my-work-metrics article\.danger/);
   assert.match(styles, /\.audit-row > span\.audit-event-icon/);
 });
+
+test("stream collaboration discovery preserves private calendar boundaries", async () => {
+  const [schema, schedule, requests, response, worker, ui, styles] = await Promise.all([
+    read("lib/db.ts"),
+    read("app/api/collab/schedule/route.ts"),
+    read("app/api/collab/requests/route.ts"),
+    read("app/api/collab/requests/[id]/route.ts"),
+    read("lib/reminder-worker.ts"),
+    read("app/collab-planner.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(schema, /stream schedules and collaboration requests/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_requests/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_notifications/);
+  assert.match(schedule, /c\.calendar_type='streaming'/);
+  assert.match(schedule, /c\.visibility IN \('team','public'\)/);
+  assert.match(schedule, /event\.visibility === "busy"/);
+  assert.match(requests, /canEditCalendar\(calendarPermission/);
+  assert.match(requests, /source\.ownerId !== recipientId/);
+  assert.match(response, /db\.transaction/);
+  assert.match(response, /createCalendarEventPublicId/);
+  assert.match(response, /recipient_calendar_id/);
+  assert.match(worker, /collab_notifications/);
+  assert.match(worker, /Northline collab update/);
+  assert.match(ui, /Team stream schedule/);
+  assert.match(ui, /Ask to collab/);
+  assert.match(styles, /\.collab-grid/);
+});

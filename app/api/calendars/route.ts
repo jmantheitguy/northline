@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const calendars = db
     .prepare(
-      `SELECT c.public_id id,c.name,c.color,c.description,c.timezone,
+      `SELECT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,
     c.owner_id ownerId,u.name ownerName,CASE WHEN c.owner_id=? THEN 'owner' ELSE cm.permission END permission,
     (SELECT COUNT(*) FROM calendar_events e WHERE e.calendar_id=c.id AND e.end_at>=datetime('now','-31 days')) eventCount
     FROM calendars c JOIN users u ON u.id=c.owner_id
@@ -36,12 +36,14 @@ export async function POST(request: Request) {
         ? String(body.color)
         : "#7c6ce7",
       timezone = validTimezone(body.timezone);
+    const calendarType = body.calendarType === "streaming" ? "streaming" : "personal";
+    const visibility = calendarType === "streaming" && ["team","public"].includes(body.visibility) ? body.visibility : "private";
     if (!name || name.length > 80)
       throw new Error("Calendar name must be between 1 and 80 characters");
     const key = createCalendarPublicId(),
       result = db
         .prepare(
-          "INSERT INTO calendars(public_id,owner_id,name,color,description,timezone) VALUES(?,?,?,?,?,?)",
+          "INSERT INTO calendars(public_id,owner_id,name,color,description,timezone,calendar_type,visibility) VALUES(?,?,?,?,?,?,?,?)",
         )
         .run(
           key,
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
             .trim()
             .slice(0, 500),
           timezone,
+          calendarType,
+          visibility,
         );
     const id = Number(result.lastInsertRowid);
     recordCalendarActivity(

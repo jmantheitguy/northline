@@ -1,0 +1,549 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element */
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Calendar = {
+  id: string;
+  name: string;
+  permission: string;
+  calendarType: string;
+  visibility: string;
+};
+type Person = {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+  timezone: string;
+};
+type ScheduleEvent = {
+  id: string;
+  title: string;
+  description: string;
+  startAt: string;
+  endAt: string;
+  timezone: string;
+  kind: string;
+  visibility: string;
+  platform: string;
+  game: string;
+  streamUrl: string;
+  collabEnabled: number;
+  calendarId: string;
+  calendarName: string;
+  color: string;
+  ownerId: number;
+  ownerName: string;
+  ownerAvatar: string | null;
+};
+type CollabRequest = {
+  id: string;
+  requesterId: number;
+  recipientId: number;
+  requesterName: string;
+  requesterAvatar: string | null;
+  recipientName: string;
+  recipientAvatar: string | null;
+  startAt: string;
+  endAt: string;
+  timezone: string;
+  title: string;
+  message: string;
+  status: string;
+  responseMessage: string;
+  sourceEventId: string | null;
+};
+const jsonHeaders = { "Content-Type": "application/json" };
+const call = async (url: string, options?: RequestInit) => {
+  const response = await fetch(url, options),
+    body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Request failed");
+  return body;
+};
+const localInput = (date: Date) =>
+  new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const blank = () => {
+  const start = new Date(Date.now() + 86400000);
+  start.setMinutes(0, 0, 0);
+  const end = new Date(start.getTime() + 7200000);
+  return {
+    recipientId: "",
+    calendarId: "",
+    sourceEventId: "",
+    title: "Collaboration stream",
+    message: "",
+    startAt: localInput(start),
+    endAt: localInput(end),
+  };
+};
+
+export function CollabPlanner({
+  notify,
+}: {
+  notify: (message: string) => void;
+}) {
+  const [events, setEvents] = useState<ScheduleEvent[]>([]),
+    [people, setPeople] = useState<Person[]>([]),
+    [calendars, setCalendars] = useState<Calendar[]>([]),
+    [requests, setRequests] = useState<CollabRequest[]>([]),
+    [me, setMe] = useState(0),
+    [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<"request" | "availability" | null>(null),
+    [form, setForm] = useState(blank()),
+    [responseCalendars, setResponseCalendars] = useState<
+      Record<string, string>
+    >({});
+  const ownedStreaming = calendars.filter(
+    (c) => c.calendarType === "streaming" && c.permission !== "viewer",
+  );
+  const load = async () => {
+    setLoading(true);
+    try {
+      const start = new Date(),
+        end = new Date(Date.now() + 90 * 86400000);
+      const [schedule, requestData, calendarData] = await Promise.all([
+        call(
+          `/api/collab/schedule?from=${start.toISOString()}&to=${end.toISOString()}`,
+        ),
+        call("/api/collab/requests"),
+        call("/api/calendars"),
+      ]);
+      setEvents(schedule.events);
+      setPeople(schedule.people);
+      setRequests(requestData.requests);
+      setMe(requestData.currentUserId);
+      setCalendars(calendarData.calendars);
+    } catch (error) {
+      notify((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  const incoming = requests.filter((r) => r.recipientId === me),
+    outgoing = requests.filter((r) => r.requesterId === me);
+  const grouped = useMemo(
+    () =>
+      Object.entries(
+        events.reduce<Record<string, ScheduleEvent[]>>((all, event) => {
+          const key = new Date(event.startAt).toLocaleDateString([], {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          });
+          (all[key] ||= []).push(event);
+          return all;
+        }, {}),
+      ),
+    [events],
+  );
+  const openRequest = (event?: ScheduleEvent) => {
+    const next = blank();
+    if (event) {
+      next.recipientId = String(event.ownerId);
+      next.sourceEventId = event.id;
+      next.title = `Collab with ${event.ownerName}`;
+      next.startAt = localInput(new Date(event.startAt));
+      next.endAt = localInput(new Date(event.endAt));
+    }
+    next.calendarId = ownedStreaming[0]?.id || "";
+    setForm(next);
+    setModal("request");
+  };
+  const submitRequest = async () => {
+    try {
+      await call("/api/collab/requests", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          ...form,
+          recipientId: Number(form.recipientId),
+          startAt: new Date(form.startAt).toISOString(),
+          endAt: new Date(form.endAt).toISOString(),
+          timezone: zone,
+        }),
+      });
+      setModal(null);
+      notify("Collaboration request sent");
+      await load();
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  const offer = async () => {
+    try {
+      await call(`/api/calendars/${form.calendarId}/events`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          title: form.title || "Available for collabs",
+          description: form.message,
+          startAt: new Date(form.startAt).toISOString(),
+          endAt: new Date(form.endAt).toISOString(),
+          timezone: zone,
+          kind: "availability",
+          visibility: "team",
+          collabEnabled: true,
+          status: "confirmed",
+        }),
+      });
+      setModal(null);
+      notify("Availability published to the team schedule");
+      await load();
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  const respond = async (item: CollabRequest, action: string) => {
+    try {
+      const body: Record<string, unknown> = {
+        action,
+        calendarId:
+          responseCalendars[item.id] ||
+          ownedStreaming[0]?.id ||
+          calendars.find((c) => c.permission !== "viewer")?.id,
+      };
+      if (action === "counter") {
+        const start = window.prompt(
+          "New start (YYYY-MM-DD HH:MM)",
+          localInput(new Date(item.startAt)).replace("T", " "),
+        );
+        const end = window.prompt(
+          "New end (YYYY-MM-DD HH:MM)",
+          localInput(new Date(item.endAt)).replace("T", " "),
+        );
+        if (!start || !end) return;
+        body.startAt = new Date(start).toISOString();
+        body.endAt = new Date(end).toISOString();
+        body.timezone = zone;
+      }
+      await call(`/api/collab/requests/${item.id}`, {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify(body),
+      });
+      notify(`Collaboration request ${action}ed`);
+      await load();
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  return (
+    <div className="collab-planner">
+      <header className="collab-hero">
+        <div>
+          <span className="eyebrow">STREAMER COLLABORATION</span>
+          <h2>Team stream schedule</h2>
+          <p>
+            Share only the schedule windows you choose, find open time, and
+            coordinate collabs without exposing private calendars.
+          </p>
+        </div>
+        <div>
+          <button className="secondary" onClick={() => void load()}>
+            Refresh
+          </button>
+          <button
+            className="secondary"
+            onClick={() => {
+              const next = blank();
+              next.calendarId = ownedStreaming[0]?.id || "";
+              next.title = "Available for collabs";
+              setForm(next);
+              setModal("availability");
+            }}
+          >
+            ＋ Availability
+          </button>
+          <button className="primary" onClick={() => openRequest()}>
+            Request collab
+          </button>
+        </div>
+      </header>
+      {!ownedStreaming.length && (
+        <div className="collab-callout">
+          <b>Create a team-visible streaming calendar first.</b>
+          <span>
+            In Calendar settings, choose “Streaming schedule” and Team
+            visibility. Your personal calendars stay private.
+          </span>
+        </div>
+      )}
+      <section className="collab-grid">
+        <div className="collab-schedule">
+          <h3>Next 90 days</h3>
+          {loading ? (
+            <p>Loading schedule…</p>
+          ) : grouped.length ? (
+            grouped.map(([day, items]) => (
+              <section key={day}>
+                <header>{day}</header>
+                {items.map((event) => (
+                  <article key={event.id}>
+                    <span className="avatar">
+                      {event.ownerAvatar ? (
+                        <img src={event.ownerAvatar} alt="" />
+                      ) : (
+                        event.ownerName.slice(0, 1)
+                      )}
+                    </span>
+                    <div>
+                      <b>{event.title}</b>
+                      <small>
+                        {event.ownerName} ·{" "}
+                        {new Date(event.startAt).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                        –
+                        {new Date(event.endAt).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </small>
+                      <em>
+                        {[event.kind, event.platform, event.game]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </em>
+                    </div>
+                    {event.ownerId !== me && event.collabEnabled === 1 && (
+                      <button
+                        className="secondary"
+                        onClick={() => openRequest(event)}
+                      >
+                        Ask to collab
+                      </button>
+                    )}
+                  </article>
+                ))}
+              </section>
+            ))
+          ) : (
+            <div className="calendar-empty">
+              <b>No team schedule entries yet</b>
+              <span>
+                Publish an availability window or a stream from a team-visible
+                streaming calendar.
+              </span>
+            </div>
+          )}
+        </div>
+        <aside className="collab-inbox">
+          <h3>Collab inbox</h3>
+          {incoming.map((item) => (
+            <RequestCard
+              key={item.id}
+              item={item}
+              incoming
+              calendars={calendars}
+              selected={responseCalendars[item.id] || ""}
+              select={(value) =>
+                setResponseCalendars((current) => ({
+                  ...current,
+                  [item.id]: value,
+                }))
+              }
+              respond={respond}
+            />
+          ))}
+          {!incoming.length && <p>No incoming requests.</p>}
+          <h3>Sent requests</h3>
+          {outgoing.map((item) => (
+            <RequestCard
+              key={item.id}
+              item={item}
+              calendars={calendars}
+              selected=""
+              select={() => {}}
+              respond={respond}
+            />
+          ))}
+          {!outgoing.length && <p>No sent requests.</p>}
+        </aside>
+      </section>
+      {modal && (
+        <div className="modal-backdrop">
+          <div className="modal calendar-modal">
+            <button className="modal-close" onClick={() => setModal(null)}>
+              ×
+            </button>
+            <h2>
+              {modal === "availability"
+                ? "Share availability"
+                : "Request a collaboration"}
+            </h2>
+            <p>Times are shown in {zone} and stored in UTC.</p>
+            {modal === "request" && (
+              <label>
+                Streamer
+                <select
+                  value={form.recipientId}
+                  onChange={(e) =>
+                    setForm({ ...form, recipientId: e.target.value })
+                  }
+                >
+                  <option value="">Choose a streamer</option>
+                  {people
+                    .filter((p) => p.id !== me)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+            <label>
+              Your streaming calendar
+              <select
+                value={form.calendarId}
+                onChange={(e) =>
+                  setForm({ ...form, calendarId: e.target.value })
+                }
+              >
+                <option value="">Choose a calendar</option>
+                {ownedStreaming.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {modal === "availability" ? "Label" : "Collab idea"}
+              <input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </label>
+            <div className="modal-row">
+              <label>
+                Starts
+                <input
+                  type="datetime-local"
+                  value={form.startAt}
+                  onChange={(e) =>
+                    setForm({ ...form, startAt: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Ends
+                <input
+                  type="datetime-local"
+                  value={form.endAt}
+                  onChange={(e) => setForm({ ...form, endAt: e.target.value })}
+                />
+              </label>
+            </div>
+            <label>
+              Details
+              <textarea
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                placeholder="Game, format, participants, or anything the team should know"
+              />
+            </label>
+            <div className="modal-actions">
+              <button className="secondary" onClick={() => setModal(null)}>
+                Cancel
+              </button>
+              <button
+                className="primary"
+                disabled={!form.calendarId}
+                onClick={() =>
+                  void (modal === "availability" ? offer() : submitRequest())
+                }
+              >
+                {modal === "availability"
+                  ? "Publish availability"
+                  : "Send request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RequestCard({
+  item,
+  incoming = false,
+  calendars,
+  selected,
+  select,
+  respond,
+}: {
+  item: CollabRequest;
+  incoming?: boolean;
+  calendars: Calendar[];
+  selected: string;
+  select: (value: string) => void;
+  respond: (item: CollabRequest, action: string) => Promise<void>;
+}) {
+  const open = ["pending", "countered"].includes(item.status);
+  return (
+    <article className="collab-request">
+      <header>
+        <b>{item.title}</b>
+        <span className={`request-status ${item.status}`}>{item.status}</span>
+      </header>
+      <small>
+        {incoming ? `From ${item.requesterName}` : `To ${item.recipientName}`} ·{" "}
+        {new Date(item.startAt).toLocaleString([], {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })}
+      </small>
+      {item.message && <p>{item.message}</p>}
+      {incoming && item.status === "pending" && (
+        <>
+          <select value={selected} onChange={(e) => select(e.target.value)}>
+            <option value="">Calendar for accepted event</option>
+            {calendars
+              .filter((c) => c.permission !== "viewer")
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+          </select>
+          <div>
+            <button
+              className="primary"
+              onClick={() => void respond(item, "accept")}
+            >
+              Accept
+            </button>
+            <button
+              className="secondary"
+              onClick={() => void respond(item, "counter")}
+            >
+              New time
+            </button>
+            <button
+              className="secondary"
+              onClick={() => void respond(item, "decline")}
+            >
+              Decline
+            </button>
+          </div>
+        </>
+      )}
+      {!incoming && open && <div>
+        {item.status === "countered" && <button className="primary" onClick={() => void respond(item, "accept")}>Accept new time</button>}
+        <button className="secondary" onClick={() => void respond(item, "cancel")}>Cancel request</button>
+      </div>}
+    </article>
+  );
+}

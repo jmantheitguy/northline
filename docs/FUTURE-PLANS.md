@@ -19,7 +19,13 @@ The delivered foundation provides:
 
 Public schedule pages, recurring-event edge cases, collaboration requests, guest invitations, `.ics` feeds, and external provider synchronization remain later phases. Private one-time event reminders, day view, activity history, and 30-day recovery were added in Beta v0.7.1.
 
-## Streaming calendars and collaboration planning
+## Delivered in Beta v0.8.0 — Team stream schedules and collaboration planning
+
+Beta v0.8.0 delivers authenticated team schedule discovery, streaming-calendar visibility, stream and availability metadata, one-to-one collaboration requests, accept/decline/counter/cancel states, dual-calendar confirmed events, local-time presentation, and private Task Buddy request updates. Personal calendars remain private by default. Team discovery never grants calendar membership, and busy-only entries are redacted by the server.
+
+Anonymous public schedule pages, recurring schedules, multi-participant invitations, attendance responses, collaboration preferences, abuse controls, calendar feeds, external guests, and provider synchronization remain future phases.
+
+## Longer-term streaming calendar planning
 
 The largest planned feature is a calendar system designed specifically for streamers. Every Northline member would have a private calendar workspace where they can plan streams, appearances, production deadlines, and collaboration events. A member could maintain multiple calendars—for example, a public stream schedule, private planning calendar, collaboration calendar, and channel-specific schedules—and choose the visibility of each calendar independently.
 

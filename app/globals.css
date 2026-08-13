@@ -10,6 +10,21 @@
 
 /* Private calendars */
 .calendar-hub { max-width: none; }
+.calendar-page-actions,.collab-hero>div:last-child,.collab-request>div { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.field-note { margin:-4px 0 12px; color:var(--muted); font-size:11px; }
+.collab-planner { display:flex; flex-direction:column; gap:18px; }
+.collab-hero { display:flex; justify-content:space-between; gap:24px; padding:22px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(135deg,var(--panel),var(--subtle)); }
+.collab-hero h2 { margin:5px 0; font-size:25px; }.collab-hero p { max-width:720px; margin:0; color:var(--muted); }
+.collab-callout { display:flex; flex-direction:column; gap:5px; padding:14px 16px; border:1px solid #9278f055; border-radius:11px; background:#7c6ce712; }.collab-callout span { color:var(--muted); font-size:12px; }
+.collab-grid { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:18px; }
+.collab-schedule,.collab-inbox { padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }.collab-schedule>h3,.collab-inbox>h3 { margin:0 0 14px; }
+.collab-schedule>section { margin-bottom:20px; }.collab-schedule>section>header { padding:8px 0; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; font-weight:700; }
+.collab-schedule article { display:grid; grid-template-columns:38px 1fr auto; gap:11px; align-items:center; padding:12px 4px; border-bottom:1px solid var(--line); }.collab-schedule article>div { display:flex; flex-direction:column; gap:3px; }.collab-schedule small,.collab-schedule em { color:var(--muted); font-size:11px; font-style:normal; text-transform:capitalize; }
+.collab-schedule .avatar { width:34px;height:34px;display:grid;place-items:center;border-radius:50%;overflow:hidden;background:var(--subtle);font-weight:700; }.collab-schedule .avatar img { width:100%;height:100%;object-fit:cover; }
+.collab-inbox { align-self:start; }.collab-inbox>p { color:var(--muted); font-size:12px; }.collab-inbox>h3:not(:first-child) { margin-top:24px; }
+.collab-request { padding:13px; margin-bottom:10px; border:1px solid var(--line); border-radius:10px; background:var(--subtle); }.collab-request header { display:flex; justify-content:space-between; gap:8px; }.collab-request small { color:var(--muted); }.collab-request p { white-space:pre-wrap; font-size:12px; }.collab-request select { width:100%; margin:9px 0; padding:8px; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--text); }
+.request-status { padding:3px 6px; border-radius:10px; background:var(--panel); color:var(--muted); font-size:9px; text-transform:uppercase; }.request-status.accepted { color:#1aa36f; }.request-status.pending,.request-status.countered { color:var(--purple); }
+.overlay { position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:15px;background:#090812aa;backdrop-filter:blur(3px); }.modal-x { position:absolute;right:15px;top:12px;border:0;background:transparent;color:var(--muted);font-size:24px; }
 .calendar-page-head,.calendar-toolbar,.calendar-viewbar,.calendar-toolbar>div,.calendar-toolbar-actions,.calendar-viewbar>div,.calendar-members>div,.modal-actions { display:flex; align-items:center; }
 .calendar-page-head { justify-content:space-between; gap:24px; margin-bottom:24px; }
 .calendar-page-head h1 { margin:5px 0; font-size:30px; }
@@ -47,6 +62,7 @@
   .calendar-page-head,.calendar-toolbar,.calendar-viewbar { align-items:flex-start; flex-direction:column; }
   .calendar-shell { grid-template-columns:1fr; }.calendar-list { border-right:0; border-bottom:1px solid var(--line); max-height:220px; overflow:auto; }.calendar-main { padding:12px; }.month-grid article { min-height:80px; padding:4px; }.month-grid button b { display:none; }.calendar-toolbar-actions { flex-wrap:wrap; }
   .calendar-viewbar>div { max-width:100%; flex-wrap:wrap; }.calendar-activity>article { flex-direction:column; }.calendar-trash>article { grid-template-columns:9px 1fr; }.calendar-trash>article button { grid-column:2; }.calendar-reminder-row { grid-template-columns:1fr; }
+  .collab-hero { flex-direction:column; }.collab-grid { grid-template-columns:1fr; }.collab-schedule article { grid-template-columns:34px 1fr; }.collab-schedule article>button { grid-column:2; }.calendar-page-actions { justify-content:flex-end; }
 }
 .share-person em {
   color: #777;
