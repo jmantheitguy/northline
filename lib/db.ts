@@ -356,7 +356,22 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sent_at TEXT
   );
+  CREATE TABLE IF NOT EXISTS collab_request_participants (
+    collab_request_id INTEGER NOT NULL REFERENCES collab_requests(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    calendar_id INTEGER REFERENCES calendars(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    proposed_start_at TEXT,
+    proposed_end_at TEXT,
+    timezone TEXT,
+    response_message TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(collab_request_id,user_id)
+  );
+  INSERT OR IGNORE INTO collab_request_participants(collab_request_id,user_id,calendar_id,status,proposed_start_at,proposed_end_at,timezone,response_message,updated_at)
+    SELECT id,recipient_id,recipient_calendar_id,status,proposed_start_at,proposed_end_at,timezone,response_message,updated_at FROM collab_requests;
   CREATE INDEX IF NOT EXISTS collab_requests_parties_idx ON collab_requests(recipient_id,requester_id,status);
+  CREATE INDEX IF NOT EXISTS collab_participants_user_idx ON collab_request_participants(user_id,status);
   CREATE INDEX IF NOT EXISTS collab_notifications_due_idx ON collab_notifications(status,created_at);
 `);
 
@@ -628,6 +643,7 @@ const migrations: [number, string][] = [
   [17, "calendar reminders and recoverable deletion"],
   [18, "per-user time zones"],
   [19, "stream schedules and collaboration requests"],
+  [20, "multi-user collaboration participants"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

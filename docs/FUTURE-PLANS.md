@@ -23,6 +23,8 @@ Public schedule pages, recurring-event edge cases, collaboration requests, guest
 
 Beta v0.8.0 delivers authenticated team schedule discovery, streaming-calendar visibility, stream and availability metadata, one-to-one collaboration requests, accept/decline/counter/cancel states, dual-calendar confirmed events, local-time presentation, and private Task Buddy request updates. Personal calendars remain private by default. Team discovery never grants calendar membership, and busy-only entries are redacted by the server.
 
+Beta v0.8.1 expands the request model to up to 20 invited streamers, with independent responses, counterproposals, destination calendars, and Task Buddy delivery for every participant.
+
 Anonymous public schedule pages, recurring schedules, multi-participant invitations, attendance responses, collaboration preferences, abuse controls, calendar feeds, external guests, and provider synchronization remain future phases.
 
 ## Longer-term streaming calendar planning

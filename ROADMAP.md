@@ -2,11 +2,12 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.8.0
+## Current — Beta v0.8.1
 
 - Team-visible streaming calendars and a combined 90-day streamer schedule
 - Stream and availability metadata with explicit event-level privacy and busy-only disclosure
 - Collaboration invitations, negotiation, acceptance, cancellation, and private Task Buddy updates
+- Multi-streamer proposals with independent invitee responses and destination calendars
 - Accepted collabs copied to both participants' chosen calendars without broad calendar access
 
 - Multiple private calendars per user with names, colors, descriptions, and time-zone preferences

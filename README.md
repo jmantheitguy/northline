@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.8.0 — Stream schedules and collaboration planning**
+Current release: **Beta v0.8.1 — Multi-streamer collaboration requests**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -64,8 +64,8 @@ The application combines visual task boards, private collaboration, user adminis
 - Explicit streaming calendars with private, Northline-team, or public-ready visibility; personal calendars remain private by default
 - Stream, availability, and confirmed-collab entries with platform, game/category, destination link, local-time rendering, and per-entry detail controls
 - A combined 90-day team schedule that exposes only eligible streaming entries and can reduce an entry to a generic busy window
-- Collaboration requests with proposed times, private messages, accept, decline, counterproposal, and cancellation states
-- Accepted requests create independent confirmed events on both participants' selected calendars without sharing either full calendar
+- Collaboration requests for up to 20 invited streamers, with proposed times, private messages, accept, decline, counterproposal, and cancellation states
+- Each invitee responds independently and chooses their own destination calendar; accepted requests create confirmed events without sharing any participant's full calendar
 - Task Buddy sends private Discord updates for collaboration invitations and responses when the recipient has linked Discord
 - “Public-ready” is an authenticated visibility policy in this release; anonymous schedule pages and calendar feeds remain future work
 

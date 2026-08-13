@@ -40,11 +40,8 @@ type ScheduleEvent = {
 type CollabRequest = {
   id: string;
   requesterId: number;
-  recipientId: number;
   requesterName: string;
   requesterAvatar: string | null;
-  recipientName: string;
-  recipientAvatar: string | null;
   startAt: string;
   endAt: string;
   timezone: string;
@@ -53,6 +50,16 @@ type CollabRequest = {
   status: string;
   responseMessage: string;
   sourceEventId: string | null;
+  participants: Array<{
+    userId: number;
+    name: string;
+    avatar: string | null;
+    status: string;
+    proposedStartAt: string | null;
+    proposedEndAt: string | null;
+    timezone: string | null;
+    responseMessage: string;
+  }>;
 };
 const jsonHeaders = { "Content-Type": "application/json" };
 const call = async (url: string, options?: RequestInit) => {
@@ -71,7 +78,7 @@ const blank = () => {
   start.setMinutes(0, 0, 0);
   const end = new Date(start.getTime() + 7200000);
   return {
-    recipientId: "",
+    recipientIds: [] as string[],
     calendarId: "",
     sourceEventId: "",
     title: "Collaboration stream",
@@ -126,7 +133,9 @@ export function CollabPlanner({
   useEffect(() => {
     void load();
   }, []);
-  const incoming = requests.filter((r) => r.recipientId === me),
+  const incoming = requests.filter((r) =>
+      r.participants.some((p) => p.userId === me),
+    ),
     outgoing = requests.filter((r) => r.requesterId === me);
   const grouped = useMemo(
     () =>
@@ -146,7 +155,7 @@ export function CollabPlanner({
   const openRequest = (event?: ScheduleEvent) => {
     const next = blank();
     if (event) {
-      next.recipientId = String(event.ownerId);
+      next.recipientIds = [String(event.ownerId)];
       next.sourceEventId = event.id;
       next.title = `Collab with ${event.ownerName}`;
       next.startAt = localInput(new Date(event.startAt));
@@ -163,7 +172,7 @@ export function CollabPlanner({
         headers: jsonHeaders,
         body: JSON.stringify({
           ...form,
-          recipientId: Number(form.recipientId),
+          recipientIds: form.recipientIds.map(Number),
           startAt: new Date(form.startAt).toISOString(),
           endAt: new Date(form.endAt).toISOString(),
           timezone: zone,
@@ -200,10 +209,15 @@ export function CollabPlanner({
       notify((error as Error).message);
     }
   };
-  const respond = async (item: CollabRequest, action: string) => {
+  const respond = async (
+    item: CollabRequest,
+    action: string,
+    participantUserId?: number,
+  ) => {
     try {
       const body: Record<string, unknown> = {
         action,
+        participantUserId,
         calendarId:
           responseCalendars[item.id] ||
           ownedStreaming[0]?.id ||
@@ -351,6 +365,7 @@ export function CollabPlanner({
                 }))
               }
               respond={respond}
+              currentUserId={me}
             />
           ))}
           {!incoming.length && <p>No incoming requests.</p>}
@@ -363,6 +378,7 @@ export function CollabPlanner({
               selected=""
               select={() => {}}
               respond={respond}
+              currentUserId={me}
             />
           ))}
           {!outgoing.length && <p>No sent requests.</p>}
@@ -382,22 +398,40 @@ export function CollabPlanner({
             <p>Times are shown in {zone} and stored in UTC.</p>
             {modal === "request" && (
               <label>
-                Streamer
-                <select
-                  value={form.recipientId}
-                  onChange={(e) =>
-                    setForm({ ...form, recipientId: e.target.value })
-                  }
-                >
-                  <option value="">Choose a streamer</option>
+                Invited streamers
+                <div className="collab-person-picker">
                   {people
                     .filter((p) => p.id !== me)
                     .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
+                      <label key={p.id}>
+                        <input
+                          type="checkbox"
+                          checked={form.recipientIds.includes(String(p.id))}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              recipientIds: e.target.checked
+                                ? [...form.recipientIds, String(p.id)]
+                                : form.recipientIds.filter(
+                                    (id) => id !== String(p.id),
+                                  ),
+                            })
+                          }
+                        />
+                        <span className="avatar">
+                          {p.avatar ? (
+                            <img src={p.avatar} alt="" />
+                          ) : (
+                            p.name.slice(0, 1)
+                          )}
+                        </span>
+                        <span>
+                          {p.name}
+                          <small>{p.timezone}</small>
+                        </span>
+                      </label>
                     ))}
-                </select>
+                </div>
               </label>
             )}
             <label>
@@ -457,7 +491,10 @@ export function CollabPlanner({
               </button>
               <button
                 className="primary"
-                disabled={!form.calendarId}
+                disabled={
+                  !form.calendarId ||
+                  (modal === "request" && !form.recipientIds.length)
+                }
                 onClick={() =>
                   void (modal === "availability" ? offer() : submitRequest())
                 }
@@ -481,15 +518,24 @@ function RequestCard({
   selected,
   select,
   respond,
+  currentUserId,
 }: {
   item: CollabRequest;
   incoming?: boolean;
   calendars: Calendar[];
   selected: string;
   select: (value: string) => void;
-  respond: (item: CollabRequest, action: string) => Promise<void>;
+  respond: (
+    item: CollabRequest,
+    action: string,
+    participantUserId?: number,
+  ) => Promise<void>;
+  currentUserId: number;
 }) {
   const open = ["pending", "countered"].includes(item.status);
+  const myParticipant = item.participants.find(
+    (p) => p.userId === currentUserId,
+  );
   return (
     <article className="collab-request">
       <header>
@@ -497,7 +543,10 @@ function RequestCard({
         <span className={`request-status ${item.status}`}>{item.status}</span>
       </header>
       <small>
-        {incoming ? `From ${item.requesterName}` : `To ${item.recipientName}`} ·{" "}
+        {incoming
+          ? `From ${item.requesterName}`
+          : `${item.participants.length} invited streamer${item.participants.length === 1 ? "" : "s"}`}{" "}
+        ·{" "}
         {new Date(item.startAt).toLocaleString([], {
           month: "short",
           day: "numeric",
@@ -506,7 +555,18 @@ function RequestCard({
         })}
       </small>
       {item.message && <p>{item.message}</p>}
-      {incoming && item.status === "pending" && (
+      <div className="collab-participants">
+        {item.participants.map((p) => (
+          <span key={p.userId} title={`${p.name}: ${p.status}`}>
+            <span className="avatar">
+              {p.avatar ? <img src={p.avatar} alt="" /> : p.name.slice(0, 1)}
+            </span>
+            <small>{p.name}</small>
+            <em className={`request-status ${p.status}`}>{p.status}</em>
+          </span>
+        ))}
+      </div>
+      {incoming && myParticipant?.status === "pending" && (
         <>
           <select value={selected} onChange={(e) => select(e.target.value)}>
             <option value="">Calendar for accepted event</option>
@@ -540,10 +600,27 @@ function RequestCard({
           </div>
         </>
       )}
-      {!incoming && open && <div>
-        {item.status === "countered" && <button className="primary" onClick={() => void respond(item, "accept")}>Accept new time</button>}
-        <button className="secondary" onClick={() => void respond(item, "cancel")}>Cancel request</button>
-      </div>}
+      {!incoming && open && (
+        <div>
+          {item.participants
+            .filter((p) => p.status === "countered")
+            .map((p) => (
+              <button
+                key={p.userId}
+                className="primary"
+                onClick={() => void respond(item, "accept", p.userId)}
+              >
+                Accept {p.name}&apos;s new time
+              </button>
+            ))}
+          <button
+            className="secondary"
+            onClick={() => void respond(item, "cancel")}
+          >
+            Cancel request
+          </button>
+        </div>
+      )}
     </article>
   );
 }

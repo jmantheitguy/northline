@@ -1,5 +1,15 @@
 # Northline release history
 
+## Beta v0.8.1 — Multi-streamer collaboration requests
+
+- Let organizers invite up to 20 active Northline streamers with one collaboration request.
+- Track each participant's acceptance, decline, counterproposal, response, and destination calendar independently.
+- Display the complete invitee roster and response state to organizers and invitees.
+- Add confirmed events only for participants who accept, while creating the organizer event once and never widening calendar membership.
+- Protect the shared group time from counterproposal changes after any participant has accepted.
+- Fan out private Task Buddy invitations and group-time updates to the affected participants.
+- Migrate existing one-to-one requests into the new participant table with schema migration 20.
+
 ## Beta v0.8.0 — Stream schedules and collaboration planning
 
 - Add streaming-calendar purpose and private, team, or public-ready visibility without changing the private default.

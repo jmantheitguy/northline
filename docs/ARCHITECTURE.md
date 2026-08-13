@@ -28,7 +28,7 @@ A Next.js Proxy runs only for API routes and rejects foreign-origin mutations be
 
 Schema changes are forward-only and recorded in `schema_migrations`. Startup creates missing tables/columns/indexes before recording the corresponding version. Downgrades across schema versions require restoration of the matching pre-upgrade database rather than destructive down migrations.
 
-Streaming discovery is a separate read model over calendars and calendar events. It requires an authenticated active Northline session, includes the current user's own entries, and otherwise requires both a streaming calendar with team/public-ready visibility and an eligible event visibility. Busy-only rows are redacted server-side. Collaboration requests reference users and calendars internally while exposing opaque request IDs. Accepting a request transactionally creates one event in each selected calendar rather than adding calendar membership, so collaboration does not widen access to unrelated events.
+Streaming discovery is a separate read model over calendars and calendar events. It requires an authenticated active Northline session, includes the current user's own entries, and otherwise requires both a streaming calendar with team/public-ready visibility and an eligible event visibility. Busy-only rows are redacted server-side. Collaboration requests expose opaque request IDs and use a participant junction table for independent response state, counterproposal metadata, and destination calendars. Existing one-to-one rows are migrated into that table. The organizer event is created once, while each accepted participant receives a separate event in their chosen calendar; no response adds calendar membership or widens access to unrelated events.
 
 ## Time-zone model
 
