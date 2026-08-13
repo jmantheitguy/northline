@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.8.8 — Unified search controls
+
+- Restyle global, directory, and administration search fields as unified controls without nested input backgrounds.
+- Add a consistent vector search icon, aligned shortcut hint, and application-wide focus treatment.
+- Preserve responsive behavior while improving contrast and visual consistency in both light and dark modes.
+
 ## Beta v0.8.7 — Authentik-managed directory visibility
 
 - Let Northline access-group membership determine which Authentik identities appear throughout the product.

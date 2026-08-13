@@ -210,6 +210,18 @@ function BrandMark({ priority = false }: { priority?: boolean }) {
     />
   );
 }
+function SearchIcon() {
+  return (
+    <svg
+      className="search-icon"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+    >
+      <circle cx="8.5" cy="8.5" r="5" />
+      <path d="m12.2 12.2 4 4" />
+    </svg>
+  );
+}
 const emptyTask = {
   title: "",
   description: "",
@@ -716,7 +728,7 @@ export function NorthlineApp() {
             </button>
           )}
           <div className="global-search">
-            ⌕
+            <SearchIcon />
             <input
               aria-label="Global task search"
               placeholder="Search every board…"
@@ -2060,7 +2072,7 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
       </div>
       <div className="directory-tools">
         <div className="global-search">
-          ⌕
+          <SearchIcon />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -2793,7 +2805,7 @@ function Admin({
           <>
             <div className="admin-toolbar">
               <div className="global-search">
-                ⌕
+                <SearchIcon />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

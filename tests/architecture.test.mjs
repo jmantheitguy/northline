@@ -200,6 +200,16 @@ test("dark mode is persistent and application-wide", async () => {
   assert.match(styles, /\.modal/);
 });
 
+test("search controls render as unified accessible fields", async () => {
+  const ui = await read("app/northline-app.tsx");
+  const styles = await read("app/globals.css");
+  assert.match(ui, /function SearchIcon/);
+  assert.match(ui, /className="search-icon"/);
+  assert.match(styles, /\.global-search:focus-within/);
+  assert.match(styles, /\.global-search input[\s\S]*background: transparent !important/);
+  assert.match(styles, /\.search-icon/);
+});
+
 test("public documentation covers the deployed platform without private network addresses", async () => {
   const docs = await Promise.all(
     [

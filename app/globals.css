@@ -1289,30 +1289,60 @@ button {
   z-index: 4;
 }
 .global-search {
-  height: 36px;
+  height: 38px;
   width: 340px;
   border: 1px solid var(--line);
-  background: #f8f8fa;
-  border-radius: 8px;
+  background: var(--subtle);
+  border-radius: 9px;
   display: flex;
   align-items: center;
-  padding: 0 11px;
+  padding: 0 9px 0 11px;
   color: #9695a1;
-  gap: 8px;
+  gap: 9px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+.global-search:focus-within {
+  border-color: var(--purple);
+  background: var(--panel);
+  box-shadow: 0 0 0 3px #8069e51a;
+}
+.search-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
 }
 .global-search input {
+  width: 100%;
+  height: 100%;
+  padding: 0;
   border: 0;
   outline: 0;
-  background: transparent;
+  background: transparent !important;
+  color: var(--text);
+  font: inherit;
   flex: 1;
   min-width: 0;
 }
+.global-search input::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
 .global-search kbd {
+  flex: 0 0 auto;
   font-size: 10px;
-  border: 1px solid #dedde2;
-  background: #fff;
-  border-radius: 4px;
-  padding: 2px 5px;
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  border-radius: 5px;
+  padding: 5px 6px;
 }
 .top-actions {
   margin-left: auto;
@@ -1634,7 +1664,6 @@ button {
 }
 .directory-tools .global-search {
   width: 420px;
-  background: #fff;
 }
 .people-grid {
   display: grid;
