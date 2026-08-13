@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.8.10 — Scrollable calendar event editor
+
+- Keep calendar and collaboration event editors within the visible browser viewport.
+- Add an internal vertical scrollbar for longer event forms on shorter screens.
+- Contain scroll momentum inside the editor so the calendar behind it remains stationary.
+
 ## Beta v0.8.9 — Member contact cards
 
 - Remove email addresses from the main People grid to keep community profiles clean and scannable.
