@@ -1,5 +1,14 @@
 # Northline release history
 
+## Beta v0.9.0 — User Help Center and welcome guide
+
+- Add a searchable, plain-language Help Center covering every member-facing Northline workflow.
+- Document boards, tasks, columns, permissions, shared workspaces, My Work, reminders, calendars, streaming, collabs, time tracking, People, account preferences, and troubleshooting.
+- Add a friendly first-login welcome guide with direct links to the most common areas of Northline.
+- Let each user dismiss the welcome guide permanently on their current browser and reopen it from Help Center at any time.
+- Keep administrative tools and private infrastructure details out of all user documentation.
+- Support responsive layouts, keyboard-friendly native disclosure controls, and both light and dark themes.
+
 ## Beta v0.8.12 — Complete collab calendar removal
 
 - Remove a cancelled collaboration from every participant's active calendar.

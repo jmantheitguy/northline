@@ -9,6 +9,7 @@ import { TimeClock } from "./time-clock";
 import { TimeCard } from "./time-card";
 import { AdminTime } from "./admin-time";
 import { CalendarHub } from "./calendar-hub";
+import { HelpCenter, WelcomeGuide, type HelpDestination } from "./help-center";
 
 type Status = string;
 type Priority = "Low" | "Medium" | "High";
@@ -166,6 +167,7 @@ type View =
   | "calendars"
   | "directory"
   | "reminders"
+  | "help"
   | "settings"
   | "admin";
 type BoardMode = "board" | "list" | "timeline" | "calendar";
@@ -285,6 +287,7 @@ export function NorthlineApp() {
   const [directoryUsers, setDirectoryUsers] = useState<WorkspaceUser[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [sidebar, setSidebar] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
@@ -365,6 +368,18 @@ export function NorthlineApp() {
       .then((d) => setAuthUser(d.user))
       .finally(() => setAuthLoading(false));
   }, []);
+  useEffect(() => {
+    if (!authUser) return;
+    setShowWelcome(
+      window.localStorage.getItem(`northline-welcome-${authUser.id}`) !== "dismissed",
+    );
+  }, [authUser?.id]);
+  const navigateFromHelp = (destination: HelpDestination) => setView(destination);
+  const dismissWelcome = (remember: boolean) => {
+    if (remember && authUser)
+      window.localStorage.setItem(`northline-welcome-${authUser.id}`, "dismissed");
+    setShowWelcome(false);
+  };
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
@@ -699,6 +714,12 @@ export function NorthlineApp() {
             </button>
           )}
           <button
+            className={view === "help" ? "active" : ""}
+            onClick={() => setView("help")}
+          >
+            <span>?</span>Help Center
+          </button>
+          <button
             className={view === "settings" ? "active" : ""}
             onClick={() => setView("settings")}
           >
@@ -819,6 +840,12 @@ export function NorthlineApp() {
         {view === "time" && <TimeCard notify={notify} />}
         {view === "calendars" && <CalendarHub notify={notify} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
+        {view === "help" && (
+          <HelpCenter
+            navigate={navigateFromHelp}
+            showWelcome={() => setShowWelcome(true)}
+          />
+        )}
         {view === "settings" && (
           <Settings notify={notify} timezone={authUser.timezone} />
         )}
@@ -827,6 +854,14 @@ export function NorthlineApp() {
         )}
       </main>
       <TimeClock notify={notify} />
+      {showWelcome && (
+        <WelcomeGuide
+          name={authUser.name}
+          navigate={navigateFromHelp}
+          openHelp={() => setView("help")}
+          dismiss={dismissWelcome}
+        />
+      )}
       {modal && (
         <NorthlineModal
           type={modal}

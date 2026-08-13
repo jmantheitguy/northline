@@ -210,6 +210,25 @@ test("search controls render as unified accessible fields", async () => {
   assert.match(styles, /\.search-icon/);
 });
 
+test("member help is searchable, actionable, and excludes administration", async () => {
+  const [app, help, styles] = await Promise.all([
+    read("app/northline-app.tsx"),
+    read("app/help-center.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(app, /Help Center/);
+  assert.match(app, /northline-welcome-/);
+  assert.match(help, /Search help topics/);
+  assert.match(help, /Create and organize a board/);
+  assert.match(help, /Request and manage a collab/);
+  assert.match(help, /Task Buddy reminders/);
+  assert.match(help, /Don&apos;t show this welcome screen again/);
+  assert.doesNotMatch(help, /Administration/);
+  assert.doesNotMatch(help, /Linux|Docker|Cloudflare|database health/i);
+  assert.match(styles, /\.help-page/);
+  assert.match(styles, /\.welcome-guide/);
+});
+
 test("public documentation covers the deployed platform without private network addresses", async () => {
   const docs = await Promise.all(
     [
