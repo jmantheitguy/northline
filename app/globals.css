@@ -2664,6 +2664,33 @@ html[data-theme="dark"] .my-work-search {
 .time-entry-modal {
   max-width: 510px;
 }
+.manual-time-field {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.manual-time-field legend {
+  margin-bottom: 7px;
+  font-size: 11px;
+  font-weight: 750;
+}
+.manual-time-field > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
+}
+.manual-time-field input,
+.manual-time-field select {
+  width: 100%;
+  height: 40px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+}
 .admin-time-summary {
   display: grid;
   gap: 8px;

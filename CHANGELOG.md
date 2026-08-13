@@ -1,5 +1,10 @@
 # Northline release history
 
+## Beta v0.5.1 — Familiar manual time controls
+
+- Replace native manual time-entry spinners with explicit date, 1–12 hour, minute, and AM/PM controls.
+- Default new manual entries to a one-hour local-time window while preserving exact existing times during corrections.
+
 ## Beta v0.5.0 — Persistent time cards
 
 - Add a floating clock control that expands into Time In and Time Out actions and persists active timers through reloads and browser sessions.

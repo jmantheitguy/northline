@@ -35,6 +35,77 @@ const localValue = (iso?: string | null) =>
         .toISOString()
         .slice(0, 16)
     : "";
+const localNow = (offsetMinutes = 0) => {
+  const date = new Date(Date.now() + offsetMinutes * 60000);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+};
+function TimePicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [date = "", time = "12:00"] = value.split("T"),
+    [rawHour = "12", minute = "00"] = time.split(":"),
+    hour24 = Number(rawHour),
+    hour = String(hour24 % 12 || 12),
+    period = hour24 >= 12 ? "PM" : "AM";
+  const update = (
+    nextDate: string,
+    nextHour: string,
+    nextMinute: string,
+    nextPeriod: string,
+  ) => {
+    const converted = (Number(nextHour) % 12) + (nextPeriod === "PM" ? 12 : 0);
+    onChange(`${nextDate}T${String(converted).padStart(2, "0")}:${nextMinute}`);
+  };
+  return (
+    <fieldset className="manual-time-field">
+      <legend>{label}</legend>
+      <input
+        aria-label={`${label} date`}
+        type="date"
+        value={date}
+        onChange={(event) => update(event.target.value, hour, minute, period)}
+      />
+      <div>
+        <select
+          aria-label={`${label} hour`}
+          value={hour}
+          onChange={(event) => update(date, event.target.value, minute, period)}
+        >
+          {Array.from({ length: 12 }, (_, index) => index + 1).map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+        <select
+          aria-label={`${label} minute`}
+          value={minute}
+          onChange={(event) => update(date, hour, event.target.value, period)}
+        >
+          {Array.from({ length: 60 }, (_, index) =>
+            String(index).padStart(2, "0"),
+          ).map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+        <select
+          aria-label={`${label} AM or PM`}
+          value={period}
+          onChange={(event) => update(date, hour, minute, event.target.value)}
+        >
+          <option>AM</option>
+          <option>PM</option>
+        </select>
+      </div>
+    </fieldset>
+  );
+}
 const initialForm = {
   startedAt: "",
   endedAt: "",
@@ -133,7 +204,11 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
           className="primary"
           onClick={() => {
             setEditing(null);
-            setForm(initialForm);
+            setForm({
+              ...initialForm,
+              startedAt: localNow(),
+              endedAt: localNow(60),
+            });
             setManual(true);
           }}
         >
@@ -223,32 +298,20 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
                 : "Record work that was not captured by the timer."}
             </p>
             <div className="modal-row">
-              <label>
-                Time in
-                <input
-                  type="datetime-local"
-                  value={form.startedAt}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      startedAt: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Time out
-                <input
-                  type="datetime-local"
-                  value={form.endedAt}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      endedAt: event.target.value,
-                    }))
-                  }
-                />
-              </label>
+              <TimePicker
+                label="Time in"
+                value={form.startedAt}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, startedAt: value }))
+                }
+              />
+              <TimePicker
+                label="Time out"
+                value={form.endedAt}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, endedAt: value }))
+                }
+              />
             </div>
             <label>
               Board
