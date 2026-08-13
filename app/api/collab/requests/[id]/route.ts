@@ -62,7 +62,9 @@ export async function PATCH(
           "UPDATE collab_request_participants SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status IN ('pending','countered','accepted')",
         ).run(row.id);
         db.prepare(
-          "UPDATE calendar_events SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND deleted_at IS NULL",
+          `UPDATE calendar_events
+           SET status='cancelled',deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
+           WHERE collab_request_id=? AND deleted_at IS NULL`,
         ).run(row.id);
         db.prepare(
           `UPDATE calendar_reminders SET status='cancelled',error=NULL

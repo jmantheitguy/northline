@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.8.12 — Complete collab calendar removal
+
+- Remove a cancelled collaboration from every participant's active calendar.
+- Preserve cancelled event records as soft-deleted data for recovery and audit history.
+- Continue cancelling every pending Task Buddy reminder tied to the removed collab.
+
 ## Beta v0.8.11 — Automatic collab reminders
 
 - Automatically schedule a private Task Buddy DM 30 minutes before each accepted collaboration.

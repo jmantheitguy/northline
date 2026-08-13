@@ -115,7 +115,7 @@ export async function GET() {
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     application: {
-      version: process.env.npm_package_version || "0.8.11-beta.0",
+      version: process.env.npm_package_version || "0.8.12-beta.0",
       uptimeSeconds: Math.round(process.uptime()),
       rssBytes: memory.rss,
       heapBytes: memory.heapUsed,
