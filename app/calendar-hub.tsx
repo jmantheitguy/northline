@@ -73,6 +73,10 @@ const api = async (url: string, options?: RequestInit) => {
 };
 const headers = { "Content-Type": "application/json" };
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const utcTimestamp = (value: string) =>
+  /Z$|[+-]\d{2}:?\d{2}$/.test(value)
+    ? value
+    : `${value.replace(" ", "T")}Z`;
 const localInput = (date: Date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000)
     .toISOString()
@@ -1133,7 +1137,7 @@ function ActivityPanel({ activity }: { activity: Detail["activity"] }) {
             <b>{item.actorName}</b>
             <p>{item.detail}</p>
           </span>
-          <time>{new Date(item.createdAt).toLocaleString()}</time>
+          <time>{new Date(utcTimestamp(item.createdAt)).toLocaleString()}</time>
         </article>
       ))}
       {!activity.length && <p>No activity yet.</p>}
@@ -1173,7 +1177,7 @@ function TrashPanel({
           <span>
             <b>{item.name}</b>
             <small>
-              Calendar · deleted {new Date(item.deletedAt).toLocaleString()}
+              Calendar · deleted {new Date(utcTimestamp(item.deletedAt)).toLocaleString()}
             </small>
           </span>
           <button
@@ -1192,7 +1196,7 @@ function TrashPanel({
           <span>
             <b>{item.title}</b>
             <small>
-              Event · deleted {new Date(item.deletedAt).toLocaleString()}
+              Event · deleted {new Date(utcTimestamp(item.deletedAt)).toLocaleString()}
             </small>
           </span>
           <button

@@ -9,6 +9,7 @@ import {
   timeOptions,
   validateAssociation,
 } from "@/lib/time-entries";
+import { zonedDateTimeToUtc } from "@/lib/timezones";
 
 const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
@@ -21,11 +22,12 @@ export async function GET(request: NextRequest) {
   const values: Array<string | number> = [user.id];
   if (search.get("from")) {
     conditions.push("e.started_at>=?");
-    values.push(`${search.get("from")}T00:00:00.000Z`);
+    values.push(zonedDateTimeToUtc(search.get("from")!, "00:00:00", user.timezone).toISOString());
   }
   if (search.get("to")) {
     conditions.push("e.started_at<?");
-    values.push(`${search.get("to")}T23:59:59.999Z`);
+    const nextDay=new Date(`${search.get("to")}T12:00:00Z`);nextDay.setUTCDate(nextDay.getUTCDate()+1);
+    values.push(zonedDateTimeToUtc(nextDay.toISOString().slice(0,10), "00:00:00", user.timezone).toISOString());
   }
   if (search.get("boardId")) {
     conditions.push("e.board_id=?");

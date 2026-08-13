@@ -14,6 +14,8 @@ Every account receives one personal workspace. Its boards are private by default
 
 Global search returns tasks only from boards the signed-in user can access. Direct task links contain the opaque board ID and task ID, but the server still checks authorization.
 
+Directly shared boards from another member's private workspace appear in a virtual **Shared with me** workspace. This navigation group exposes only boards explicitly shared with the current member and never reveals the owner's other private boards.
+
 ## Private calendars
 
 Each member can maintain multiple private calendars with independent names, colors, descriptions, and IANA time zones. Calendar navigation includes month, week, day, and agenda views. Events may be timed or all-day and include a title, description, location or link, time zone, and tentative, confirmed, or cancelled state. Times are stored as UTC instants and displayed in the viewer's local browser time.
@@ -35,6 +37,8 @@ Admins can create and manage accounts, review roles/status, inspect board owners
 ## Time tracking and reporting
 
 Each member has one persistent timer that can be started from the floating clock or directly from a task. Timers may be associated with an accessible board and task, survive page reloads, and warn after 12 hours without silently changing the recorded session. My Time supports manual entries, audited corrections, soft deletion and 30-day recovery, daily/weekly totals, report filters, and CSV export. Administrators can review active timers, organization totals, filtered entries, CSV exports, and time-entry audit actions; they cannot operate another member's timer.
+
+Each account records the IANA time zone detected from its current browser. Shared timestamps are stored as UTC instants and rendered locally for the viewer, while date-only task deadlines remain stable across locations. Time-report filters use local calendar-day boundaries and Task Buddy calculates due warnings in the task creator's zone.
 
 ## Time cards
 

@@ -299,6 +299,31 @@ test("schema upgrades and operational failures are observable", async () => {
   assert.match(compose, /healthcheck/);
 });
 
+test("user time zones are device-synchronized and UTC-safe", async () => {
+  const [schema, auth, settings, timezone, time, adminTime, notifications, ui] =
+    await Promise.all([
+      read("lib/db.ts"),
+      read("lib/auth.ts"),
+      read("app/api/settings/timezone/route.ts"),
+      read("lib/timezones.ts"),
+      read("app/api/time/route.ts"),
+      read("app/api/admin/time/route.ts"),
+      read("lib/task-notifications.ts"),
+      read("app/northline-app.tsx"),
+    ]);
+  assert.match(schema, /timezone TEXT NOT NULL DEFAULT 'UTC'/);
+  assert.match(schema, /per-user time zones/);
+  assert.match(auth, /u\.timezone/);
+  assert.match(settings, /validTimezone/);
+  assert.match(settings, /scheduleDueNotification/);
+  assert.match(timezone, /zonedDateTimeToUtc/);
+  assert.match(time, /user\.timezone/);
+  assert.match(adminTime, /admin\.timezone/);
+  assert.match(notifications, /17:00:00/);
+  assert.match(ui, /resolvedOptions\(\)\.timeZone/);
+  assert.match(ui, /Device synchronized/);
+});
+
 test("authorization matrix is enforced at every board capability", async () => {
   const routes = await Promise.all(
     [
@@ -407,12 +432,16 @@ test("personal and shared workspaces inherit board access safely", async () => {
   assert.match(permissions, /workspace_permission/);
   assert.match(boards, /workspaceId/);
   assert.match(boards, /workspace_members/);
+  assert.match(boards, /navigationWorkspaceId/);
+  assert.match(boards, /Shared with me/);
+  assert.match(boards, /navigationWorkspaceId===0/);
   assert.match(workspaces, /kind\).*shared|kind.*shared/s);
   assert.match(members, /WORKSPACE\.SHARE/);
   assert.match(search, /workspace_members/);
   assert.match(reminders, /workspace_members/);
   assert.match(ui, /New shared workspace/);
   assert.match(ui, /Manage workspace/);
+  assert.match(ui, /navigationWorkspaceId \?\? board\.workspaceId/);
   assert.match(announce, /New Push to/);
   assert.match(announce, /GitHub Push Event/);
   assert.match(announce, /allowed_mentions/);

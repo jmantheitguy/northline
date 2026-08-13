@@ -3,13 +3,13 @@ import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import db from "./db";
 
-export type SessionUser = { id: number; name: string; email: string; avatar: string|null; role: "Admin"|"Member"|"Guest"; status: string };
+export type SessionUser = { id: number; name: string; email: string; avatar: string|null; role: "Admin"|"Member"|"Guest"; status: string; timezone: string };
 const digest = (token:string) => createHash("sha256").update(token).digest("hex");
 
 export async function currentUser(): Promise<SessionUser|null> {
   const token = (await cookies()).get("northline_session")?.value;
   if (!token) return null;
-  return (db.prepare(`SELECT u.id,u.name,u.email,u.avatar,u.role,u.status FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>datetime('now') AND u.status='Active'`).get(digest(token)) as SessionUser) || null;
+  return (db.prepare(`SELECT u.id,u.name,u.email,u.avatar,u.role,u.status,u.timezone FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>datetime('now') AND u.status='Active'`).get(digest(token)) as SessionUser) || null;
 }
 export async function requireAdmin() { const user=await currentUser(); return user?.role==="Admin"?user:null; }
 export async function createSession(userId:number) {

@@ -2,18 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import db from "@/lib/db";
 import { entrySelect } from "@/lib/time-entries";
+import { zonedDateTimeToUtc } from "@/lib/timezones";
 
 const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
 export async function GET(request: NextRequest) {
-  if (!(await requireAdmin()))
+  const admin=await requireAdmin();
+  if (!admin)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const search = request.nextUrl.searchParams;
   const conditions = ["e.deleted_at IS NULL"];
   const values: Array<string | number> = [];
   if (search.get("userId")) { conditions.push("e.user_id=?"); values.push(Number(search.get("userId"))); }
-  if (search.get("from")) { conditions.push("e.started_at>=?"); values.push(`${search.get("from")}T00:00:00.000Z`); }
-  if (search.get("to")) { conditions.push("e.started_at<=?"); values.push(`${search.get("to")}T23:59:59.999Z`); }
+  if (search.get("from")) { conditions.push("e.started_at>=?"); values.push(zonedDateTimeToUtc(search.get("from")!,"00:00:00",admin.timezone).toISOString()); }
+  if (search.get("to")) { const nextDay=new Date(`${search.get("to")}T12:00:00Z`);nextDay.setUTCDate(nextDay.getUTCDate()+1);conditions.push("e.started_at<?"); values.push(zonedDateTimeToUtc(nextDay.toISOString().slice(0,10),"00:00:00",admin.timezone).toISOString()); }
   if (search.get("boardId")) { conditions.push("e.board_id=?"); values.push(Number(search.get("boardId"))); }
   const entries = db
     .prepare(

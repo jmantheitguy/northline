@@ -1,5 +1,15 @@
 # Northline release history
 
+## Beta v0.7.4 — Per-user time zones
+
+- Detect each signed-in member's IANA time zone from their browser and persist it to their Northline account.
+- Keep shared instants in UTC while displaying them according to the current viewer's device time zone across boards, calendars, reminders, time cards, audits, sessions, and administration.
+- Interpret personal and administrative time-report date filters using the viewer's local midnight boundaries, including daylight-saving transitions.
+- Schedule task due-date warnings relative to 5:00 PM in the task creator's time zone instead of the Linux VM's clock, and recalculate pending warnings when that zone changes.
+- Preserve task due dates as date-only values so collaborators in other zones never see them shift to an adjacent day.
+- Correct calendar activity and recovery timestamps created by SQLite so browsers consistently interpret them as UTC before local display.
+- Add a permission-safe virtual Shared with me workspace so direct board shares remain visible even when the board belongs to another member's private workspace.
+
 ## Beta v0.7.3 — List-view task movement
 
 - Make editable task rows draggable in List view.

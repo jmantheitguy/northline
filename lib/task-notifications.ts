@@ -1,6 +1,7 @@
 import "server-only";
 
 import db from "./db";
+import { DEFAULT_TIMEZONE, zonedDateTimeToUtc } from "./timezones";
 
 type EventType="assignment"|"status"|"comment"|"mention"|"due";
 type TaskContext={id:number;boardId:number;title:string;status?:string|null;assigneeId?:number|null;dueDate?:string|null;createdBy?:number|null};
@@ -49,6 +50,8 @@ export function scheduleDueNotification(task:TaskContext,actorId:number){
   const completed=(db.prepare("SELECT is_done isDone FROM board_columns WHERE board_id=? AND column_key=?").get(task.boardId,task.status||"") as {isDone:number}|undefined)?.isDone===1;
   if(!task.dueDate||completed)return;
   const config=settings(task.boardId);const hours=Number(config?.due_warning_hours||24);
-  const due=new Date(`${task.dueDate}T17:00:00Z`);const when=new Date(due.getTime()-hours*3600000);if(when<=new Date())when.setTime(Date.now()+1000);
+  const recipientId=task.createdBy||actorId;
+  const recipient=db.prepare("SELECT timezone FROM users WHERE id=?").get(recipientId) as {timezone:string}|undefined;
+  const due=zonedDateTimeToUtc(task.dueDate,"17:00:00",recipient?.timezone||DEFAULT_TIMEZONE);const when=new Date(due.getTime()-hours*3600000);if(when<=new Date())when.setTime(Date.now()+1000);
   enqueue(task,actorId,"due",`⏰ **${task.title}** is due ${task.dueDate}.`,`due:${task.id}:${task.dueDate}:${hours}`,when);
 }

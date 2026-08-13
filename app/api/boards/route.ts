@@ -9,13 +9,17 @@ export async function GET(){
   const personalBoardCount=(db.prepare("SELECT COUNT(*) count FROM boards WHERE workspace_id=?").get(personal.id) as {count:number}).count;
   if(!personalBoardCount){const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id,personal.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id)}
   const boards=db.prepare(`SELECT DISTINCT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,b.workspace_id workspaceId,
+    CASE WHEN b.owner_id=? OR w.owner_id=? OR wm.user_id IS NOT NULL THEN b.workspace_id ELSE 0 END navigationWorkspaceId,
     CASE WHEN b.owner_id=? OR w.owner_id=? THEN 'owner' WHEN bm.permission='editor' OR wm.permission='editor' THEN 'editor' ELSE 'viewer' END permission,
     (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id AND t.archived_at IS NULL) taskCount
     FROM boards b JOIN users u ON u.id=b.owner_id JOIN workspaces w ON w.id=b.workspace_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
     LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
-    WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id);
-  return NextResponse.json({boards,workspaces:listWorkspaces(user)});
+    WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id);
+  const directShares=(boards as Array<{navigationWorkspaceId:number}>).filter(board=>board.navigationWorkspaceId===0).length;
+  const workspaces=listWorkspaces(user) as Array<Record<string,unknown>>;
+  if(directShares)workspaces.push({id:0,workspaceKey:"shared-with-me",name:"Shared with me",kind:"shared",ownerId:0,ownerName:"Northline",permission:"viewer",boardCount:directShares,memberCount:0,virtual:true});
+  return NextResponse.json({boards,workspaces});
 }
 
 export async function POST(request:Request){

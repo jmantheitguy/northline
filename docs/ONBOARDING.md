@@ -7,7 +7,8 @@
 5. A board owner shares the appropriate boards as viewer or editor.
 6. The member chooses personal Task Buddy preferences in Northline Settings.
 7. The member opens a shared board, confirms their viewer/editor permission, and tests global search.
-8. The member chooses light or dark mode. Northline initially follows the device preference and then remembers the browser-specific selection.
+8. Northline detects and saves the device's IANA time zone. The member can confirm it under Settings; signing in after traveling updates it automatically.
+9. The member chooses light or dark mode. Northline initially follows the device preference and then remembers the browser-specific selection.
 
 ## Administrator onboarding
 

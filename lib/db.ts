@@ -515,6 +515,7 @@ addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 addUserColumn("avatar", "avatar TEXT");
 addUserColumn("directory_id", "directory_id TEXT");
 addUserColumn("discord_user_id", "discord_user_id TEXT");
+addUserColumn("timezone", "timezone TEXT NOT NULL DEFAULT 'UTC'");
 db.prepare(
   "UPDATE users SET directory_id=oidc_subject,oidc_subject=NULL WHERE directory_id IS NULL AND oidc_subject GLOB '????????-????-????-????-????????????'",
 ).run();
@@ -569,6 +570,7 @@ const migrations: [number, string][] = [
   [15, "descriptive administration audit events"],
   [16, "private calendars and selective sharing"],
   [17, "calendar reminders and recoverable deletion"],
+  [18, "per-user time zones"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

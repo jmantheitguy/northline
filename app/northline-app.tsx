@@ -43,6 +43,7 @@ type BoardSummary = {
   permission: "owner" | "editor" | "viewer";
   taskCount: number;
   workspaceId: number;
+  navigationWorkspaceId: number;
 };
 type Workspace = {
   id: number;
@@ -113,6 +114,7 @@ type SessionUser = {
   email: string;
   avatar: string | null;
   role: "Admin" | "Member" | "Guest";
+  timezone: string;
 };
 type Modal =
   | "task-create"
@@ -261,7 +263,7 @@ export function NorthlineApp() {
         );
       setActiveWorkspaceId(
         (current) =>
-          requestedBoard?.workspaceId ||
+          (requestedBoard?.navigationWorkspaceId ?? requestedBoard?.workspaceId) ||
           (current &&
           (d.workspaces || []).some(
             (workspace: Workspace) => workspace.id === current,
@@ -331,6 +333,20 @@ export function NorthlineApp() {
   useEffect(() => {
     if (authUser) void loadBoards();
   }, [authUser]);
+  useEffect(() => {
+    if (!authUser) return;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    document.documentElement.dataset.timezone = timezone;
+    window.localStorage.setItem("northline-timezone", timezone);
+    if (authUser.timezone === timezone) return;
+    jsonFetch("/api/settings/timezone", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ timezone }),
+    })
+      .then(() => setAuthUser((current) => current ? { ...current, timezone } : current))
+      .catch((error) => notify(error.message));
+  }, [authUser?.id, authUser?.timezone]);
   useEffect(() => {
     if (activeBoardId && view === "board") void loadBoard(activeBoardId);
   }, [activeBoardId, view]);
@@ -412,7 +428,8 @@ export function NorthlineApp() {
     workspaces.find((workspace) => workspace.id === activeWorkspaceId) ||
     workspaces[0];
   const visibleBoards = boards.filter(
-    (board) => board.workspaceId === activeWorkspace?.id,
+    (board) =>
+      (board.navigationWorkspaceId ?? board.workspaceId) === activeWorkspace?.id,
   );
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;
@@ -499,7 +516,9 @@ export function NorthlineApp() {
                 onClick={() => {
                   setActiveWorkspaceId(workspace.id);
                   const first = boards.find(
-                    (board) => board.workspaceId === workspace.id,
+                    (board) =>
+                      (board.navigationWorkspaceId ?? board.workspaceId) ===
+                      workspace.id,
                   );
                   setActiveBoardId(first?.id || null);
                   setView("board");
@@ -730,7 +749,8 @@ export function NorthlineApp() {
           <MyWork
             notify={notify}
             openTask={(task) => {
-              setActiveWorkspaceId(task.workspaceId);
+              const summary=boards.find((board)=>board.id===task.boardId);
+              setActiveWorkspaceId(summary?.navigationWorkspaceId ?? task.workspaceId);
               setActiveBoardId(task.boardId);
               setView("board");
               setDeepLinkTaskId(task.id);
@@ -740,7 +760,7 @@ export function NorthlineApp() {
         {view === "time" && <TimeCard notify={notify} />}
         {view === "calendars" && <CalendarHub notify={notify} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
-        {view === "settings" && <Settings notify={notify} />}
+        {view === "settings" && <Settings notify={notify} timezone={authUser.timezone} />}
         {view === "admin" && isAdmin && (
           <Admin users={users} reloadUsers={loadAdminUsers} notify={notify} />
         )}
@@ -2002,7 +2022,7 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
   );
 }
 
-function Settings({ notify }: { notify: (s: string) => void }) {
+function Settings({ notify, timezone }: { notify: (s: string) => void; timezone: string }) {
   const [discord, setDiscord] = useState<{
     configured: boolean;
     channels: { id: string; name: string }[];
@@ -2155,6 +2175,16 @@ function Settings({ notify }: { notify: (s: string) => void }) {
             Revoke all others
           </button>
         )}
+      </div>
+      <div className="settings-body">
+        <div>
+          <h3>Local time zone</h3>
+          <p>
+            Northline detected <b>{timezone}</b> from this device. Shared
+            timestamps are stored in UTC and displayed in this time zone.
+          </p>
+        </div>
+        <span className="connected">● Device synchronized</span>
       </div>
       <div className="settings-body">
         <div>
