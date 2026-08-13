@@ -1,5 +1,16 @@
 # Northline release history
 
+## Beta v0.7.0 — Private calendars
+
+- Add multiple private, named, color-coded calendars for every Northline member.
+- Add responsive month, week, and agenda views with one-time timed or all-day events, locations, descriptions, and confirmation states.
+- Store event instants in UTC while retaining each event and calendar's validated IANA time-zone identity.
+- Let calendar owners explicitly share one calendar with an active member as a viewer or editor, then revoke that access independently.
+- Keep calendar settings, sharing, and deletion owner-only; editors can manage events while viewers remain read-only.
+- Use opaque random calendar and event identifiers at browser and API boundaries and return not-found responses for inaccessible calendars.
+- Record calendar, event, and membership activity while preserving private details from administrators who have not been granted calendar access.
+- Include the new calendar schema in Northline's existing database backup and restore coverage.
+
 ## Beta v0.6.2 — Descriptive audit and live Linux health
 
 - Replace raw audit action codes and numeric targets with readable descriptions, actors, affected objects, timestamps, and retained diagnostic codes.

@@ -8,6 +8,7 @@ import { ReminderCenter } from "./reminder-center";
 import { TimeClock } from "./time-clock";
 import { TimeCard } from "./time-card";
 import { AdminTime } from "./admin-time";
+import { CalendarHub } from "./calendar-hub";
 
 type Status = string;
 type Priority = "Low" | "Medium" | "High";
@@ -130,6 +131,7 @@ type View =
   | "board"
   | "my-work"
   | "time"
+  | "calendars"
   | "directory"
   | "reminders"
   | "settings"
@@ -552,6 +554,12 @@ export function NorthlineApp() {
             <span>◷</span>My Time
           </button>
           <button
+            className={view === "calendars" ? "active" : ""}
+            onClick={() => setView("calendars")}
+          >
+            <span>▦</span>Calendars
+          </button>
+          <button
             className={view === "directory" ? "active" : ""}
             onClick={() => setView("directory")}
           >
@@ -730,6 +738,7 @@ export function NorthlineApp() {
           />
         )}
         {view === "time" && <TimeCard notify={notify} />}
+        {view === "calendars" && <CalendarHub notify={notify} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "settings" && <Settings notify={notify} />}
         {view === "admin" && isAdmin && (

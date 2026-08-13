@@ -115,7 +115,7 @@ export async function GET() {
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     application: {
-      version: process.env.npm_package_version || "0.6.2-beta.0",
+      version: process.env.npm_package_version || "0.7.0-beta.0",
       uptimeSeconds: Math.round(process.uptime()),
       rssBytes: memory.rss,
       heapBytes: memory.heapUsed,
@@ -123,7 +123,7 @@ export async function GET() {
     },
     database: {
       status:
-        integrity === "ok" && migration.version >= 15 ? "healthy" : "degraded",
+        integrity === "ok" && migration.version >= 16 ? "healthy" : "degraded",
       integrity,
       sizeBytes: fs.statSync(databasePath).size,
       migrationVersion: migration.version,

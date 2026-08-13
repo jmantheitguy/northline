@@ -14,6 +14,12 @@ Every account receives one personal workspace. Its boards are private by default
 
 Global search returns tasks only from boards the signed-in user can access. Direct task links contain the opaque board ID and task ID, but the server still checks authorization.
 
+## Private calendars
+
+Each member can maintain multiple private calendars with independent names, colors, descriptions, and IANA time zones. Calendar navigation includes month, week, and agenda views. Events may be timed or all-day and include a title, description, location or link, time zone, and tentative, confirmed, or cancelled state. Times are stored as UTC instants and displayed in the viewer's local browser time.
+
+Calendars are private by default. The owner may share a specific calendar with an active Northline member as a viewer or editor and may revoke access at any time. Viewers cannot change events. Editors can create, update, and delete events but cannot rename, share, or delete the calendar. Administrators have no implicit private-calendar access. Calendar and event URLs use opaque random identifiers, while all authorization remains server-enforced. Settings, sharing, and event changes are retained in calendar activity and the permission-aware audit system.
+
 ## Collaboration and identity
 
 Users sign in locally or through Authentik OIDC using their office identity. Authentik groups grant Northline User or Northline Admin access, and the directory sync imports profiles while revoking sessions for removed accounts. Board owners can share viewer or editor access through the searchable user directory. Site administrators do not receive implicit access to private board content and must be shared onto a board like any other collaborator. Task assignment is limited to the owner and active shared members. Discord is an optional linked profile source—not a sign-in method—and supplies only the Discord ID/avatar used for profile pictures and private Task Buddy delivery.

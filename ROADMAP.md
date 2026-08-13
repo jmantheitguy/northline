@@ -2,7 +2,12 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.6.2
+## Current — Beta v0.7.0
+
+- Multiple private calendars per user with names, colors, descriptions, and time-zone preferences
+- Responsive month, week, and agenda views for one-time timed and all-day events
+- Explicit per-calendar viewer/editor sharing without implicit administrator access
+- Opaque calendar/event identifiers and audited event, settings, and access changes
 
 - Unsaved-change protection for editable modals
 - Explicit 12-hour reminder scheduling controls
@@ -63,7 +68,6 @@ Northline is being built in public as a self-hosted project workspace for small 
 
 ## Longer-term ideas
 
-- Streamer-focused private multi-calendar support with selective sharing
 - Opt-in public stream schedules with local-time viewing and subscription feeds
 - Collaboration proposals, availability preferences, invitations, attendance responses, and shared events
 - Northline task and Task Buddy integration for stream preparation and announcements

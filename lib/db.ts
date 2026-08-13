@@ -13,6 +13,10 @@ export const createBoardPublicId = () =>
 export const createColumnKey = () => `col_${randomBytes(8).toString("hex")}`;
 export const createWorkspacePublicId = () =>
   `wsp_${randomBytes(16).toString("hex")}`;
+export const createCalendarPublicId = () =>
+  `cal_${randomBytes(16).toString("hex")}`;
+export const createCalendarEventPublicId = () =>
+  `evt_${randomBytes(16).toString("hex")}`;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec(`
@@ -48,6 +52,50 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS calendars (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT NOT NULL UNIQUE,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#7c6ce7',
+    description TEXT NOT NULL DEFAULT '',
+    timezone TEXT NOT NULL DEFAULT 'UTC',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS calendar_members (
+    calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL CHECK(permission IN ('viewer','editor')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(calendar_id,user_id)
+  );
+  CREATE TABLE IF NOT EXISTS calendar_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT NOT NULL UNIQUE,
+    calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    location TEXT NOT NULL DEFAULT '',
+    start_at TEXT NOT NULL,
+    end_at TEXT NOT NULL,
+    timezone TEXT NOT NULL DEFAULT 'UTC',
+    all_day INTEGER NOT NULL DEFAULT 0 CHECK(all_day IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'confirmed' CHECK(status IN ('tentative','confirmed','cancelled')),
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS calendar_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    calendar_id INTEGER NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+    actor_id INTEGER REFERENCES users(id),
+    action TEXT NOT NULL,
+    detail TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS calendar_events_range_idx ON calendar_events(calendar_id,start_at,end_at);
+  CREATE INDEX IF NOT EXISTS calendar_members_user_idx ON calendar_members(user_id,calendar_id);
   CREATE TABLE IF NOT EXISTS workspaces (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     public_id TEXT NOT NULL UNIQUE,
@@ -489,6 +537,7 @@ const migrations: [number, string][] = [
   [13, "persistent time cards and audit history"],
   [14, "audited time entry deletion"],
   [15, "descriptive administration audit events"],
+  [16, "private calendars and selective sharing"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

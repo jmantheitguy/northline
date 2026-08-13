@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.6.2 — Descriptive audit and live Linux health**
+Current release: **Beta v0.7.0 — Private calendars**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -48,6 +48,15 @@ The application combines visual task boards, private collaboration, user adminis
 - A persistent floating Time In/Time Out clock with task-detail shortcuts and long-running timer warnings
 - Personal time cards with daily and weekly totals, date/board/task filters, CSV export, manual entries, audited corrections, and 30-day deletion recovery
 - Filterable organization-wide time reporting, CSV export, active-timer visibility, and audit history for administrators without exposing timer controls across accounts
+
+### Private calendars
+
+- Multiple named, color-coded calendars per member, with month, week, and agenda views
+- One-time all-day or timed events with descriptions, locations, status, and explicit IANA time zones
+- Private-by-default ownership and per-calendar viewer/editor sharing with active Northline members
+- Opaque random calendar and event identifiers at every browser/API boundary
+- Owner-only sharing, settings, and deletion; editors may manage events and viewers remain read-only
+- Audited event and sharing changes without granting site administrators implicit access to private calendar content
 
 ### Members and access
 

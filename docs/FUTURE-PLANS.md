@@ -2,11 +2,11 @@
 
 This document describes longer-term product directions under consideration after the initial Beta stabilization work. It is a planning reference rather than a promise of delivery dates. Priorities may change as the team learns from real use.
 
-## Proposed Beta v0.7.0 — Private calendars
+## Delivered in Beta v0.7.0 — Private calendars
 
-Beta v0.7.0 is planned as the first calendar foundation, not the complete public collaboration network. The target release includes multiple private calendars per user, calendar colors and names, month/week/agenda views, one-time events, time-zone-safe storage and display, event reminders, and explicit calendar sharing with viewer or editor permission. Every calendar is private by default, and sharing one calendar must not expose the owner's other calendars, private boards, Discord identifiers, or administrative data.
+Beta v0.7.0 delivers the first calendar foundation, not the complete public collaboration network. It includes multiple private calendars per user, calendar colors and names, month/week/agenda views, one-time events, time-zone-safe storage and display, and explicit calendar sharing with viewer or editor permission. Every calendar is private by default, and sharing one calendar does not expose the owner's other calendars, private boards, Discord identifiers, or administrative data.
 
-The proposed acceptance criteria are:
+The delivered foundation provides:
 
 - A user can create, rename, recolor, and delete multiple calendars without affecting another user's data.
 - Events retain their intended wall-clock time across time zones and daylight-saving transitions.
@@ -17,7 +17,7 @@ The proposed acceptance criteria are:
 - Calendar data is covered by the existing local backup and restore process before production use.
 - Desktop and mobile month, week, and agenda journeys pass interactive testing with the production identity flow.
 
-Public schedule pages, recurring-event edge cases, collaboration requests, guest invitations, `.ics` feeds, and external provider synchronization remain later phases unless the foundation is stable enough to include them safely.
+Event reminders, public schedule pages, recurring-event edge cases, collaboration requests, guest invitations, `.ics` feeds, and external provider synchronization remain later phases.
 
 ## Streaming calendars and collaboration planning
 

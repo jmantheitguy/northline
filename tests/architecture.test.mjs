@@ -524,3 +524,35 @@ test("persistent personal time cards remain auditable and administrator visible"
   assert.match(adminApi, /organization-time\.csv/);
   assert.match(ui, /Start timer/);
 });
+
+test("private calendars use opaque identifiers and explicit per-calendar permissions", async () => {
+  const [schema, permissions, calendars, detail, members, events, eventRoute, ui, app] =
+    await Promise.all([
+      read("lib/db.ts"),
+      read("lib/calendars.ts"),
+      read("app/api/calendars/route.ts"),
+      read("app/api/calendars/[id]/route.ts"),
+      read("app/api/calendars/[id]/members/route.ts"),
+      read("app/api/calendars/[id]/events/route.ts"),
+      read("app/api/calendar-events/[id]/route.ts"),
+      read("app/calendar-hub.tsx"),
+      read("app/northline-app.tsx"),
+    ]);
+  for (const table of ["calendars", "calendar_members", "calendar_events", "calendar_activity"])
+    assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  assert.match(schema, /private calendars and selective sharing/);
+  assert.match(schema, /createCalendarPublicId/);
+  assert.match(schema, /createCalendarEventPublicId/);
+  assert.doesNotMatch(permissions, /role.*Admin|Admin.*role/);
+  assert.match(permissions, /calendarIdByKey/);
+  assert.match(permissions, /calendarEventByKey/);
+  assert.match(calendars, /c\.public_id id/);
+  assert.match(detail, /calendarIdByKey/);
+  assert.match(members, /Only the calendar owner/);
+  assert.match(events, /canEditCalendar/);
+  assert.match(eventRoute, /calendarEventByKey/);
+  assert.match(ui, /My calendars/);
+  assert.match(ui, /month.*week.*agenda/s);
+  assert.match(ui, /viewer.*editor/s);
+  assert.match(app, /CalendarHub/);
+});

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import db from "@/lib/db";
 import { boardPermission } from "@/lib/boards";
+import { calendarPermission } from "@/lib/calendars";
 
 const actionLabels: Record<string, string> = {
   "TASK.CREATE": "Created task",
@@ -23,6 +24,14 @@ const actionLabels: Record<string, string> = {
   "USER.STATUS.UPDATE": "Changed user status",
   "USER.ROLE.UPDATE": "Changed user role",
   "HEALTH.DISCORD.TEST": "Sent Task Buddy health test",
+  "CALENDAR.CREATE": "Created calendar",
+  "CALENDAR.UPDATE": "Updated calendar",
+  "CALENDAR.DELETE": "Deleted calendar",
+  "CALENDAR.SHARE": "Changed calendar access",
+  "CALENDAR.UNSHARE": "Removed calendar access",
+  "CALENDAR.EVENT.CREATE": "Created calendar event",
+  "CALENDAR.EVENT.UPDATE": "Updated calendar event",
+  "CALENDAR.EVENT.DELETE": "Deleted calendar event",
 };
 
 type AuditRecord = {
@@ -36,16 +45,20 @@ type AuditRecord = {
 
 function describeAudit(admin: NonNullable<Awaited<ReturnType<typeof requireAdmin>>>, item: AuditRecord) {
   const label = actionLabels[item.action] || item.action.replaceAll(".", " ").toLowerCase();
-  if (item.detail) return { ...item, label, description: item.detail };
   const [rawId] = String(item.target || "").split(":");
   if (item.action.startsWith("TASK.")) {
     const task = db.prepare("SELECT id,title,board_id boardId FROM tasks WHERE id=?").get(Number(rawId)) as { id:number; title:string; boardId:number } | undefined;
-    return { ...item, label, description: task && boardPermission(admin, task.boardId) ? `${label} “${task.title}”` : `${label} on a private or removed board` };
+    return { ...item, label, description: task && boardPermission(admin, task.boardId) ? (item.detail || `${label} “${task.title}”`) : `${label} on a private or removed board` };
   }
   if (item.action.startsWith("BOARD.")) {
     const board = db.prepare("SELECT id,name FROM boards WHERE id=? OR public_id=?").get(Number(rawId) || -1, rawId) as { id:number; name:string } | undefined;
-    return { ...item, label, description: board && boardPermission(admin, board.id) ? `${label} “${board.name}”` : `${label} on a private or removed board` };
+    return { ...item, label, description: board && boardPermission(admin, board.id) ? (item.detail || `${label} “${board.name}”`) : `${label} on a private or removed board` };
   }
+  if (item.action.startsWith("CALENDAR.")) {
+    const calendarId = Number(rawId);
+    return { ...item, label, description: calendarId && calendarPermission(admin, calendarId) ? (item.detail || label) : `${label} on a private or removed calendar` };
+  }
+  if (item.detail) return { ...item, label, description: item.detail };
   if (item.action.startsWith("USER.")) {
     const target = db.prepare("SELECT name,email FROM users WHERE id=? OR email=?").get(Number(rawId) || -1, rawId) as { name:string; email:string } | undefined;
     return { ...item, label, description: target ? `${label} for ${target.name} (${target.email})` : `${label}: ${rawId}` };
