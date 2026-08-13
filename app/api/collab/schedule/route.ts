@@ -4,13 +4,18 @@ import db from "@/lib/db";
 
 export async function GET(request: Request) {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const url = new URL(request.url);
   const from = url.searchParams.get("from") || new Date().toISOString();
-  const to = url.searchParams.get("to") || new Date(Date.now() + 90 * 86400000).toISOString();
-  const events = db.prepare(`
+  const to =
+    url.searchParams.get("to") ||
+    new Date(Date.now() + 90 * 86400000).toISOString();
+  const events = db
+    .prepare(
+      `
     SELECT e.public_id id,e.title,e.description,e.start_at startAt,e.end_at endAt,e.timezone,
-      e.event_kind kind,e.visibility,e.platform,e.game,e.stream_url streamUrl,e.collab_enabled collabEnabled,
+      e.event_kind kind,e.visibility,e.platform,e.game,e.stream_url streamUrl,e.collab_enabled collabEnabled,e.collab_request_id collabRequestId,
       c.public_id calendarId,c.name calendarName,c.color,c.owner_id ownerId,
       u.name ownerName,u.avatar ownerAvatar
     FROM calendar_events e
@@ -22,14 +27,49 @@ export async function GET(request: Request) {
         c.calendar_type='streaming' AND c.visibility IN ('team','public')
         AND e.visibility IN ('calendar','team','public','busy')
       ))
-    ORDER BY e.start_at,u.name COLLATE NOCASE
-  `).all(to, from, user.id) as Array<Record<string, unknown> & { ownerId: number; visibility: string }>;
+    ORDER BY e.start_at,CASE WHEN e.collab_request_id IS NOT NULL AND c.owner_id=(SELECT requester_id FROM collab_requests WHERE id=e.collab_request_id) THEN 0 ELSE 1 END,u.name COLLATE NOCASE
+  `,
+    )
+    .all(to, from, user.id) as Array<
+    Record<string, unknown> & { ownerId: number; visibility: string }
+  >;
   const safeEvents = events.map((event) => {
     if (event.ownerId !== user.id && event.visibility === "busy") {
-      return { ...event, title: "Busy", description: "", platform: "", game: "", streamUrl: "", collabEnabled: 0 };
+      return {
+        ...event,
+        title: "Busy",
+        description: "",
+        platform: "",
+        game: "",
+        streamUrl: "",
+        collabEnabled: 0,
+      };
     }
     return event;
   });
-  const people = db.prepare("SELECT id,name,email,avatar,timezone FROM users WHERE status='Active' ORDER BY name COLLATE NOCASE").all();
-  return NextResponse.json({ events: safeEvents, people });
+  const seen = new Set<number>();
+  const groupedEvents = safeEvents
+    .filter((event) => {
+      const requestId = Number(event.collabRequestId || 0);
+      if (!requestId) return true;
+      if (seen.has(requestId)) return false;
+      seen.add(requestId);
+      return true;
+    })
+    .map((event) => {
+      const requestId = Number(event.collabRequestId || 0);
+      if (!requestId) return event;
+      const names = db
+        .prepare(
+          `SELECT u.name FROM collab_request_participants p JOIN users u ON u.id=p.user_id WHERE p.collab_request_id=? AND p.status='accepted' ORDER BY u.name COLLATE NOCASE`,
+        )
+        .all(requestId) as Array<{ name: string }>;
+      return { ...event, participantNames: names.map((item) => item.name) };
+    });
+  const people = db
+    .prepare(
+      "SELECT id,name,email,avatar,timezone FROM users WHERE status='Active' ORDER BY name COLLATE NOCASE",
+    )
+    .all();
+  return NextResponse.json({ events: groupedEvents, people });
 }

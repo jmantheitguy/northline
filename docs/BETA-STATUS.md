@@ -1,8 +1,8 @@
 # Beta validation status
 
-Beta v0.8.1 continues controlled production validation with a small team. This document distinguishes verified release evidence from work that requires an interactive browser or deliberate failure simulation.
+Beta v0.8.2 continues controlled production validation with a small team. This document distinguishes verified release evidence from work that requires an interactive browser or deliberate failure simulation.
 
-## Verified for Beta v0.8.1
+## Verified for Beta v0.8.2
 
 - Production containers report healthy operation for Northline, Authentik, its database and worker, and the mail server.
 - The public Northline route responds successfully through the configured edge tunnel.
@@ -16,6 +16,7 @@ Beta v0.8.1 continues controlled production validation with a small team. This d
 - Streaming schedule discovery is limited to authenticated active users and eligible team/public-ready entries; private calendars and private event details remain excluded.
 - Collaboration requests use opaque identifiers, accepted events are written to each participant's selected calendar, and private Discord notifications use the existing Task Buddy identity link.
 - Multi-streamer requests maintain independent participant responses and calendars, migrate legacy requests forward, and lock group-time negotiation after the first acceptance.
+- Confirmed collaborations support unanimous reschedule approval, targeted organizer/participant notifications, atomic event updates, and one-row team-schedule presentation over separate private calendar copies.
 - Northline-only local backups are encrypted, verified, and retained for the latest four generations.
 - The latest recorded non-destructive restore drill completed successfully.
 - VM storage has safe operating headroom after unused container-build artifacts were removed.

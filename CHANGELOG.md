@@ -1,5 +1,15 @@
 # Northline release history
 
+## Beta v0.8.2 — Collaboration rescheduling
+
+- Let organizers and accepted participants propose a replacement time after a collaboration has been confirmed.
+- Route participant proposals privately to the organizer and organizer proposals privately to accepted participants through Task Buddy.
+- Track every required approval independently and update all accepted calendar copies atomically only after unanimous approval.
+- Allow any required participant to decline the proposed time without cancelling the existing confirmed collaboration.
+- Collapse organizer and participant calendar copies into one row in the combined team schedule while retaining both private records.
+- Display the confirmed participant roster on the combined schedule and correct the outgoing request summary.
+- Add schema migration 21 for reschedule proposals and approval responses.
+
 ## Beta v0.8.1 — Multi-streamer collaboration requests
 
 - Let organizers invite up to 20 active Northline streamers with one collaboration request.

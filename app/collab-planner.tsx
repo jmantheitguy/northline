@@ -36,6 +36,7 @@ type ScheduleEvent = {
   ownerId: number;
   ownerName: string;
   ownerAvatar: string | null;
+  participantNames?: string[];
 };
 type CollabRequest = {
   id: string;
@@ -60,6 +61,17 @@ type CollabRequest = {
     timezone: string | null;
     responseMessage: string;
   }>;
+  reschedule: null | {
+    id: string;
+    proposedBy: number;
+    proposedByName: string;
+    startAt: string;
+    endAt: string;
+    timezone: string;
+    message: string;
+    status: string;
+    responses: Array<{ userId: number; name: string; status: string }>;
+  };
 };
 const jsonHeaders = { "Content-Type": "application/json" };
 const call = async (url: string, options?: RequestInit) => {
@@ -99,8 +111,11 @@ export function CollabPlanner({
     [requests, setRequests] = useState<CollabRequest[]>([]),
     [me, setMe] = useState(0),
     [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<"request" | "availability" | null>(null),
+  const [modal, setModal] = useState<
+      "request" | "availability" | "reschedule" | null
+    >(null),
     [form, setForm] = useState(blank()),
+    [rescheduling, setRescheduling] = useState<CollabRequest | null>(null),
     [responseCalendars, setResponseCalendars] = useState<
       Record<string, string>
     >({});
@@ -248,6 +263,53 @@ export function CollabPlanner({
       notify((error as Error).message);
     }
   };
+  const openReschedule = (item: CollabRequest) => {
+    const next = blank();
+    next.title = `Reschedule ${item.title}`;
+    next.startAt = localInput(new Date(item.startAt));
+    next.endAt = localInput(new Date(item.endAt));
+    setForm(next);
+    setRescheduling(item);
+    setModal("reschedule");
+  };
+  const submitReschedule = async () => {
+    if (!rescheduling) return;
+    try {
+      await call(`/api/collab/requests/${rescheduling.id}/reschedule`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          startAt: new Date(form.startAt).toISOString(),
+          endAt: new Date(form.endAt).toISOString(),
+          timezone: zone,
+          message: form.message,
+        }),
+      });
+      setModal(null);
+      setRescheduling(null);
+      notify("New collab time proposed");
+      await load();
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  const respondReschedule = async (
+    item: CollabRequest,
+    action: "accept" | "decline",
+  ) => {
+    if (!item.reschedule) return;
+    try {
+      await call(`/api/collab/reschedule/${item.reschedule.id}`, {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify({ action }),
+      });
+      notify(action === "accept" ? "New time accepted" : "New time declined");
+      await load();
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
   return (
     <div className="collab-planner">
       <header className="collab-hero">
@@ -321,6 +383,9 @@ export function CollabPlanner({
                           minute: "2-digit",
                         })}
                       </small>
+                      {event.participantNames?.length ? (
+                        <small>With {event.participantNames.join(", ")}</small>
+                      ) : null}
                       <em>
                         {[event.kind, event.platform, event.game]
                           .filter(Boolean)
@@ -366,6 +431,8 @@ export function CollabPlanner({
               }
               respond={respond}
               currentUserId={me}
+              openReschedule={openReschedule}
+              respondReschedule={respondReschedule}
             />
           ))}
           {!incoming.length && <p>No incoming requests.</p>}
@@ -379,6 +446,8 @@ export function CollabPlanner({
               select={() => {}}
               respond={respond}
               currentUserId={me}
+              openReschedule={openReschedule}
+              respondReschedule={respondReschedule}
             />
           ))}
           {!outgoing.length && <p>No sent requests.</p>}
@@ -393,7 +462,9 @@ export function CollabPlanner({
             <h2>
               {modal === "availability"
                 ? "Share availability"
-                : "Request a collaboration"}
+                : modal === "reschedule"
+                  ? "Propose a new collab time"
+                  : "Request a collaboration"}
             </h2>
             <p>Times are shown in {zone} and stored in UTC.</p>
             {modal === "request" && (
@@ -434,29 +505,33 @@ export function CollabPlanner({
                 </div>
               </label>
             )}
-            <label>
-              Your streaming calendar
-              <select
-                value={form.calendarId}
-                onChange={(e) =>
-                  setForm({ ...form, calendarId: e.target.value })
-                }
-              >
-                <option value="">Choose a calendar</option>
-                {ownedStreaming.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {modal === "availability" ? "Label" : "Collab idea"}
-              <input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </label>
+            {modal !== "reschedule" && (
+              <label>
+                Your streaming calendar
+                <select
+                  value={form.calendarId}
+                  onChange={(e) =>
+                    setForm({ ...form, calendarId: e.target.value })
+                  }
+                >
+                  <option value="">Choose a calendar</option>
+                  {ownedStreaming.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {modal !== "reschedule" && (
+              <label>
+                {modal === "availability" ? "Label" : "Collab idea"}
+                <input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </label>
+            )}
             <div className="modal-row">
               <label>
                 Starts
@@ -482,7 +557,11 @@ export function CollabPlanner({
               <textarea
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                placeholder="Game, format, participants, or anything the team should know"
+                placeholder={
+                  modal === "reschedule"
+                    ? "Why is a new time needed?"
+                    : "Game, format, participants, or anything the team should know"
+                }
               />
             </label>
             <div className="modal-actions">
@@ -492,16 +571,22 @@ export function CollabPlanner({
               <button
                 className="primary"
                 disabled={
-                  !form.calendarId ||
+                  (modal !== "reschedule" && !form.calendarId) ||
                   (modal === "request" && !form.recipientIds.length)
                 }
                 onClick={() =>
-                  void (modal === "availability" ? offer() : submitRequest())
+                  void (modal === "availability"
+                    ? offer()
+                    : modal === "reschedule"
+                      ? submitReschedule()
+                      : submitRequest())
                 }
               >
                 {modal === "availability"
                   ? "Publish availability"
-                  : "Send request"}
+                  : modal === "reschedule"
+                    ? "Propose new time"
+                    : "Send request"}
               </button>
             </div>
           </div>
@@ -519,6 +604,8 @@ function RequestCard({
   select,
   respond,
   currentUserId,
+  openReschedule,
+  respondReschedule,
 }: {
   item: CollabRequest;
   incoming?: boolean;
@@ -531,6 +618,11 @@ function RequestCard({
     participantUserId?: number,
   ) => Promise<void>;
   currentUserId: number;
+  openReschedule: (item: CollabRequest) => void;
+  respondReschedule: (
+    item: CollabRequest,
+    action: "accept" | "decline",
+  ) => Promise<void>;
 }) {
   const open = ["pending", "countered"].includes(item.status);
   const myParticipant = item.participants.find(
@@ -566,6 +658,52 @@ function RequestCard({
           </span>
         ))}
       </div>
+      {item.reschedule && (
+        <section className="collab-reschedule">
+          <b>New time proposed by {item.reschedule.proposedByName}</b>
+          <small>
+            {new Date(item.reschedule.startAt).toLocaleString([], {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+            –
+            {new Date(item.reschedule.endAt).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </small>
+          {item.reschedule.message && <p>{item.reschedule.message}</p>}
+          <div className="reschedule-responses">
+            {item.reschedule.responses.map((response) => (
+              <span key={response.userId}>
+                {response.name}: {response.status}
+              </span>
+            ))}
+          </div>
+          {item.reschedule.responses.some(
+            (response) =>
+              response.userId === currentUserId &&
+              response.status === "pending",
+          ) && (
+            <div>
+              <button
+                className="primary"
+                onClick={() => void respondReschedule(item, "accept")}
+              >
+                Accept new time
+              </button>
+              <button
+                className="secondary"
+                onClick={() => void respondReschedule(item, "decline")}
+              >
+                Can&apos;t make it
+              </button>
+            </div>
+          )}
+        </section>
+      )}
       {incoming && myParticipant?.status === "pending" && (
         <>
           <select value={selected} onChange={(e) => select(e.target.value)}>
@@ -620,6 +758,11 @@ function RequestCard({
             Cancel request
           </button>
         </div>
+      )}
+      {item.status === "accepted" && !item.reschedule && (
+        <button className="secondary wide" onClick={() => openReschedule(item)}>
+          I can&apos;t make this time · Propose another
+        </button>
       )}
     </article>
   );

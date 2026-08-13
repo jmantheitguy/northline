@@ -19,6 +19,8 @@ export const createCalendarEventPublicId = () =>
   `evt_${randomBytes(16).toString("hex")}`;
 export const createCollabRequestPublicId = () =>
   `clb_${randomBytes(16).toString("hex")}`;
+export const createCollabReschedulePublicId = () =>
+  `rsc_${randomBytes(16).toString("hex")}`;
 db.pragma("busy_timeout = 10000");
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
@@ -409,10 +411,32 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(collab_request_id,user_id)
   );
+  CREATE TABLE IF NOT EXISTS collab_reschedule_proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT NOT NULL UNIQUE,
+    collab_request_id INTEGER NOT NULL REFERENCES collab_requests(id) ON DELETE CASCADE,
+    proposed_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    proposed_start_at TEXT NOT NULL,
+    proposed_end_at TEXT NOT NULL,
+    timezone TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS collab_reschedule_responses (
+    proposal_id INTEGER NOT NULL REFERENCES collab_reschedule_proposals(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending',
+    responded_at TEXT,
+    PRIMARY KEY(proposal_id,user_id)
+  );
   INSERT OR IGNORE INTO collab_request_participants(collab_request_id,user_id,calendar_id,status,proposed_start_at,proposed_end_at,timezone,response_message,updated_at)
     SELECT id,recipient_id,recipient_calendar_id,status,proposed_start_at,proposed_end_at,timezone,response_message,updated_at FROM collab_requests;
   CREATE INDEX IF NOT EXISTS collab_requests_parties_idx ON collab_requests(recipient_id,requester_id,status);
   CREATE INDEX IF NOT EXISTS collab_participants_user_idx ON collab_request_participants(user_id,status);
+  CREATE UNIQUE INDEX IF NOT EXISTS collab_reschedule_one_pending_idx ON collab_reschedule_proposals(collab_request_id) WHERE status='pending';
+  CREATE INDEX IF NOT EXISTS collab_reschedule_responses_user_idx ON collab_reschedule_responses(user_id,status);
   CREATE INDEX IF NOT EXISTS collab_notifications_due_idx ON collab_notifications(status,created_at);
 `);
 
@@ -685,6 +709,7 @@ const migrations: [number, string][] = [
   [18, "per-user time zones"],
   [19, "stream schedules and collaboration requests"],
   [20, "multi-user collaboration participants"],
+  [21, "collaboration reschedule proposals"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

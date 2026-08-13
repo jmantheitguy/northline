@@ -35,6 +35,26 @@ export async function GET() {
         )
         .all(...ids) as Array<Record<string, unknown> & { requestId: number }>)
     : [];
+  const proposals = ids.length
+    ? (db
+        .prepare(
+          `SELECT p.collab_request_id requestId,p.public_id id,p.proposed_by proposedBy,u.name proposedByName,p.proposed_start_at startAt,p.proposed_end_at endAt,p.timezone,p.message,p.status
+      FROM collab_reschedule_proposals p JOIN users u ON u.id=p.proposed_by WHERE p.collab_request_id IN (${ids.map(() => "?").join(",")}) AND p.status='pending'`,
+        )
+        .all(...ids) as Array<
+        Record<string, unknown> & { requestId: number; id: string }
+      >)
+    : [];
+  const proposalIds = proposals.map((item) => item.id);
+  const proposalResponses = proposalIds.length
+    ? (db
+        .prepare(
+          `SELECT p.public_id proposalId,r.user_id userId,u.name,r.status FROM collab_reschedule_responses r JOIN collab_reschedule_proposals p ON p.id=r.proposal_id JOIN users u ON u.id=r.user_id WHERE p.public_id IN (${proposalIds.map(() => "?").join(",")}) ORDER BY u.name COLLATE NOCASE`,
+        )
+        .all(...proposalIds) as Array<
+        Record<string, unknown> & { proposalId: string }
+      >)
+    : [];
   return NextResponse.json({
     requests: requests.map(({ internalId, ...item }) => ({
       ...item,
@@ -50,6 +70,26 @@ export async function GET() {
           timezone: p.timezone,
           responseMessage: p.responseMessage,
         })),
+      reschedule:
+        proposals
+          .filter((proposal) => proposal.requestId === internalId)
+          .map((proposal) => ({
+            id: proposal.id,
+            proposedBy: proposal.proposedBy,
+            proposedByName: proposal.proposedByName,
+            startAt: proposal.startAt,
+            endAt: proposal.endAt,
+            timezone: proposal.timezone,
+            message: proposal.message,
+            status: proposal.status,
+            responses: proposalResponses
+              .filter((response) => response.proposalId === proposal.id)
+              .map((response) => ({
+                userId: response.userId,
+                name: response.name,
+                status: response.status,
+              })),
+          }))[0] || null,
     })),
     currentUserId: user.id,
   });

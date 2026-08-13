@@ -654,11 +654,13 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
 });
 
 test("stream collaboration discovery preserves private calendar boundaries", async () => {
-  const [schema, schedule, requests, response, worker, ui, styles] = await Promise.all([
+  const [schema, schedule, requests, response, proposeReschedule,respondReschedule, worker, ui, styles] = await Promise.all([
     read("lib/db.ts"),
     read("app/api/collab/schedule/route.ts"),
     read("app/api/collab/requests/route.ts"),
     read("app/api/collab/requests/[id]/route.ts"),
+    read("app/api/collab/requests/[id]/reschedule/route.ts"),
+    read("app/api/collab/reschedule/[proposalId]/route.ts"),
     read("lib/reminder-worker.ts"),
     read("app/collab-planner.tsx"),
     read("app/globals.css"),
@@ -668,9 +670,13 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_notifications/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_request_participants/);
   assert.match(schema, /multi-user collaboration participants/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_reschedule_proposals/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_reschedule_responses/);
+  assert.match(schema, /collaboration reschedule proposals/);
   assert.match(schedule, /c\.calendar_type='streaming'/);
   assert.match(schedule, /c\.visibility IN \('team','public'\)/);
   assert.match(schedule, /event\.visibility === "busy"/);
+  assert.match(schedule, /seen\.has\(requestId\)/);
   assert.match(requests, /canEditCalendar\(calendarPermission/);
   assert.match(requests, /recipientIds\.includes\(source\.ownerId\)/);
   assert.match(requests, /recipientIds\.length > 20/);
@@ -680,9 +686,14 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(response, /collab_request_participants/);
   assert.match(response, /participantUserId/);
   assert.match(response, /group time cannot change after someone has accepted/);
+  assert.match(proposeReschedule, /accepted collaboration participants/);
+  assert.match(proposeReschedule, /collab_reschedule_responses/);
+  assert.match(respondReschedule, /UPDATE calendar_events SET start_at=\?,end_at=\?/);
+  assert.match(respondReschedule, /remaining\s*===\s*0/);
   assert.match(worker, /collab_notifications/);
   assert.match(worker, /Northline collab update/);
   assert.match(ui, /Team stream schedule/);
   assert.match(ui, /Ask to collab/);
+  assert.match(ui, /Propose another/);
   assert.match(styles, /\.collab-grid/);
 });
