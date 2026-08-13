@@ -590,19 +590,33 @@ test("persistent personal time cards remain auditable and administrator visible"
 });
 
 test("private calendars use opaque identifiers and explicit per-calendar permissions", async () => {
-  const [schema, permissions, calendars, detail, members, events, eventRoute, ui, app] =
-    await Promise.all([
-      read("lib/db.ts"),
-      read("lib/calendars.ts"),
-      read("app/api/calendars/route.ts"),
-      read("app/api/calendars/[id]/route.ts"),
-      read("app/api/calendars/[id]/members/route.ts"),
-      read("app/api/calendars/[id]/events/route.ts"),
-      read("app/api/calendar-events/[id]/route.ts"),
-      read("app/calendar-hub.tsx"),
-      read("app/northline-app.tsx"),
-    ]);
-  for (const table of ["calendars", "calendar_members", "calendar_events", "calendar_activity"])
+  const [
+    schema,
+    permissions,
+    calendars,
+    detail,
+    members,
+    events,
+    eventRoute,
+    ui,
+    app,
+  ] = await Promise.all([
+    read("lib/db.ts"),
+    read("lib/calendars.ts"),
+    read("app/api/calendars/route.ts"),
+    read("app/api/calendars/[id]/route.ts"),
+    read("app/api/calendars/[id]/members/route.ts"),
+    read("app/api/calendars/[id]/events/route.ts"),
+    read("app/api/calendar-events/[id]/route.ts"),
+    read("app/calendar-hub.tsx"),
+    read("app/northline-app.tsx"),
+  ]);
+  for (const table of [
+    "calendars",
+    "calendar_members",
+    "calendar_events",
+    "calendar_activity",
+  ])
     assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.match(schema, /private calendars and selective sharing/);
   assert.match(schema, /createCalendarPublicId/);
@@ -622,17 +636,25 @@ test("private calendars use opaque identifiers and explicit per-calendar permiss
 });
 
 test("calendar stabilization keeps reminders and recovery private", async () => {
-  const [schema, detail, restoreCalendar, restoreEvent, reminders, worker, ui, styles] =
-    await Promise.all([
-      read("lib/db.ts"),
-      read("app/api/calendars/[id]/route.ts"),
-      read("app/api/calendars/[id]/restore/route.ts"),
-      read("app/api/calendar-events/[id]/restore/route.ts"),
-      read("app/api/calendar-events/[id]/reminders/route.ts"),
-      read("lib/reminder-worker.ts"),
-      read("app/calendar-hub.tsx"),
-      read("app/globals.css"),
-    ]);
+  const [
+    schema,
+    detail,
+    restoreCalendar,
+    restoreEvent,
+    reminders,
+    worker,
+    ui,
+    styles,
+  ] = await Promise.all([
+    read("lib/db.ts"),
+    read("app/api/calendars/[id]/route.ts"),
+    read("app/api/calendars/[id]/restore/route.ts"),
+    read("app/api/calendar-events/[id]/restore/route.ts"),
+    read("app/api/calendar-events/[id]/reminders/route.ts"),
+    read("lib/reminder-worker.ts"),
+    read("app/calendar-hub.tsx"),
+    read("app/globals.css"),
+  ]);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS calendar_reminders/);
   assert.match(schema, /calendar reminders and recoverable deletion/);
   assert.match(schema, /ALTER TABLE calendars ADD COLUMN deleted_at/);
@@ -640,7 +662,10 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
   assert.match(detail, /permission\s*===\s*"owner"[\s\S]*deletedEvents/);
   assert.match(restoreCalendar, /owner_id=\?/);
   assert.match(restoreCalendar, /datetime\('now','-30 days'\)/);
-  assert.match(restoreEvent, /calendarPermission\(user, event\.calendarId\) !== "owner"/);
+  assert.match(
+    restoreEvent,
+    /calendarPermission\(user, event\.calendarId\) !== "owner"/,
+  );
   assert.match(reminders, /calendarPermission\(user, event\.calendarId\)/);
   assert.match(reminders, /recipient_user_id/);
   assert.match(worker, /calendar_reminders/);
@@ -654,7 +679,17 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
 });
 
 test("stream collaboration discovery preserves private calendar boundaries", async () => {
-  const [schema, schedule, requests, response, proposeReschedule,respondReschedule, worker, ui, styles] = await Promise.all([
+  const [
+    schema,
+    schedule,
+    requests,
+    response,
+    proposeReschedule,
+    respondReschedule,
+    worker,
+    ui,
+    styles,
+  ] = await Promise.all([
     read("lib/db.ts"),
     read("app/api/collab/schedule/route.ts"),
     read("app/api/collab/requests/route.ts"),
@@ -668,10 +703,19 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(schema, /stream schedules and collaboration requests/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_requests/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_notifications/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_request_participants/);
+  assert.match(
+    schema,
+    /CREATE TABLE IF NOT EXISTS collab_request_participants/,
+  );
   assert.match(schema, /multi-user collaboration participants/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_reschedule_proposals/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS collab_reschedule_responses/);
+  assert.match(
+    schema,
+    /CREATE TABLE IF NOT EXISTS collab_reschedule_proposals/,
+  );
+  assert.match(
+    schema,
+    /CREATE TABLE IF NOT EXISTS collab_reschedule_responses/,
+  );
   assert.match(schema, /collaboration reschedule proposals/);
   assert.match(schedule, /c\.calendar_type='streaming'/);
   assert.match(schedule, /c\.visibility IN \('team','public'\)/);
@@ -688,7 +732,10 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(response, /group time cannot change after someone has accepted/);
   assert.match(proposeReschedule, /accepted collaboration participants/);
   assert.match(proposeReschedule, /collab_reschedule_responses/);
-  assert.match(respondReschedule, /UPDATE calendar_events SET start_at=\?,end_at=\?/);
+  assert.match(
+    respondReschedule,
+    /UPDATE calendar_events SET start_at=\?,end_at=\?/,
+  );
   assert.match(respondReschedule, /remaining\s*===\s*0/);
   assert.match(worker, /collab_notifications/);
   assert.match(worker, /Northline collab update/);
@@ -703,4 +750,22 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(styles, /\.collab-grid/);
   assert.match(styles, /\.collab-picker-search/);
   assert.match(styles, /\.collab-selected-streamers/);
+});
+
+test("directory profiles expose only explicitly public stream schedules", async () => {
+  const directory = await read("app/api/directory/route.ts");
+  const schedule = await read(
+    "app/api/directory/[id]/stream-schedule/route.ts",
+  );
+  const ui = await read("app/northline-app.tsx");
+  const styles = await read("app/globals.css");
+  assert.match(directory, /publicStreamCalendarCount/);
+  assert.match(directory, /c\.visibility='public'/);
+  assert.match(schedule, /calendar_type='streaming'/);
+  assert.match(schedule, /c\.visibility='public'/);
+  assert.match(schedule, /e\.visibility IN \('calendar','public'\)/);
+  assert.match(schedule, /e\.status!='cancelled'/);
+  assert.match(ui, /View public stream schedule/);
+  assert.match(ui, /No public stream schedule/);
+  assert.match(styles, /\.public-schedule-events/);
 });

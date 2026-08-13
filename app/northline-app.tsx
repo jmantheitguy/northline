@@ -107,6 +107,34 @@ type WorkspaceUser = {
   initials: string;
   color: string;
   authSource?: "local" | "oidc";
+  publicStreamCalendarCount: number;
+  publicStreamCalendarName: string | null;
+};
+type PublicStreamSchedule = {
+  owner: { id: number; name: string; avatar: string | null; timezone: string };
+  calendars: Array<{
+    id: string;
+    name: string;
+    color: string;
+    description: string;
+    timezone: string;
+  }>;
+  events: Array<{
+    id: string;
+    title: string;
+    description: string;
+    startAt: string;
+    endAt: string;
+    timezone: string;
+    allDay: number;
+    kind: string;
+    platform: string;
+    game: string;
+    streamUrl: string;
+    calendarId: string;
+    calendarName: string;
+    color: string;
+  }>;
 };
 type SessionUser = {
   id: number;
@@ -196,6 +224,8 @@ function decorateUsers(list: any[]): WorkspaceUser[] {
   return list.map((u) => ({
     ...u,
     boards: Number(u.boards || 0),
+    publicStreamCalendarCount: Number(u.publicStreamCalendarCount || 0),
+    publicStreamCalendarName: u.publicStreamCalendarName || null,
     initials: String(u.name)
       .split(" ")
       .map((x: string) => x[0])
@@ -264,7 +294,8 @@ export function NorthlineApp() {
         );
       setActiveWorkspaceId(
         (current) =>
-          (requestedBoard?.navigationWorkspaceId ?? requestedBoard?.workspaceId) ||
+          (requestedBoard?.navigationWorkspaceId ??
+            requestedBoard?.workspaceId) ||
           (current &&
           (d.workspaces || []).some(
             (workspace: Workspace) => workspace.id === current,
@@ -347,7 +378,11 @@ export function NorthlineApp() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ timezone }),
     })
-      .then(() => setAuthUser((current) => current ? { ...current, timezone } : current))
+      .then(() =>
+        setAuthUser((current) =>
+          current ? { ...current, timezone } : current,
+        ),
+      )
       .catch((error) => notify(error.message));
   }, [authUser?.id, authUser?.timezone]);
   useEffect(() => {
@@ -432,7 +467,8 @@ export function NorthlineApp() {
     workspaces[0];
   const visibleBoards = boards.filter(
     (board) =>
-      (board.navigationWorkspaceId ?? board.workspaceId) === activeWorkspace?.id,
+      (board.navigationWorkspaceId ?? board.workspaceId) ===
+      activeWorkspace?.id,
   );
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;
@@ -756,8 +792,10 @@ export function NorthlineApp() {
           <MyWork
             notify={notify}
             openTask={(task) => {
-              const summary=boards.find((board)=>board.id===task.boardId);
-              setActiveWorkspaceId(summary?.navigationWorkspaceId ?? task.workspaceId);
+              const summary = boards.find((board) => board.id === task.boardId);
+              setActiveWorkspaceId(
+                summary?.navigationWorkspaceId ?? task.workspaceId,
+              );
               setActiveBoardId(task.boardId);
               setView("board");
               setDeepLinkTaskId(task.id);
@@ -767,7 +805,9 @@ export function NorthlineApp() {
         {view === "time" && <TimeCard notify={notify} />}
         {view === "calendars" && <CalendarHub notify={notify} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
-        {view === "settings" && <Settings notify={notify} timezone={authUser.timezone} />}
+        {view === "settings" && (
+          <Settings notify={notify} timezone={authUser.timezone} />
+        )}
         {view === "admin" && isAdmin && (
           <Admin users={users} reloadUsers={loadAdminUsers} notify={notify} />
         )}
@@ -1986,11 +2026,28 @@ function Calendar({
 function Directory({ users }: { users: WorkspaceUser[] }) {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
+  const [schedule, setSchedule] = useState<PublicStreamSchedule | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState<number | null>(null);
+  const [scheduleError, setScheduleError] = useState("");
   const list = users.filter(
     (p) =>
       (p.name + p.email).toLowerCase().includes(query.toLowerCase()) &&
       (role === "all" || p.role === role),
   );
+  const openSchedule = async (person: WorkspaceUser) => {
+    if (!person.publicStreamCalendarCount) return;
+    setScheduleLoading(person.id);
+    setScheduleError("");
+    try {
+      setSchedule(
+        await jsonFetch(`/api/directory/${person.id}/stream-schedule`),
+      );
+    } catch (error) {
+      setScheduleError((error as Error).message);
+    } finally {
+      setScheduleLoading(null);
+    }
+  };
   return (
     <section className="content directory">
       <div className="page-title">
@@ -2024,14 +2081,40 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
       <div className="people-grid">
         {list.map((p) => (
           <article className="person" key={p.id}>
-            <Avatar name={p.name} avatar={p.avatar} color={p.color} />
-            <i className="online" />
-            <h3>{p.name}</h3>
-            <p>{p.email}</p>
-            <span>{p.role}</span>
-            <small>
-              {p.boards} board{p.boards === 1 ? "" : "s"}
-            </small>
+            <div className="person-identity">
+              <span className="person-avatar">
+                <Avatar name={p.name} avatar={p.avatar} color={p.color} />
+                <i className="online" title="Active" />
+              </span>
+              <div>
+                <h3>{p.name}</h3>
+                <p title={p.email}>{p.email}</p>
+              </div>
+            </div>
+            <div className="person-meta">
+              <span>{p.role}</span>
+              <small>
+                {p.boards} board{p.boards === 1 ? "" : "s"}
+              </small>
+            </div>
+            <button
+              className="secondary person-schedule-button"
+              disabled={
+                !p.publicStreamCalendarCount || scheduleLoading === p.id
+              }
+              title={
+                p.publicStreamCalendarCount
+                  ? `View ${p.name}'s public stream schedule`
+                  : `${p.name} does not have a public stream schedule`
+              }
+              onClick={() => void openSchedule(p)}
+            >
+              {scheduleLoading === p.id
+                ? "Loading schedule…"
+                : p.publicStreamCalendarCount
+                  ? "View public stream schedule"
+                  : "No public stream schedule"}
+            </button>
           </article>
         ))}
       </div>
@@ -2041,11 +2124,111 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
           copy="Try a different name, email, or role."
         />
       )}
+      {scheduleError && (
+        <div className="toast error" role="alert">
+          {scheduleError}
+        </div>
+      )}
+      {schedule && (
+        <div className="modal-backdrop">
+          <div
+            className="modal public-schedule-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="public-schedule-title"
+          >
+            <button
+              className="modal-close"
+              aria-label="Close public stream schedule"
+              onClick={() => setSchedule(null)}
+            >
+              ×
+            </button>
+            <div className="public-schedule-heading">
+              <Avatar
+                name={schedule.owner.name}
+                avatar={schedule.owner.avatar}
+                color="#7961e8"
+              />
+              <div>
+                <div className="eyebrow">PUBLIC STREAM SCHEDULE</div>
+                <h2 id="public-schedule-title">{schedule.owner.name}</h2>
+                <p>
+                  {schedule.calendars
+                    .map((calendar) => calendar.name)
+                    .join(", ")}
+                </p>
+              </div>
+            </div>
+            <div className="public-schedule-events">
+              {schedule.events.map((event) => (
+                <article key={event.id}>
+                  <i style={{ background: event.color }} />
+                  <time>
+                    {new Date(event.startAt).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    <small>
+                      {new Date(event.startAt).toLocaleTimeString(undefined, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                      {" – "}
+                      {new Date(event.endAt).toLocaleTimeString(undefined, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </small>
+                  </time>
+                  <div>
+                    <b>{event.title}</b>
+                    <span>
+                      {[event.game, event.platform]
+                        .filter(Boolean)
+                        .join(" · ") || event.calendarName}
+                    </span>
+                    {event.description && <p>{event.description}</p>}
+                  </div>
+                  {/^https?:\/\//i.test(event.streamUrl) && (
+                    <a
+                      className="secondary"
+                      href={event.streamUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Stream link
+                    </a>
+                  )}
+                </article>
+              ))}
+              {!schedule.events.length && (
+                <div className="empty-state">
+                  <b>No upcoming public streams</b>
+                  <span>
+                    This calendar is public but has no upcoming events.
+                  </span>
+                </div>
+              )}
+            </div>
+            <p className="field-note">
+              Times are shown in your current device time zone.
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
-function Settings({ notify, timezone }: { notify: (s: string) => void; timezone: string }) {
+function Settings({
+  notify,
+  timezone,
+}: {
+  notify: (s: string) => void;
+  timezone: string;
+}) {
   const [discord, setDiscord] = useState<{
     configured: boolean;
     channels: { id: string; name: string }[];
@@ -2290,13 +2473,7 @@ function Admin({
   notify: (s: string) => void;
 }) {
   const [tab, setTab] = useState<
-    | "overview"
-    | "users"
-    | "boards"
-    | "audit"
-    | "time"
-    | "security"
-    | "health"
+    "overview" | "users" | "boards" | "audit" | "time" | "security" | "health"
   >("overview");
   const [query, setQuery] = useState("");
   const [create, setCreate] = useState(false);
@@ -2326,7 +2503,10 @@ function Admin({
   useEffect(() => {
     if (tab !== "health" || !healthLive) return;
     const timer = window.setInterval(
-      () => jsonFetch("/api/admin/health").then(setHealth).catch(() => undefined),
+      () =>
+        jsonFetch("/api/admin/health")
+          .then(setHealth)
+          .catch(() => undefined),
       5000,
     );
     return () => window.clearInterval(timer);
@@ -2363,7 +2543,9 @@ function Admin({
           <h1>Workspace administration</h1>
           <p>One place for operations, people, access, time, and recovery.</p>
         </div>
-        <div className={`admin-live-status ${health && Object.values([health.database?.status, health.storage?.status, health.discord?.status, health.backup?.status, health.restore?.status]).some((status) => status === "degraded" || status === "unknown") ? "degraded" : "healthy"}`}>
+        <div
+          className={`admin-live-status ${health && Object.values([health.database?.status, health.storage?.status, health.discord?.status, health.backup?.status, health.restore?.status]).some((status) => status === "degraded" || status === "unknown") ? "degraded" : "healthy"}`}
+        >
           <i />
           <span>{health ? "Live system status" : "Loading status"}</span>
         </div>
@@ -2384,12 +2566,23 @@ function Admin({
             users.filter((u) => u.role === "Admin").length
           }
         />
-        <Metric label="ACTIVE TIMERS" value={overview?.metrics.activeTimers ?? 0} />
+        <Metric
+          label="ACTIVE TIMERS"
+          value={overview?.metrics.activeTimers ?? 0}
+        />
       </div>
       <div className="admin-panel">
         <div className="admin-tabs">
           {(
-            ["overview", "users", "boards", "time", "health", "audit", "security"] as const
+            [
+              "overview",
+              "users",
+              "boards",
+              "time",
+              "health",
+              "audit",
+              "security",
+            ] as const
           ).map((name) => (
             <button
               key={name}
@@ -2412,8 +2605,12 @@ function Admin({
                 className="secondary"
                 onClick={() => {
                   void loadOverview();
-                  jsonFetch("/api/admin/health").then(setHealth).catch((e) => notify(e.message));
-                  jsonFetch("/api/admin/time").then(setAdminTime).catch((e) => notify(e.message));
+                  jsonFetch("/api/admin/health")
+                    .then(setHealth)
+                    .catch((e) => notify(e.message));
+                  jsonFetch("/api/admin/time")
+                    .then(setAdminTime)
+                    .catch((e) => notify(e.message));
                   notify("Dashboard refreshed");
                 }}
               >
@@ -2421,41 +2618,174 @@ function Admin({
               </button>
             </div>
             <div className="admin-status-grid">
-              <DashboardStatus title="Application" status="healthy" detail={health ? `${health.application.version} · up ${Math.floor(health.application.uptimeSeconds / 60)} min` : "Loading"} />
-              <DashboardStatus title="Database" status={health?.database.status || "unknown"} detail={health ? `${health.database.integrity} · schema v${health.database.migrationVersion}` : "Loading"} />
-              <DashboardStatus title="Task Buddy" status={health?.discord.status || "unknown"} detail={health?.discord.error || (health ? "Private delivery ready" : "Loading")} />
-              <DashboardStatus title="Local backup" status={health?.backup.status || "unknown"} detail={health?.backup.completedAt ? `Last run ${new Date(health.backup.completedAt).toLocaleString()}` : health?.backup.message || "Loading"} />
-              <DashboardStatus title="Restore test" status={health?.restore.status || "unknown"} detail={health?.restore.completedAt ? `Verified ${new Date(health.restore.completedAt).toLocaleString()}` : health?.restore.message || "Loading"} />
-              <DashboardStatus title="VM storage" status={health?.storage.status || "unknown"} detail={health ? `${formatBytes(health.storage.freeBytes)} available` : "Loading"} />
+              <DashboardStatus
+                title="Application"
+                status="healthy"
+                detail={
+                  health
+                    ? `${health.application.version} · up ${Math.floor(health.application.uptimeSeconds / 60)} min`
+                    : "Loading"
+                }
+              />
+              <DashboardStatus
+                title="Database"
+                status={health?.database.status || "unknown"}
+                detail={
+                  health
+                    ? `${health.database.integrity} · schema v${health.database.migrationVersion}`
+                    : "Loading"
+                }
+              />
+              <DashboardStatus
+                title="Task Buddy"
+                status={health?.discord.status || "unknown"}
+                detail={
+                  health?.discord.error ||
+                  (health ? "Private delivery ready" : "Loading")
+                }
+              />
+              <DashboardStatus
+                title="Local backup"
+                status={health?.backup.status || "unknown"}
+                detail={
+                  health?.backup.completedAt
+                    ? `Last run ${new Date(health.backup.completedAt).toLocaleString()}`
+                    : health?.backup.message || "Loading"
+                }
+              />
+              <DashboardStatus
+                title="Restore test"
+                status={health?.restore.status || "unknown"}
+                detail={
+                  health?.restore.completedAt
+                    ? `Verified ${new Date(health.restore.completedAt).toLocaleString()}`
+                    : health?.restore.message || "Loading"
+                }
+              />
+              <DashboardStatus
+                title="VM storage"
+                status={health?.storage.status || "unknown"}
+                detail={
+                  health
+                    ? `${formatBytes(health.storage.freeBytes)} available`
+                    : "Loading"
+                }
+              />
             </div>
             <div className="admin-dashboard-columns">
               <div className="admin-dashboard-card">
-                <header><div><small>WORKSPACE</small><h3>Organization snapshot</h3></div></header>
+                <header>
+                  <div>
+                    <small>WORKSPACE</small>
+                    <h3>Organization snapshot</h3>
+                  </div>
+                </header>
                 <div className="admin-snapshot-grid">
-                  <DashboardNumber label="Active members" value={overview?.metrics.activeUsers ?? "—"} />
-                  <DashboardNumber label="Workspaces" value={overview?.metrics.workspaces ?? "—"} />
-                  <DashboardNumber label="Boards" value={overview?.metrics.activeBoards ?? "—"} />
-                  <DashboardNumber label="Open tasks" value={overview?.metrics.tasks ?? "—"} />
-                  <DashboardNumber label="Active timers" value={overview?.metrics.activeTimers ?? "—"} />
-                  <DashboardNumber label="Failed reminders" value={overview?.metrics.failedReminders ?? "—"} alert={(overview?.metrics.failedReminders || 0) > 0} />
+                  <DashboardNumber
+                    label="Active members"
+                    value={overview?.metrics.activeUsers ?? "—"}
+                  />
+                  <DashboardNumber
+                    label="Workspaces"
+                    value={overview?.metrics.workspaces ?? "—"}
+                  />
+                  <DashboardNumber
+                    label="Boards"
+                    value={overview?.metrics.activeBoards ?? "—"}
+                  />
+                  <DashboardNumber
+                    label="Open tasks"
+                    value={overview?.metrics.tasks ?? "—"}
+                  />
+                  <DashboardNumber
+                    label="Active timers"
+                    value={overview?.metrics.activeTimers ?? "—"}
+                  />
+                  <DashboardNumber
+                    label="Failed reminders"
+                    value={overview?.metrics.failedReminders ?? "—"}
+                    alert={(overview?.metrics.failedReminders || 0) > 0}
+                  />
                 </div>
               </div>
               <div className="admin-dashboard-card">
-                <header><div><small>TIME</small><h3>Currently clocked in</h3></div><button onClick={() => setTab("time")}>Open reports</button></header>
+                <header>
+                  <div>
+                    <small>TIME</small>
+                    <h3>Currently clocked in</h3>
+                  </div>
+                  <button onClick={() => setTab("time")}>Open reports</button>
+                </header>
                 <div className="admin-active-list">
-                  {(adminTime?.totals || []).filter((item: any) => item.activeSince).length ? (adminTime?.totals || []).filter((item: any) => item.activeSince).map((item: any) => (
-                    <div key={item.userId}><Avatar name={item.userName} avatar={item.userAvatar} /><span><b>{item.userName}</b><small>Since {new Date(item.activeSince).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></span><em>Active</em></div>
-                  )) : <div className="admin-inline-empty">No members are currently clocked in.</div>}
+                  {(adminTime?.totals || []).filter(
+                    (item: any) => item.activeSince,
+                  ).length ? (
+                    (adminTime?.totals || [])
+                      .filter((item: any) => item.activeSince)
+                      .map((item: any) => (
+                        <div key={item.userId}>
+                          <Avatar
+                            name={item.userName}
+                            avatar={item.userAvatar}
+                          />
+                          <span>
+                            <b>{item.userName}</b>
+                            <small>
+                              Since{" "}
+                              {new Date(item.activeSince).toLocaleTimeString(
+                                [],
+                                { hour: "numeric", minute: "2-digit" },
+                              )}
+                            </small>
+                          </span>
+                          <em>Active</em>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="admin-inline-empty">
+                      No members are currently clocked in.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
             <div className="admin-tool-grid">
-              <AdminTool title="People & access" copy="Manage members, roles, status, and Authentik synchronization." action="Manage users" onClick={() => setTab("users")} />
-              <AdminTool title="Board access" copy="Review ownership, sharing, and task totals without bypassing privacy." action="Review boards" onClick={() => setTab("boards")} />
-              <AdminTool title="Time reports" copy="Inspect active timers, totals, audit events, filters, and CSV exports." action="Open time" onClick={() => setTab("time")} />
-              <AdminTool title="System health" copy="Inspect database, storage, backup, restore, sessions, and Task Buddy." action="Open health" onClick={() => setTab("health")} />
-              <AdminTool title="Audit history" copy="Review recent administrative and collaboration activity." action="View audit" onClick={() => setTab("audit")} />
-              <AdminTool title="Security controls" copy="Review identity, recovery access, secrets, and session boundaries." action="View security" onClick={() => setTab("security")} />
+              <AdminTool
+                title="People & access"
+                copy="Manage members, roles, status, and Authentik synchronization."
+                action="Manage users"
+                onClick={() => setTab("users")}
+              />
+              <AdminTool
+                title="Board access"
+                copy="Review ownership, sharing, and task totals without bypassing privacy."
+                action="Review boards"
+                onClick={() => setTab("boards")}
+              />
+              <AdminTool
+                title="Time reports"
+                copy="Inspect active timers, totals, audit events, filters, and CSV exports."
+                action="Open time"
+                onClick={() => setTab("time")}
+              />
+              <AdminTool
+                title="System health"
+                copy="Inspect database, storage, backup, restore, sessions, and Task Buddy."
+                action="Open health"
+                onClick={() => setTab("health")}
+              />
+              <AdminTool
+                title="Audit history"
+                copy="Review recent administrative and collaboration activity."
+                action="View audit"
+                onClick={() => setTab("audit")}
+              />
+              <AdminTool
+                title="Security controls"
+                copy="Review identity, recovery access, secrets, and session boundaries."
+                action="View security"
+                onClick={() => setTab("security")}
+              />
             </div>
           </div>
         )}
@@ -2569,10 +2899,14 @@ function Admin({
             </div>
             {overview?.audit.map((a: any) => (
               <div className="audit-row" key={a.id}>
-                <span className="audit-event-icon">{a.action.split(".")[0].slice(0, 1)}</span>
+                <span className="audit-event-icon">
+                  {a.action.split(".")[0].slice(0, 1)}
+                </span>
                 <span>
                   <b>{a.description}</b>
-                  <small>{a.actorName} · <code>{a.action}</code></small>
+                  <small>
+                    {a.actorName} · <code>{a.action}</code>
+                  </small>
                 </span>
                 <time>{new Date(`${a.createdAt}Z`).toLocaleString()}</time>
               </div>
@@ -2621,7 +2955,11 @@ function Admin({
                 ↻ Refresh
               </button>
               <label className="live-health-toggle">
-                <input type="checkbox" checked={healthLive} onChange={(event) => setHealthLive(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={healthLive}
+                  onChange={(event) => setHealthLive(event.target.checked)}
+                />
                 Live updates
               </label>
             </div>
@@ -2692,20 +3030,77 @@ function Admin({
                 </div>
                 <div className="linux-health-panel">
                   <div className="linux-health-heading">
-                    <div><span className="eyebrow">LINUX HOST</span><h3>Real-time system resources</h3></div>
-                    <small>{health.linux.platform} · {health.linux.architecture} · {health.linux.cpuCores} vCPU</small>
+                    <div>
+                      <span className="eyebrow">LINUX HOST</span>
+                      <h3>Real-time system resources</h3>
+                    </div>
+                    <small>
+                      {health.linux.platform} · {health.linux.architecture} ·{" "}
+                      {health.linux.cpuCores} vCPU
+                    </small>
                   </div>
                   <div className="linux-stat-grid">
-                    <LinuxStat label="CPU" value={`${health.linux.cpuUsagePercent}%`} percent={health.linux.cpuUsagePercent} detail={health.linux.cpuModel} />
-                    <LinuxStat label="Memory" value={`${health.linux.memoryUsedPercent}%`} percent={health.linux.memoryUsedPercent} detail={`${formatBytes(health.linux.memoryTotalBytes - health.linux.memoryAvailableBytes)} used of ${formatBytes(health.linux.memoryTotalBytes)}`} />
-                    <LinuxStat label="Disk" value={`${Math.round((1 - health.storage.freeBytes / health.storage.totalBytes) * 1000) / 10}%`} percent={(1 - health.storage.freeBytes / health.storage.totalBytes) * 100} detail={`${formatBytes(health.storage.freeBytes)} available`} />
-                    <LinuxStat label="Swap" value={health.linux.swapTotalBytes ? `${Math.round(health.linux.swapUsedBytes / health.linux.swapTotalBytes * 1000) / 10}%` : "Disabled"} percent={health.linux.swapTotalBytes ? health.linux.swapUsedBytes / health.linux.swapTotalBytes * 100 : 0} detail={health.linux.swapTotalBytes ? `${formatBytes(health.linux.swapUsedBytes)} used of ${formatBytes(health.linux.swapTotalBytes)}` : "No swap configured"} />
+                    <LinuxStat
+                      label="CPU"
+                      value={`${health.linux.cpuUsagePercent}%`}
+                      percent={health.linux.cpuUsagePercent}
+                      detail={health.linux.cpuModel}
+                    />
+                    <LinuxStat
+                      label="Memory"
+                      value={`${health.linux.memoryUsedPercent}%`}
+                      percent={health.linux.memoryUsedPercent}
+                      detail={`${formatBytes(health.linux.memoryTotalBytes - health.linux.memoryAvailableBytes)} used of ${formatBytes(health.linux.memoryTotalBytes)}`}
+                    />
+                    <LinuxStat
+                      label="Disk"
+                      value={`${Math.round((1 - health.storage.freeBytes / health.storage.totalBytes) * 1000) / 10}%`}
+                      percent={
+                        (1 -
+                          health.storage.freeBytes /
+                            health.storage.totalBytes) *
+                        100
+                      }
+                      detail={`${formatBytes(health.storage.freeBytes)} available`}
+                    />
+                    <LinuxStat
+                      label="Swap"
+                      value={
+                        health.linux.swapTotalBytes
+                          ? `${Math.round((health.linux.swapUsedBytes / health.linux.swapTotalBytes) * 1000) / 10}%`
+                          : "Disabled"
+                      }
+                      percent={
+                        health.linux.swapTotalBytes
+                          ? (health.linux.swapUsedBytes /
+                              health.linux.swapTotalBytes) *
+                            100
+                          : 0
+                      }
+                      detail={
+                        health.linux.swapTotalBytes
+                          ? `${formatBytes(health.linux.swapUsedBytes)} used of ${formatBytes(health.linux.swapTotalBytes)}`
+                          : "No swap configured"
+                      }
+                    />
                   </div>
                   <div className="linux-host-details">
-                    <span><small>LOAD AVERAGE</small><b>{health.linux.loadAverage.join(" · ")}</b></span>
-                    <span><small>HOST UPTIME</small><b>{formatUptime(health.linux.uptimeSeconds)}</b></span>
-                    <span><small>HOSTNAME</small><b>{health.linux.hostname}</b></span>
-                    <span><small>NODE PROCESS</small><b>{formatBytes(health.application.rssBytes)} RSS</b></span>
+                    <span>
+                      <small>LOAD AVERAGE</small>
+                      <b>{health.linux.loadAverage.join(" · ")}</b>
+                    </span>
+                    <span>
+                      <small>HOST UPTIME</small>
+                      <b>{formatUptime(health.linux.uptimeSeconds)}</b>
+                    </span>
+                    <span>
+                      <small>HOSTNAME</small>
+                      <b>{health.linux.hostname}</b>
+                    </span>
+                    <span>
+                      <small>NODE PROCESS</small>
+                      <b>{formatBytes(health.application.rssBytes)} RSS</b>
+                    </span>
                   </div>
                 </div>
                 <div className="health-actions">
@@ -2815,7 +3210,10 @@ function DashboardStatus({
   const normalized = status === "configured" ? "healthy" : status;
   return (
     <article className={`dashboard-status ${normalized}`}>
-      <div><i /><span>{normalized}</span></div>
+      <div>
+        <i />
+        <span>{normalized}</span>
+      </div>
       <h3>{title}</h3>
       <p>{detail}</p>
     </article>
@@ -2830,7 +3228,12 @@ function DashboardNumber({
   value: string | number;
   alert?: boolean;
 }) {
-  return <div className={alert ? "alert" : ""}><b>{value}</b><span>{label}</span></div>;
+  return (
+    <div className={alert ? "alert" : ""}>
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  );
 }
 function AdminTool({
   title,
@@ -2893,8 +3296,13 @@ function LinuxStat({
 }) {
   return (
     <article className="linux-stat">
-      <div><span>{label}</span><b>{value}</b></div>
-      <div className="linux-meter"><i style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>
+      <div>
+        <span>{label}</span>
+        <b>{value}</b>
+      </div>
+      <div className="linux-meter">
+        <i style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} />
+      </div>
       <small>{detail}</small>
     </article>
   );
@@ -3365,7 +3773,7 @@ function NorthlineModal({
     });
   const schedule = () =>
     run(async () => {
-      const result=await jsonFetch("/api/reminders", {
+      const result = await jsonFetch("/api/reminders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3597,7 +4005,9 @@ function NorthlineModal({
                   <Avatar name={c.authorName} avatar={c.authorAvatar} />
                   <span>
                     <b>{c.authorName}</b>
-                    <small>{new Date(`${c.createdAt}Z`).toLocaleString()}</small>
+                    <small>
+                      {new Date(`${c.createdAt}Z`).toLocaleString()}
+                    </small>
                     <p>{c.body}</p>
                   </span>
                 </div>

@@ -1638,55 +1638,152 @@ button {
 }
 .people-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
 }
 .person {
-  background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 210px;
+  background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 24px;
-  text-align: center;
+  border-radius: 13px;
+  padding: 18px;
+  text-align: left;
+}
+.person-identity {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+}
+.person-avatar {
   position: relative;
 }
-.person .avatar {
-  width: 50px;
-  height: 50px;
+.person-avatar .avatar {
+  width: 52px;
+  height: 52px;
   font-size: 14px;
 }
-.person > i {
+.person-avatar > i {
   position: absolute;
+  right: -1px;
+  bottom: 1px;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: #aaa;
-  border: 2px solid #fff;
-  top: 61px;
-  margin-left: -10px;
+  border: 2px solid var(--panel);
 }
-.person > i.online {
+.person-avatar > i.online {
   background: #37bf84;
 }
 .person h3 {
-  margin: 13px 0 3px;
+  margin: 0 0 4px;
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .person p {
   margin: 0;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.person > span {
-  display: inline-block;
-  margin: 14px 0;
+.person-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 18px 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.person-meta > span {
   background: #f0eefb;
   color: #6753ca;
   border-radius: 10px;
   padding: 3px 9px;
   font-size: 10px;
 }
-.person button {
-  display: block;
+.person-meta small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.person-schedule-button {
   width: 100%;
+  min-height: 38px;
+  margin-top: auto;
+  white-space: normal;
+}
+.person-schedule-button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+.public-schedule-modal {
+  width: min(720px, calc(100vw - 30px));
+  max-height: min(760px, calc(100vh - 40px));
+  overflow-y: auto;
+}
+.public-schedule-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-right: 28px;
+}
+.public-schedule-heading .avatar {
+  width: 48px;
+  height: 48px;
+}
+.public-schedule-heading h2 {
+  margin: 3px 0;
+}
+.public-schedule-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.public-schedule-events {
+  display: flex;
+  flex-direction: column;
+  margin: 22px 0 12px;
+  border-top: 1px solid var(--line);
+}
+.public-schedule-events article {
+  display: grid;
+  grid-template-columns: 5px 125px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.public-schedule-events article > i {
+  width: 5px;
+  height: 38px;
+  border-radius: 4px;
+}
+.public-schedule-events time,
+.public-schedule-events article > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.public-schedule-events small,
+.public-schedule-events article > div > span,
+.public-schedule-events article > div > p {
+  color: var(--muted);
+  font-size: 10px;
+}
+.public-schedule-events article > div > p {
+  margin: 3px 0 0;
+  white-space: normal;
+}
+.public-schedule-events a {
+  text-decoration: none;
 }
 .settings {
   max-width: 920px;
@@ -3238,7 +3335,27 @@ html[data-theme="dark"] .my-work-search {
     margin-left: 0;
   }
   .people-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+  }
+  .directory-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .directory-tools .global-search {
+    width: 100%;
+  }
+  .public-schedule-events article {
+    grid-template-columns: 5px minmax(0, 1fr) auto;
+  }
+  .public-schedule-events article > time {
+    grid-column: 2;
+  }
+  .public-schedule-events article > div {
+    grid-column: 2;
+  }
+  .public-schedule-events article > a {
+    grid-column: 3;
+    grid-row: 1 / span 3;
   }
   .settings-card,
   .settings-body {
