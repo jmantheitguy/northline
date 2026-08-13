@@ -288,11 +288,21 @@ if (!timeEntryColumns.some((column) => column.name === "deleted_at"))
   db.exec("ALTER TABLE time_entries ADD COLUMN deleted_at TEXT");
 
 const calendarColumns = db.prepare("PRAGMA table_info(calendars)").all() as Array<{ name: string }>;
-if (!calendarColumns.some((column) => column.name === "deleted_at"))
-  db.exec("ALTER TABLE calendars ADD COLUMN deleted_at TEXT");
+if (!calendarColumns.some((column) => column.name === "deleted_at")) {
+  try {
+    db.exec("ALTER TABLE calendars ADD COLUMN deleted_at TEXT");
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
+  }
+}
 const calendarEventColumns = db.prepare("PRAGMA table_info(calendar_events)").all() as Array<{ name: string }>;
-if (!calendarEventColumns.some((column) => column.name === "deleted_at"))
-  db.exec("ALTER TABLE calendar_events ADD COLUMN deleted_at TEXT");
+if (!calendarEventColumns.some((column) => column.name === "deleted_at")) {
+  try {
+    db.exec("ALTER TABLE calendar_events ADD COLUMN deleted_at TEXT");
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
+  }
+}
 
 const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{
   name: string;
