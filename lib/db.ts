@@ -191,6 +191,7 @@ db.exec(`
     duration_seconds INTEGER,
     note TEXT NOT NULL DEFAULT '',
     source TEXT NOT NULL CHECK(source IN ('timer','manual')),
+    deleted_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK(ended_at IS NULL OR ended_at > started_at),
@@ -218,6 +219,12 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS time_entries_one_active_user_idx ON time_entries(user_id) WHERE ended_at IS NULL;
   CREATE INDEX IF NOT EXISTS time_entry_audit_entry_idx ON time_entry_audit(time_entry_id,created_at DESC);
 `);
+
+const timeEntryColumns = db
+  .prepare("PRAGMA table_info(time_entries)")
+  .all() as Array<{ name: string }>;
+if (!timeEntryColumns.some((column) => column.name === "deleted_at"))
+  db.exec("ALTER TABLE time_entries ADD COLUMN deleted_at TEXT");
 
 const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{
   name: string;
@@ -474,6 +481,7 @@ const migrations: [number, string][] = [
   [11, "personal and shared workspaces"],
   [12, "recoverable task archive"],
   [13, "persistent time cards and audit history"],
+  [14, "audited time entry deletion"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

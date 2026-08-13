@@ -7,7 +7,9 @@ export async function GET() {
   if (!(await requireAdmin()))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const entries = db
-    .prepare(`${entrySelect} ORDER BY e.started_at DESC LIMIT 1000`)
+    .prepare(
+      `${entrySelect} WHERE e.deleted_at IS NULL ORDER BY e.started_at DESC LIMIT 1000`,
+    )
     .all();
   const totals = db
     .prepare(
@@ -15,7 +17,7 @@ export async function GET() {
     COALESCE(SUM(CASE WHEN e.ended_at IS NOT NULL THEN e.duration_seconds ELSE 0 END),0) totalSeconds,
     COALESCE(SUM(CASE WHEN e.ended_at IS NOT NULL AND e.started_at>=datetime('now','-7 days') THEN e.duration_seconds ELSE 0 END),0) weekSeconds,
     MAX(CASE WHEN e.ended_at IS NULL THEN e.started_at END) activeSince
-    FROM users u LEFT JOIN time_entries e ON e.user_id=u.id WHERE u.status='Active' GROUP BY u.id ORDER BY u.name`,
+    FROM users u LEFT JOIN time_entries e ON e.user_id=u.id AND e.deleted_at IS NULL WHERE u.status='Active' GROUP BY u.id ORDER BY u.name`,
     )
     .all();
   const audit = db

@@ -2601,7 +2601,7 @@ html[data-theme="dark"] .my-work-search {
 .time-card-row {
   min-width: 850px;
   display: grid;
-  grid-template-columns: 110px 90px 90px 100px minmax(220px, 1fr) 85px 70px;
+  grid-template-columns: 110px 90px 90px 100px minmax(220px, 1fr) 85px 120px;
   align-items: center;
   min-height: 54px;
   border-bottom: 1px solid var(--line);
@@ -2660,6 +2660,14 @@ html[data-theme="dark"] .my-work-search {
   width: auto;
   padding: 5px 8px;
   font-size: 9px;
+}
+.time-entry-actions {
+  display: flex;
+  gap: 5px;
+  padding: 0;
+}
+.time-card-row .danger-text {
+  color: #d95055;
 }
 .time-entry-modal {
   max-width: 510px;

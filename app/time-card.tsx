@@ -162,6 +162,22 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
       reason: "",
     });
   };
+  const remove = async (entry: Entry) => {
+    if (
+      !window.confirm(
+        "Delete this time entry? Its audit record will be retained.",
+      )
+    )
+      return;
+    try {
+      await request(`/api/time/${entry.id}`, { method: "DELETE" });
+      await load();
+      window.dispatchEvent(new Event("northline-time-changed"));
+      notify("Time entry deleted");
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
   const save = async () => {
     setBusy(true);
     try {
@@ -273,13 +289,22 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
             </span>
             <span>
               {entry.endedAt && (
-                <button
-                  className="icon-button"
-                  aria-label="Correct entry"
-                  onClick={() => openEdit(entry)}
-                >
-                  Edit
-                </button>
+                <span className="time-entry-actions">
+                  <button
+                    className="icon-button"
+                    aria-label="Correct entry"
+                    onClick={() => openEdit(entry)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="icon-button danger-text"
+                    aria-label="Delete entry"
+                    onClick={() => void remove(entry)}
+                  >
+                    Delete
+                  </button>
+                </span>
               )}
             </span>
           </div>

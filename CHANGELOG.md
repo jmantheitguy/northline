@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.5.2 — Audited time-entry deletion
+
+- Let users delete their own completed time entries after explicit confirmation.
+- Soft-delete entries so they leave personal totals and administrator reports without destroying the retained audit trail.
+- Require active timers to be stopped before their entries can be deleted.
+
 ## Beta v0.5.1 — Familiar manual time controls
 
 - Replace native manual time-entry spinners with explicit date, 1–12 hour, minute, and AM/PM controls.

@@ -2,7 +2,7 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.5.1
+## Current — Beta v0.5.2
 
 - Unsaved-change protection for editable modals
 - Explicit 12-hour reminder scheduling controls

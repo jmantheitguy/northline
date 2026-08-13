@@ -16,13 +16,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const entries = db
     .prepare(
-      `${entrySelect} WHERE e.user_id=? ORDER BY e.started_at DESC LIMIT 250`,
+      `${entrySelect} WHERE e.user_id=? AND e.deleted_at IS NULL ORDER BY e.started_at DESC LIMIT 250`,
     )
     .all(user.id);
   const active =
     db
       .prepare(
-        `${entrySelect} WHERE e.user_id=? AND e.ended_at IS NULL LIMIT 1`,
+        `${entrySelect} WHERE e.user_id=? AND e.ended_at IS NULL AND e.deleted_at IS NULL LIMIT 1`,
       )
       .get(user.id) || null;
   return NextResponse.json({ active, entries, options: timeOptions(user) });

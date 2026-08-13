@@ -495,4 +495,9 @@ test("persistent personal time cards remain auditable and administrator visible"
   assert.match(timeCard, /Manual entry/);
   assert.match(ui, /TimeClock/);
   assert.match(ui, /AdminTime/);
+  assert.match(schema, /deleted_at/);
+  assert.match(schema, /audited time entry deletion/);
+  assert.match(timeEntry, /export async function DELETE/);
+  assert.match(timeEntry, /Stop the active timer before deleting it/);
+  assert.match(timeCard, /Time entry deleted/);
 });

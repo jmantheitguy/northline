@@ -28,7 +28,7 @@ Admins can create and manage accounts, review roles/status, inspect board owners
 
 ## Time cards
 
-Every user has a persistent personal time clock available from the floating clock control and a My Time page. Timers continue on the server through reloads, can be associated with accessible boards and tasks, and are limited to one active timer per user. Users can add manual entries and correct completed entries with a required audit reason. Northline prevents overlapping entries and calculates durations server-side. Administrators can review time totals and entry history for all active users from the Administration Time panel.
+Every user has a persistent personal time clock available from the floating clock control and a My Time page. Timers continue on the server through reloads, can be associated with accessible boards and tasks, and are limited to one active timer per user. Users can add manual entries, correct completed entries with a required audit reason, and remove completed entries with confirmation. Removal is an audited soft deletion: the entry leaves normal totals and reports while its audit history remains available. Northline prevents overlapping entries and calculates durations server-side. Administrators can review time totals and entry history for all active users from the Administration Time panel.
 
 ## Experience
 

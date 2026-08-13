@@ -17,7 +17,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = Number((await params).id),
     entry = db
-      .prepare("SELECT * FROM time_entries WHERE id=? AND user_id=?")
+      .prepare(
+        "SELECT * FROM time_entries WHERE id=? AND user_id=? AND deleted_at IS NULL",
+      )
       .get(id, user.id) as Record<string, unknown> | undefined;
   if (!entry)
     return NextResponse.json(
@@ -75,4 +77,41 @@ export async function PATCH(
       { status: 400 },
     );
   }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await currentUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const id = Number((await params).id),
+    entry = db
+      .prepare(
+        "SELECT * FROM time_entries WHERE id=? AND user_id=? AND deleted_at IS NULL",
+      )
+      .get(id, user.id) as Record<string, unknown> | undefined;
+  if (!entry)
+    return NextResponse.json(
+      { error: "Time entry not found" },
+      { status: 404 },
+    );
+  if (!entry.ended_at)
+    return NextResponse.json(
+      { error: "Stop the active timer before deleting it" },
+      { status: 409 },
+    );
+  db.prepare(
+    "UPDATE time_entries SET deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+  ).run(id);
+  auditTimeEntry(
+    id,
+    user.id,
+    "DELETE",
+    entry,
+    { deleted: true },
+    "Deleted by time-card owner",
+  );
+  return NextResponse.json({ ok: true });
 }
