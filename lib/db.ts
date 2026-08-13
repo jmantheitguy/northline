@@ -289,42 +289,82 @@ const timeEntryColumns = db
 if (!timeEntryColumns.some((column) => column.name === "deleted_at"))
   db.exec("ALTER TABLE time_entries ADD COLUMN deleted_at TEXT");
 
-const calendarColumns = db.prepare("PRAGMA table_info(calendars)").all() as Array<{ name: string }>;
+const calendarColumns = db
+  .prepare("PRAGMA table_info(calendars)")
+  .all() as Array<{ name: string }>;
 if (!calendarColumns.some((column) => column.name === "deleted_at")) {
   try {
     db.exec("ALTER TABLE calendars ADD COLUMN deleted_at TEXT");
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
+    if (
+      !(error instanceof Error) ||
+      !error.message.includes("duplicate column name")
+    )
+      throw error;
   }
 }
 const addCalendarColumn = (name: string, definition: string) => {
   if (!calendarColumns.some((column) => column.name === name)) {
-    db.exec(`ALTER TABLE calendars ADD COLUMN ${definition}`);
-    calendarColumns.push({ name });
+    try {
+      db.exec(`ALTER TABLE calendars ADD COLUMN ${definition}`);
+      calendarColumns.push({ name });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes("duplicate column name")
+      )
+        throw error;
+    }
   }
 };
-addCalendarColumn("calendar_type", "calendar_type TEXT NOT NULL DEFAULT 'personal'");
+addCalendarColumn(
+  "calendar_type",
+  "calendar_type TEXT NOT NULL DEFAULT 'personal'",
+);
 addCalendarColumn("visibility", "visibility TEXT NOT NULL DEFAULT 'private'");
-const calendarEventColumns = db.prepare("PRAGMA table_info(calendar_events)").all() as Array<{ name: string }>;
+const calendarEventColumns = db
+  .prepare("PRAGMA table_info(calendar_events)")
+  .all() as Array<{ name: string }>;
 if (!calendarEventColumns.some((column) => column.name === "deleted_at")) {
   try {
     db.exec("ALTER TABLE calendar_events ADD COLUMN deleted_at TEXT");
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) throw error;
+    if (
+      !(error instanceof Error) ||
+      !error.message.includes("duplicate column name")
+    )
+      throw error;
   }
 }
 const addCalendarEventColumn = (name: string, definition: string) => {
   if (!calendarEventColumns.some((column) => column.name === name)) {
-    db.exec(`ALTER TABLE calendar_events ADD COLUMN ${definition}`);
-    calendarEventColumns.push({ name });
+    try {
+      db.exec(`ALTER TABLE calendar_events ADD COLUMN ${definition}`);
+      calendarEventColumns.push({ name });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes("duplicate column name")
+      )
+        throw error;
+    }
   }
 };
-addCalendarEventColumn("event_kind", "event_kind TEXT NOT NULL DEFAULT 'event'");
-addCalendarEventColumn("visibility", "visibility TEXT NOT NULL DEFAULT 'calendar'");
+addCalendarEventColumn(
+  "event_kind",
+  "event_kind TEXT NOT NULL DEFAULT 'event'",
+);
+addCalendarEventColumn(
+  "visibility",
+  "visibility TEXT NOT NULL DEFAULT 'calendar'",
+);
 addCalendarEventColumn("platform", "platform TEXT NOT NULL DEFAULT ''");
 addCalendarEventColumn("game", "game TEXT NOT NULL DEFAULT ''");
 addCalendarEventColumn("stream_url", "stream_url TEXT NOT NULL DEFAULT ''");
-addCalendarEventColumn("collab_enabled", "collab_enabled INTEGER NOT NULL DEFAULT 0");
+addCalendarEventColumn(
+  "collab_enabled",
+  "collab_enabled INTEGER NOT NULL DEFAULT 0",
+);
 addCalendarEventColumn("collab_request_id", "collab_request_id INTEGER");
 
 db.exec(`
@@ -617,9 +657,9 @@ addSessionColumn("user_agent", "user_agent TEXT");
 addSessionColumn("created_ip", "created_ip TEXT");
 addSessionColumn("last_seen_at", "last_seen_at TEXT");
 
-const auditColumns = db
-  .prepare("PRAGMA table_info(audit_log)")
-  .all() as Array<{ name: string }>;
+const auditColumns = db.prepare("PRAGMA table_info(audit_log)").all() as Array<{
+  name: string;
+}>;
 if (!auditColumns.some((column) => column.name === "detail"))
   db.exec("ALTER TABLE audit_log ADD COLUMN detail TEXT");
 
@@ -652,8 +692,12 @@ const recordMigrations = db.transaction(() => {
   for (const migration of migrations) insert.run(...migration);
 });
 recordMigrations();
-db.prepare("DELETE FROM calendar_events WHERE deleted_at IS NOT NULL AND datetime(deleted_at)<datetime('now','-30 days')").run();
-db.prepare("DELETE FROM calendars WHERE deleted_at IS NOT NULL AND datetime(deleted_at)<datetime('now','-30 days')").run();
+db.prepare(
+  "DELETE FROM calendar_events WHERE deleted_at IS NOT NULL AND datetime(deleted_at)<datetime('now','-30 days')",
+).run();
+db.prepare(
+  "DELETE FROM calendars WHERE deleted_at IS NOT NULL AND datetime(deleted_at)<datetime('now','-30 days')",
+).run();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;
 const password = process.env.NORTHLINE_ADMIN_PASSWORD;
