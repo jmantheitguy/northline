@@ -85,6 +85,23 @@ export async function PATCH(
         proposal.timezone,
         proposal.collab_request_id,
       );
+      const reminderAt = new Date(
+        new Date(proposal.proposed_start_at).getTime() - 30 * 60 * 1000,
+      );
+      if (reminderAt > new Date())
+        db.prepare(
+          `UPDATE calendar_reminders SET remind_at=?,error=NULL
+           WHERE status='pending' AND message LIKE 'Collab starts in 30 minutes:%'
+             AND calendar_event_id IN
+               (SELECT id FROM calendar_events WHERE collab_request_id=?)`,
+        ).run(reminderAt.toISOString(), proposal.collab_request_id);
+      else
+        db.prepare(
+          `UPDATE calendar_reminders SET status='cancelled',error=NULL
+           WHERE status='pending' AND message LIKE 'Collab starts in 30 minutes:%'
+             AND calendar_event_id IN
+               (SELECT id FROM calendar_events WHERE collab_request_id=?)`,
+        ).run(proposal.collab_request_id);
       db.prepare(
         "UPDATE collab_reschedule_proposals SET status='accepted',resolved_at=CURRENT_TIMESTAMP WHERE id=?",
       ).run(proposal.id);

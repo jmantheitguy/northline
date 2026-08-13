@@ -749,12 +749,18 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
     /UPDATE calendar_events SET start_at=\?,end_at=\?/,
   );
   assert.match(respondReschedule, /remaining\s*===\s*0/);
+  assert.match(response, /scheduleAutomaticReminders/);
+  assert.match(response, /30 \* 60 \* 1000/);
+  assert.match(response, /INSERT INTO calendar_reminders/);
+  assert.match(schema, /Collab starts in 30 minutes:/);
+  assert.match(respondReschedule, /UPDATE calendar_reminders SET remind_at=/);
   assert.match(worker, /collab_notifications/);
   assert.match(worker, /Northline collab update/);
   assert.match(ui, /Team stream schedule/);
   assert.match(ui, /Ask to collab/);
   assert.match(ui, /Reschedule collab/);
   assert.match(ui, /Cancel collab for everyone/);
+  assert.match(ui, /automatically reminds every accepted member 30 minutes before/);
   assert.match(ui, /Search streamers/);
   assert.match(ui, /availableStreamers/);
   assert.match(ui, /streamerPickerOpen/);

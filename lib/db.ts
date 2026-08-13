@@ -440,6 +440,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS collab_notifications_due_idx ON collab_notifications(status,created_at);
 `);
 
+db.exec(`
+  INSERT INTO calendar_reminders
+    (calendar_event_id,created_by,recipient_user_id,message,remind_at)
+  SELECT event.id,event.created_by,event.created_by,
+    'Collab starts in 30 minutes: ' || request.title,
+    strftime('%Y-%m-%dT%H:%M:%fZ',event.start_at,'-30 minutes')
+  FROM calendar_events event
+  JOIN collab_requests request ON request.id=event.collab_request_id
+  WHERE request.status='accepted' AND event.status='confirmed' AND event.deleted_at IS NULL
+    AND datetime(event.start_at,'-30 minutes')>datetime('now')
+    AND NOT EXISTS (
+      SELECT 1 FROM calendar_reminders existing
+      WHERE existing.calendar_event_id=event.id
+        AND existing.recipient_user_id=event.created_by
+        AND existing.message LIKE 'Collab starts in 30 minutes:%'
+    );
+`);
+
 const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{
   name: string;
 }>;

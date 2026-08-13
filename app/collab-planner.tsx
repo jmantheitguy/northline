@@ -883,6 +883,9 @@ function RequestCard({
       )}
       {item.status === "accepted" && (
         <div className="collab-confirmed-actions">
+          <p className="collab-auto-reminder">
+            Task Buddy automatically reminds every accepted member 30 minutes before.
+          </p>
           {!item.reschedule && (
             <button
               className="secondary wide collab-reschedule-button"

@@ -1,5 +1,14 @@
 # Northline release history
 
+## Beta v0.8.11 — Automatic collab reminders
+
+- Automatically schedule a private Task Buddy DM 30 minutes before each accepted collaboration.
+- Cover the organizer and every accepted participant as their calendar copies are created.
+- Prevent duplicate reminders when additional streamers accept a multi-person collab.
+- Backfill reminders for existing accepted future collabs when v0.8.11 starts.
+- Move pending reminders automatically when every participant accepts a rescheduled time.
+- Cancel pending collab reminders when the organizer cancels the collaboration.
+
 ## Beta v0.8.10 — Calendar editor and collab cancellation
 
 - Keep calendar and collaboration event editors within the visible browser viewport.

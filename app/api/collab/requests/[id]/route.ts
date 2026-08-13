@@ -65,6 +65,11 @@ export async function PATCH(
           "UPDATE calendar_events SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND deleted_at IS NULL",
         ).run(row.id);
         db.prepare(
+          `UPDATE calendar_reminders SET status='cancelled',error=NULL
+           WHERE status='pending' AND calendar_event_id IN
+             (SELECT id FROM calendar_events WHERE collab_request_id=?)`,
+        ).run(row.id);
+        db.prepare(
           "UPDATE collab_reschedule_proposals SET status='cancelled',resolved_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status='pending'",
         ).run(row.id);
         for (const p of participants(row.id))
@@ -228,6 +233,7 @@ export async function PATCH(
           `${user.name} accepted “${row.title}”.`,
         );
         refresh(row.id);
+        scheduleAutomaticReminders(row.id, row.title, start);
       })();
       return NextResponse.json({ ok: true });
     }
@@ -272,4 +278,28 @@ function queue(requestId: number, recipient: number, message: string) {
   db.prepare(
     "INSERT INTO collab_notifications(collab_request_id,recipient_user_id,message) VALUES(?,?,?)",
   ).run(requestId, recipient, message);
+}
+
+function scheduleAutomaticReminders(
+  requestId: number,
+  title: string,
+  startAt: string,
+) {
+  const remindAt = new Date(new Date(startAt).getTime() - 30 * 60 * 1000);
+  if (Number.isNaN(remindAt.valueOf()) || remindAt <= new Date()) return;
+  const message = `Collab starts in 30 minutes: ${title}`;
+  db.prepare(
+    `INSERT INTO calendar_reminders
+       (calendar_event_id,created_by,recipient_user_id,message,remind_at)
+     SELECT event.id,event.created_by,event.created_by,?,?
+     FROM calendar_events event
+     WHERE event.collab_request_id=? AND event.status='confirmed' AND event.deleted_at IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM calendar_reminders existing
+         WHERE existing.calendar_event_id=event.id
+           AND existing.recipient_user_id=event.created_by
+           AND existing.status='pending'
+           AND existing.message LIKE 'Collab starts in 30 minutes:%'
+       )`,
+  ).run(message, remindAt.toISOString(), requestId);
 }
