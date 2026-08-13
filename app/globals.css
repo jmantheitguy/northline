@@ -2572,6 +2572,15 @@ html[data-theme="dark"] .my-work-search {
 .active-punch > b {
   font-size: 14px;
 }
+.time-warning {
+  padding: 10px 12px;
+  border: 1px solid #e4a23c66;
+  border-radius: 9px;
+  background: #e4a23c18;
+  color: #c77a09;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .time-card-page {
   min-width: 0;
 }
@@ -2591,6 +2600,45 @@ html[data-theme="dark"] .my-work-search {
   display: block;
   margin-top: 6px;
   font-size: 23px;
+}
+.time-report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.time-report-filters.compact { margin: 0; }
+.time-report-filters label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.time-report-filters input,
+.time-report-filters select {
+  min-width: 130px;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--text);
+}
+.export-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 8px;
+  text-decoration: none;
 }
 .time-card-table {
   overflow-x: auto;
@@ -2666,6 +2714,29 @@ html[data-theme="dark"] .my-work-search {
   gap: 5px;
   padding: 0;
 }
+.deleted-time-entries,
+.time-audit-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.deleted-time-entries summary,
+.time-audit-panel summary { cursor: pointer; font-weight: 800; }
+.deleted-time-entries > div,
+.time-audit-panel > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+.deleted-time-entries > div span { flex: 1; }
+.time-audit-panel { margin: 16px; }
+.time-audit-panel > div { display: grid; grid-template-columns: 100px minmax(150px, 1fr) minmax(220px, 2fr); }
+.time-audit-panel small { color: var(--muted); }
 .time-card-row .danger-text {
   color: #d95055;
 }

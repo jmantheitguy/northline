@@ -1,5 +1,14 @@
 # Northline release history
 
+## Beta v0.6.0 — Time reporting and task timers
+
+- Start a board- and task-linked timer directly from an open task while preserving the single-active-timer rule.
+- Warn users when a timer has run for more than 12 hours without automatically altering recorded time.
+- Filter personal time cards by date, board, and task and export the resulting report as CSV.
+- Recover a deleted time entry for 30 days while preserving deletion and restoration events in the audit history.
+- Give administrators filterable organization reporting, CSV export, current timer visibility, and a readable time-entry audit history.
+- Publish a concrete Beta v0.7.0 plan for private multi-calendar scheduling, selective sharing, public stream schedules, and collaboration invitations.
+
 ## Beta v0.5.2 — Audited time-entry deletion
 
 - Let users delete their own completed time entries after explicit confirmation.

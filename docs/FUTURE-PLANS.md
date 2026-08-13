@@ -2,6 +2,23 @@
 
 This document describes longer-term product directions under consideration after the initial Beta stabilization work. It is a planning reference rather than a promise of delivery dates. Priorities may change as the team learns from real use.
 
+## Proposed Beta v0.7.0 — Private calendars
+
+Beta v0.7.0 is planned as the first calendar foundation, not the complete public collaboration network. The target release includes multiple private calendars per user, calendar colors and names, month/week/agenda views, one-time events, time-zone-safe storage and display, event reminders, and explicit calendar sharing with viewer or editor permission. Every calendar is private by default, and sharing one calendar must not expose the owner's other calendars, private boards, Discord identifiers, or administrative data.
+
+The proposed acceptance criteria are:
+
+- A user can create, rename, recolor, and delete multiple calendars without affecting another user's data.
+- Events retain their intended wall-clock time across time zones and daylight-saving transitions.
+- A calendar owner can grant and revoke viewer or editor access to a specific Northline user.
+- Viewers cannot change events; editors cannot change calendar ownership or sharing policy.
+- Private calendar and event IDs cannot be enumerated or opened through guessed URLs.
+- Event changes and sharing changes produce an auditable activity record.
+- Calendar data is covered by the existing local backup and restore process before production use.
+- Desktop and mobile month, week, and agenda journeys pass interactive testing with the production identity flow.
+
+Public schedule pages, recurring-event edge cases, collaboration requests, guest invitations, `.ics` feeds, and external provider synchronization remain later phases unless the foundation is stable enough to include them safely.
+
 ## Streaming calendars and collaboration planning
 
 The largest planned feature is a calendar system designed specifically for streamers. Every Northline member would have a private calendar workspace where they can plan streams, appearances, production deadlines, and collaboration events. A member could maintain multiple calendars—for example, a public stream schedule, private planning calendar, collaboration calendar, and channel-specific schedules—and choose the visibility of each calendar independently.

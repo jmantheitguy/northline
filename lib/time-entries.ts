@@ -54,6 +54,7 @@ export function ensureNoOverlap(
     .prepare(
       `SELECT id FROM time_entries
     WHERE user_id=? AND id!=?
+      AND deleted_at IS NULL
       AND started_at < ? AND (ended_at IS NULL OR ended_at > ?) LIMIT 1`,
     )
     .get(userId, exceptId || -1, endedAt, startedAt);
@@ -84,7 +85,7 @@ export function timeOptions(user: SessionUser) {
 }
 
 export const entrySelect = `SELECT e.id,e.user_id userId,e.workspace_id workspaceId,e.board_id boardId,e.task_id taskId,
-  e.started_at startedAt,e.ended_at endedAt,e.duration_seconds durationSeconds,e.note,e.source,e.created_at createdAt,e.updated_at updatedAt,
+  e.started_at startedAt,e.ended_at endedAt,e.duration_seconds durationSeconds,e.note,e.source,e.deleted_at deletedAt,e.created_at createdAt,e.updated_at updatedAt,
   u.name userName,u.avatar userAvatar,w.name workspaceName,b.name boardName,t.title taskTitle
   FROM time_entries e JOIN users u ON u.id=e.user_id
   LEFT JOIN workspaces w ON w.id=e.workspace_id LEFT JOIN boards b ON b.id=e.board_id LEFT JOIN tasks t ON t.id=e.task_id`;

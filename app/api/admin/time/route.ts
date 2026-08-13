@@ -1,16 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import db from "@/lib/db";
 import { entrySelect } from "@/lib/time-entries";
 
-export async function GET() {
+const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+
+export async function GET(request: NextRequest) {
   if (!(await requireAdmin()))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const search = request.nextUrl.searchParams;
+  const conditions = ["e.deleted_at IS NULL"];
+  const values: Array<string | number> = [];
+  if (search.get("userId")) { conditions.push("e.user_id=?"); values.push(Number(search.get("userId"))); }
+  if (search.get("from")) { conditions.push("e.started_at>=?"); values.push(`${search.get("from")}T00:00:00.000Z`); }
+  if (search.get("to")) { conditions.push("e.started_at<=?"); values.push(`${search.get("to")}T23:59:59.999Z`); }
+  if (search.get("boardId")) { conditions.push("e.board_id=?"); values.push(Number(search.get("boardId"))); }
   const entries = db
     .prepare(
-      `${entrySelect} WHERE e.deleted_at IS NULL ORDER BY e.started_at DESC LIMIT 1000`,
+      `${entrySelect} WHERE ${conditions.join(" AND ")} ORDER BY e.started_at DESC LIMIT 2000`,
     )
-    .all();
+    .all(...values) as Array<Record<string, unknown>>;
+  if (search.get("format") === "csv") {
+    const header = ["User", "Time in", "Time out", "Duration seconds", "Workspace", "Board", "Task", "Note", "Source"];
+    const lines = entries.map((entry) => [entry.userName, entry.startedAt, entry.endedAt, entry.durationSeconds, entry.workspaceName, entry.boardName, entry.taskTitle, entry.note, entry.source].map(csvCell).join(","));
+    return new Response([header.map(csvCell).join(","), ...lines].join("\r\n"), {
+      headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="northline-organization-time.csv"' },
+    });
+  }
   const totals = db
     .prepare(
       `SELECT u.id userId,u.name userName,u.avatar userAvatar,

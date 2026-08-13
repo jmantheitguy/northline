@@ -22,6 +22,7 @@ const request = async (url: string, options?: RequestInit) => {
   if (!response.ok) throw new Error(data.error || "Time clock request failed");
   return data;
 };
+const LONG_TIMER_SECONDS = 12 * 60 * 60;
 export const formatDuration = (seconds: number) => {
   const safe = Math.max(0, Math.floor(seconds)),
     hours = Math.floor(safe / 3600),
@@ -52,6 +53,22 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
     window.addEventListener("northline-time-changed", listener);
     return () => window.removeEventListener("northline-time-changed", listener);
   }, []);
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const detail = (event as CustomEvent<{ boardId?: number; taskId?: number; note?: string }>).detail || {};
+      if (active) {
+        setOpen(true);
+        notify("Stop your current timer before starting another task");
+        return;
+      }
+      setBoardId(detail.boardId ? String(detail.boardId) : "");
+      setTaskId(detail.taskId ? String(detail.taskId) : "");
+      setNote(detail.note || "");
+      setOpen(true);
+    };
+    window.addEventListener("northline-open-time-clock", listener);
+    return () => window.removeEventListener("northline-open-time-clock", listener);
+  }, [active, notify]);
   useEffect(() => {
     if (!active) return;
     setNow(Date.now());
@@ -136,6 +153,11 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
           </header>
           {active ? (
             <div className="active-punch">
+              {elapsed >= LONG_TIMER_SECONDS && (
+                <div className="time-warning" role="status">
+                  This timer has been running for over 12 hours. Check that it is still accurate.
+                </div>
+              )}
               <span>
                 Clocked in{" "}
                 {new Date(active.startedAt).toLocaleTimeString([], {

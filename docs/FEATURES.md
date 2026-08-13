@@ -26,6 +26,10 @@ Each board can enable assignment, status, comment, mention, and due-date notific
 
 Admins can create and manage accounts, review roles/status, inspect board ownership and access, search audit records, configure workspace policies, synchronize Authentik, and open a health dashboard. Health reports application uptime and memory, Node version, SQLite integrity and size, VM capacity, active sessions, Task Buddy connectivity/channels, reminder outcomes, NAS backup status, and restore-test status. A health action sends a real Task Buddy test message.
 
+## Time tracking and reporting
+
+Each member has one persistent timer that can be started from the floating clock or directly from a task. Timers may be associated with an accessible board and task, survive page reloads, and warn after 12 hours without silently changing the recorded session. My Time supports manual entries, audited corrections, soft deletion and 30-day recovery, daily/weekly totals, report filters, and CSV export. Administrators can review active timers, organization totals, filtered entries, CSV exports, and time-entry audit actions; they cannot operate another member's timer.
+
 ## Time cards
 
 Every user has a persistent personal time clock available from the floating clock control and a My Time page. Timers continue on the server through reloads, can be associated with accessible boards and tasks, and are limited to one active timer per user. Users can add manual entries, correct completed entries with a required audit reason, and remove completed entries with confirmation. Removal is an audited soft deletion: the entry leaves normal totals and reports while its audit history remains available. Northline prevents overlapping entries and calculates durations server-side. Administrators can review time totals and entry history for all active users from the Administration Time panel.

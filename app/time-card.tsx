@@ -117,24 +117,35 @@ const initialForm = {
 
 export function TimeCard({ notify }: { notify: (message: string) => void }) {
   const [entries, setEntries] = useState<Entry[]>([]),
+    [deleted, setDeleted] = useState<Entry[]>([]),
     [options, setOptions] = useState<Options>({ boards: [], tasks: [] }),
     [manual, setManual] = useState(false),
     [editing, setEditing] = useState<Entry | null>(null),
     [form, setForm] = useState(initialForm),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [filters, setFilters] = useState({ from: "", to: "", boardId: "", taskId: "" });
+  const filterQuery = () => {
+    const query = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => value && query.set(key, value));
+    return query.toString();
+  };
   const load = () =>
-    request("/api/time")
+    request(`/api/time?${filterQuery()}`)
       .then((data) => {
         setEntries(data.entries);
+        setDeleted(data.deleted || []);
         setOptions(data.options);
       })
       .catch((error) => notify(error.message));
   useEffect(() => {
-    void load();
     const listener = () => void load();
     window.addEventListener("northline-time-changed", listener);
     return () => window.removeEventListener("northline-time-changed", listener);
-  }, []);
+  }, [filters]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 200);
+    return () => window.clearTimeout(timer);
+  }, [filters]);
   const finished = entries.filter((entry) => entry.endedAt),
     today = new Date().toDateString(),
     weekStart = new Date();
@@ -174,6 +185,20 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
       await load();
       window.dispatchEvent(new Event("northline-time-changed"));
       notify("Time entry deleted");
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  const restore = async (entry: Entry) => {
+    try {
+      await request(`/api/time/${entry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore" }),
+      });
+      await load();
+      window.dispatchEvent(new Event("northline-time-changed"));
+      notify("Time entry restored");
     } catch (error) {
       notify((error as Error).message);
     }
@@ -245,6 +270,19 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
           <b>{finished.length}</b>
         </article>
       </div>
+      <div className="time-report-filters">
+        <label>From<input type="date" value={filters.from} onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))} /></label>
+        <label>To<input type="date" value={filters.to} onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))} /></label>
+        <label>Board<select value={filters.boardId} onChange={(event) => setFilters((current) => ({ ...current, boardId: event.target.value, taskId: "" }))}>
+          <option value="">All boards</option>
+          {options.boards.map((board) => <option key={board.id} value={board.id}>{board.workspaceName} · {board.name}</option>)}
+        </select></label>
+        <label>Task<select value={filters.taskId} disabled={!filters.boardId} onChange={(event) => setFilters((current) => ({ ...current, taskId: event.target.value }))}>
+          <option value="">All tasks</option>
+          {options.tasks.filter((task) => String(task.boardId) === filters.boardId).map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}
+        </select></label>
+        <a className="secondary export-link" href={`/api/time?${filterQuery()}&format=csv`}>Export CSV</a>
+      </div>
       <div className="time-card-table">
         <div className="time-card-row time-card-head">
           <span>Date</span>
@@ -310,6 +348,18 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
           </div>
         ))}
       </div>
+      {deleted.length > 0 && (
+        <details className="deleted-time-entries">
+          <summary>Recently deleted ({deleted.length})</summary>
+          <p>Deleted entries remain recoverable here for 30 days.</p>
+          {deleted.map((entry) => (
+            <div key={entry.id}>
+              <span>{new Date(entry.startedAt).toLocaleString()} · {entry.taskTitle || entry.boardName || "General work"}</span>
+              <button className="secondary" onClick={() => void restore(entry)}>Restore</button>
+            </div>
+          ))}
+        </details>
+      )}
       {manual && (
         <div className="modal-backdrop">
           <div className="modal time-entry-modal">

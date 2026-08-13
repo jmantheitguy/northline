@@ -3222,6 +3222,23 @@ function NorthlineModal({
                   <button className="discord-button" onClick={openTaskReminder}>
                     Remind me
                   </button>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      window.dispatchEvent(
+                        new CustomEvent("northline-open-time-clock", {
+                          detail: {
+                            boardId: board.board.id,
+                            taskId: task.id,
+                            note: task.title,
+                          },
+                        }),
+                      );
+                      close();
+                    }}
+                  >
+                    Start timer
+                  </button>
                 </>
               )}
               <button

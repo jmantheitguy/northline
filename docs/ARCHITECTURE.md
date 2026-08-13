@@ -28,6 +28,8 @@ A Next.js Proxy runs only for API routes and rejects foreign-origin mutations be
 
 Schema changes are forward-only and recorded in `schema_migrations`. Startup creates missing tables/columns/indexes before recording the corresponding version. Downgrades across schema versions require restoration of the matching pre-upgrade database rather than destructive down migrations.
 
+Time tracking is stored in `time_entries` with an immutable user owner and optional workspace, board, and task associations. Association validation reuses board authorization, one partial unique index enforces a single active timer per user, and overlap checks exclude soft-deleted entries. Corrections, deletion, and restoration append records to `time_entry_audit`. Personal and administrative CSV exports are generated server-side from the same permission-scoped queries as the on-screen reports.
+
 Time entries are owned by a user and optionally reference a workspace, board, and task. A partial unique index permits only one open entry per user. Start and stop timestamps are created by the server in UTC, completed durations are calculated server-side, and overlap validation applies to manual entries and corrections. Corrections retain the previous and replacement values in a dedicated time-entry audit table. Users may mutate only their own entries and may associate work only with boards they can access; the administrator reporting endpoint is read-only and requires the Admin role.
 
 ## Notification flow

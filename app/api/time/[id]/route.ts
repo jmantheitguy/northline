@@ -18,7 +18,7 @@ export async function PATCH(
   const id = Number((await params).id),
     entry = db
       .prepare(
-        "SELECT * FROM time_entries WHERE id=? AND user_id=? AND deleted_at IS NULL",
+        "SELECT * FROM time_entries WHERE id=? AND user_id=?",
       )
       .get(id, user.id) as Record<string, unknown> | undefined;
   if (!entry)
@@ -28,6 +28,16 @@ export async function PATCH(
     );
   const body = await request.json();
   try {
+    if (body.action === "restore") {
+      if (!entry.deleted_at)
+        return NextResponse.json({ error: "This entry is not deleted" }, { status: 409 });
+      ensureNoOverlap(user.id, String(entry.started_at), String(entry.ended_at), id);
+      db.prepare("UPDATE time_entries SET deleted_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(id);
+      auditTimeEntry(id, user.id, "RESTORE", entry, { deleted: false }, "Restored by time-card owner");
+      return NextResponse.json({ ok: true });
+    }
+    if (entry.deleted_at)
+      return NextResponse.json({ error: "Restore this entry before editing it" }, { status: 409 });
     if (body.action === "clock-out") {
       if (entry.ended_at)
         return NextResponse.json(
