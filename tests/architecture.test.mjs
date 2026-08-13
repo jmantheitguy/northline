@@ -373,6 +373,8 @@ test("board workflow columns are persistent, mutable, and task safe", async () =
   assert.match(ui, /function ColumnManager/);
   assert.match(ui, /Move tasks to/);
   assert.match(ui, /data\.columns\.map/);
+  assert.match(ui, /drop-target/);
+  assert.match(ui, /drag it to another category/);
   assert.match(styles, /\.task-actions/);
 });
 

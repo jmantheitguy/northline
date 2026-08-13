@@ -2,7 +2,7 @@
 
 ## Boards and tasks
 
-Boards are private to their creator until shared. Every board has an opaque random public ID, while ownership remains a relational server-side permission. Each board owns an ordered workflow whose columns can be added, renamed, recolored, moved, marked as completed, or removed by an owner or editor. Removing a column requires choosing a destination for its tasks. Northline supports Kanban, list, timeline, and calendar-oriented views; drag-and-drop movement; priorities; categories; due dates; assignees; descriptions; comments; filtering; sorting; duplication; progress reporting; board activity; and blank, content-pipeline, or launch-plan templates.
+Boards are private to their creator until shared. Every board has an opaque random public ID, while ownership remains a relational server-side permission. Each board owns an ordered workflow whose columns can be added, renamed, recolored, moved, marked as completed, or removed by an owner or editor. Removing a column requires choosing a destination for its tasks. Northline supports Kanban, list, timeline, and calendar-oriented views; drag-and-drop status movement in both Kanban and List views; priorities; categories; due dates; assignees; descriptions; comments; filtering; sorting; duplication; progress reporting; board activity; and blank, content-pipeline, or launch-plan templates.
 
 Completed tasks are hidden by default but can be shown per board. Editors can archive completed work without deleting its comments or activity history, inspect the board archive, and restore an archived task later.
 

@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.7.3 — List-view task movement
+
+- Make editable task rows draggable in List view.
+- Let owners and editors drop a task onto any workflow category to change its status through the existing permission-checked task API.
+- Highlight the active destination category and visually distinguish the row being moved in light and dark themes.
+- Keep drag controls unavailable to viewers while preserving click-to-open behavior for every permission level.
+
 ## Beta v0.7.2 — Discord profile synchronization
 
 - Preserve Discord usernames, display names, IDs, and avatar URLs in Authentik when a member links Discord.

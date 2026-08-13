@@ -1557,6 +1557,9 @@ function BoardView({
           columns={columns}
           openTask={openTask}
           canEdit={data.canEdit}
+          dragged={dragged}
+          setDragged={setDragged}
+          moveTask={moveTask}
           add={() => openModal("task-create")}
         />
       )}{" "}
@@ -1672,15 +1675,22 @@ function TaskList({
   columns,
   openTask,
   canEdit,
+  dragged,
+  setDragged,
+  moveTask,
   add,
 }: {
   tasks: Task[];
   columns: BoardColumn[];
   openTask: (task: Task) => void;
   canEdit: boolean;
+  dragged: number | null;
+  setDragged: (id: number | null) => void;
+  moveTask: (taskId: number, status: Status) => void;
   add: () => void;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
   const toggle = (key: string) =>
     setCollapsed((current) => {
       const next = new Set(current);
@@ -1702,9 +1712,33 @@ function TaskList({
         const isCollapsed = collapsed.has(column.key);
         return (
           <section
-            className="list-group"
+            className={`list-group${dropTarget === column.key ? " drop-target" : ""}`}
             key={column.id}
             style={{ "--group-color": column.color } as React.CSSProperties}
+            onDragEnter={(event) => {
+              if (!canEdit || dragged === null) return;
+              event.preventDefault();
+              setDropTarget(column.key);
+            }}
+            onDragOver={(event) => {
+              if (!canEdit || dragged === null) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node))
+                setDropTarget((current) =>
+                  current === column.key ? null : current,
+                );
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const task = tasks.find((item) => item.id === dragged);
+              if (canEdit && task && task.status !== column.key)
+                void moveTask(task.id, column.key);
+              setDropTarget(null);
+              setDragged(null);
+            }}
           >
             <button
               className="list-group-title"
@@ -1728,9 +1762,27 @@ function TaskList({
                   </div>
                   {group.map((task) => (
                     <button
-                      className="list-table-row list-task-row"
+                      className={`list-table-row list-task-row${dragged === task.id ? " dragging" : ""}`}
                       key={task.id}
+                      draggable={canEdit}
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData(
+                          "text/plain",
+                          String(task.id),
+                        );
+                        setDragged(task.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragged(null);
+                        setDropTarget(null);
+                      }}
                       onClick={() => openTask(task)}
+                      title={
+                        canEdit
+                          ? "Open task, or drag it to another category"
+                          : "Open task"
+                      }
                     >
                       <span className="list-check" aria-hidden="true" />
                       <span className="list-task-title">

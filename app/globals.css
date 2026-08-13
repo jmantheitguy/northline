@@ -2586,6 +2586,17 @@ html[data-theme="dark"] .my-work-search {
 }
 .list-group {
   min-width: 0;
+  border-radius: 8px;
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+.list-group.drop-target {
+  background: color-mix(in srgb, var(--group-color) 10%, transparent);
+  box-shadow: 0 0 0 2px var(--group-color);
+}
+.list-group.drop-target .list-group-title {
+  font-weight: 700;
 }
 .list-group-title {
   display: flex;
@@ -2675,6 +2686,15 @@ html[data-theme="dark"] .my-work-search {
 }
 .list-task-row:hover {
   background: var(--subtle);
+}
+.list-task-row[draggable="true"] {
+  cursor: grab;
+}
+.list-task-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+.list-task-row.dragging {
+  opacity: 0.45;
 }
 .list-task-title {
   gap: 10px;
