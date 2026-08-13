@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.8.8 — Unified search controls**
+Current release: **Beta v0.8.9 — Member contact cards**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 

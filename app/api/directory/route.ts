@@ -13,7 +13,7 @@ export async function GET() {
   }
   const users = db
     .prepare(
-      `SELECT u.id,u.name,u.email,u.avatar,u.role,u.status,u.auth_source authSource,
+      `SELECT u.id,u.name,u.email,u.avatar,u.role,u.status,u.auth_source authSource,u.discord_username discordUsername,
   (SELECT COUNT(*) FROM boards b WHERE b.owner_id=u.id)+(SELECT COUNT(*) FROM board_members bm WHERE bm.user_id=u.id) boards,
   (SELECT COUNT(*) FROM calendars c WHERE c.owner_id=u.id AND c.deleted_at IS NULL AND c.calendar_type='streaming' AND c.visibility='public') publicStreamCalendarCount,
   (SELECT c.name FROM calendars c WHERE c.owner_id=u.id AND c.deleted_at IS NULL AND c.calendar_type='streaming' AND c.visibility='public' ORDER BY c.created_at LIMIT 1) publicStreamCalendarName

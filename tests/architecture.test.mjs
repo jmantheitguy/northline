@@ -795,3 +795,19 @@ test("emergency management identities remain outside member-facing directories",
   assert.match(collabDirectory, /directory_visible=1/);
   assert.match(collabRequests, /directory_visible=1/);
 });
+
+test("member contact details stay behind authenticated contact cards", async () => {
+  const schema = await read("lib/db.ts");
+  const sync = await read("lib/authentik-directory.ts");
+  const directory = await read("app/api/directory/route.ts");
+  const ui = await read("app/northline-app.tsx");
+  const styles = await read("app/globals.css");
+  assert.match(schema, /discord_username/);
+  assert.match(schema, /directory Discord contact profiles/);
+  assert.match(sync, /discordUsername/);
+  assert.match(directory, /discord_username discordUsername/);
+  assert.match(ui, /Contact card/);
+  assert.match(ui, /Discord not linked/);
+  assert.match(ui, /mailto:/);
+  assert.match(styles, /\.contact-card-details/);
+});

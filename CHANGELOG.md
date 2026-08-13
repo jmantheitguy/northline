@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.8.9 — Member contact cards
+
+- Remove email addresses from the main People grid to keep community profiles clean and scannable.
+- Add an authenticated contact card for each member containing their email address, Discord username when linked, and role.
+- Retain the public stream schedule action on each profile and make it available from the contact card.
+- Store Discord usernames during Authentik directory synchronization for consistent contact details.
+
 ## Beta v0.8.8 — Unified search controls
 
 - Restyle global, directory, and administration search fields as unified controls without nested input backgrounds.

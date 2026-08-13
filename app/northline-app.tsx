@@ -107,6 +107,7 @@ type WorkspaceUser = {
   initials: string;
   color: string;
   authSource?: "local" | "oidc";
+  discordUsername: string | null;
   publicStreamCalendarCount: number;
   publicStreamCalendarName: string | null;
 };
@@ -238,6 +239,7 @@ function decorateUsers(list: any[]): WorkspaceUser[] {
     boards: Number(u.boards || 0),
     publicStreamCalendarCount: Number(u.publicStreamCalendarCount || 0),
     publicStreamCalendarName: u.publicStreamCalendarName || null,
+    discordUsername: u.discordUsername || null,
     initials: String(u.name)
       .split(" ")
       .map((x: string) => x[0])
@@ -2041,6 +2043,7 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
   const [schedule, setSchedule] = useState<PublicStreamSchedule | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState<number | null>(null);
   const [scheduleError, setScheduleError] = useState("");
+  const [contact, setContact] = useState<WorkspaceUser | null>(null);
   const list = users.filter(
     (p) =>
       (p.name + p.email).toLowerCase().includes(query.toLowerCase()) &&
@@ -2100,7 +2103,7 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
               </span>
               <div>
                 <h3>{p.name}</h3>
-                <p title={p.email}>{p.email}</p>
+                <p>{p.role === "Admin" ? "Northline administrator" : "Community member"}</p>
               </div>
             </div>
             <div className="person-meta">
@@ -2109,24 +2112,29 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
                 {p.boards} board{p.boards === 1 ? "" : "s"}
               </small>
             </div>
-            <button
-              className="secondary person-schedule-button"
-              disabled={
-                !p.publicStreamCalendarCount || scheduleLoading === p.id
-              }
-              title={
-                p.publicStreamCalendarCount
-                  ? `View ${p.name}'s public stream schedule`
-                  : `${p.name} does not have a public stream schedule`
-              }
-              onClick={() => void openSchedule(p)}
-            >
-              {scheduleLoading === p.id
-                ? "Loading schedule…"
-                : p.publicStreamCalendarCount
-                  ? "View public stream schedule"
-                  : "No public stream schedule"}
-            </button>
+            <div className="person-actions">
+              <button className="secondary" onClick={() => setContact(p)}>
+                Contact card
+              </button>
+              <button
+                className="secondary person-schedule-button"
+                disabled={
+                  !p.publicStreamCalendarCount || scheduleLoading === p.id
+                }
+                title={
+                  p.publicStreamCalendarCount
+                    ? `View ${p.name}'s public stream schedule`
+                    : `${p.name} does not have a public stream schedule`
+                }
+                onClick={() => void openSchedule(p)}
+              >
+                {scheduleLoading === p.id
+                  ? "Loading schedule…"
+                  : p.publicStreamCalendarCount
+                    ? "View public stream schedule"
+                    : "No public stream schedule"}
+              </button>
+            </div>
           </article>
         ))}
       </div>
@@ -2139,6 +2147,64 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
       {scheduleError && (
         <div className="toast error" role="alert">
           {scheduleError}
+        </div>
+      )}
+      {contact && (
+        <div className="modal-backdrop">
+          <div
+            className="modal contact-card-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="contact-card-title"
+          >
+            <button
+              className="modal-close"
+              aria-label="Close contact card"
+              onClick={() => setContact(null)}
+            >
+              ×
+            </button>
+            <div className="contact-card-profile">
+              <Avatar
+                name={contact.name}
+                avatar={contact.avatar}
+                color={contact.color}
+              />
+              <div>
+                <div className="eyebrow">CONTACT CARD</div>
+                <h2 id="contact-card-title">{contact.name}</h2>
+                <span>{contact.role}</span>
+              </div>
+            </div>
+            <dl className="contact-card-details">
+              <div>
+                <dt>Email</dt>
+                <dd>
+                  <a href={`mailto:${contact.email}`}>{contact.email}</a>
+                </dd>
+              </div>
+              <div>
+                <dt>Discord</dt>
+                <dd>
+                  {contact.discordUsername
+                    ? `@${contact.discordUsername}`
+                    : "Discord not linked"}
+                </dd>
+              </div>
+            </dl>
+            <button
+              className="primary wide"
+              disabled={!contact.publicStreamCalendarCount}
+              onClick={() => {
+                setContact(null);
+                void openSchedule(contact);
+              }}
+            >
+              {contact.publicStreamCalendarCount
+                ? "View public stream schedule"
+                : "No public stream schedule"}
+            </button>
+          </div>
         </div>
       )}
       {schedule && (

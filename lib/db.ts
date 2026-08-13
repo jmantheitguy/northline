@@ -651,6 +651,7 @@ addUserColumn("identity_synced_at", "identity_synced_at TEXT");
 addUserColumn("avatar", "avatar TEXT");
 addUserColumn("directory_id", "directory_id TEXT");
 addUserColumn("discord_user_id", "discord_user_id TEXT");
+addUserColumn("discord_username", "discord_username TEXT");
 addUserColumn("timezone", "timezone TEXT NOT NULL DEFAULT 'UTC'");
 addUserColumn(
   "directory_visible",
@@ -715,6 +716,7 @@ const migrations: [number, string][] = [
   [20, "multi-user collaboration participants"],
   [21, "collaboration reschedule proposals"],
   [22, "management identity directory visibility"],
+  [23, "directory Discord contact profiles"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

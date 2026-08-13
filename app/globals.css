@@ -1749,6 +1749,66 @@ button {
   margin-top: auto;
   white-space: normal;
 }
+.person-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: auto;
+}
+.person-actions > button {
+  width: 100%;
+  min-height: 38px;
+}
+.contact-card-modal {
+  width: min(460px, calc(100vw - 30px));
+}
+.contact-card-profile {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 15px;
+  padding-right: 28px;
+}
+.contact-card-profile .avatar {
+  width: 64px;
+  height: 64px;
+}
+.contact-card-profile h2 {
+  margin: 4px 0;
+}
+.contact-card-profile > div > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.contact-card-details {
+  display: flex;
+  flex-direction: column;
+  margin: 22px 0;
+  border-top: 1px solid var(--line);
+}
+.contact-card-details > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.contact-card-details dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+.contact-card-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.contact-card-details a {
+  color: var(--purple);
+  text-decoration: none;
+}
+.contact-card-details a:hover {
+  text-decoration: underline;
+}
 .person-schedule-button:disabled {
   opacity: 0.62;
   cursor: not-allowed;
