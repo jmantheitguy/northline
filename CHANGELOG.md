@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.8.5 — Streamer selection dropdown
+
+- Keep the streamer directory hidden until the collaboration search field is focused.
+- Present matching users in a scrollable dropdown instead of occupying the request form by default.
+- Display only selected streamers above the search field, with clear one-click removal controls.
+- Exclude selected users from search results and retain multi-streamer invitation support.
+
 ## Beta v0.8.4 — Searchable streamer picker
 
 - Add instant filtering by streamer name, email address, or time zone to the collaboration request form.

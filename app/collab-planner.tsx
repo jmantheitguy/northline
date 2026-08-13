@@ -116,6 +116,7 @@ export function CollabPlanner({
     >(null),
     [form, setForm] = useState(blank()),
     [streamerQuery, setStreamerQuery] = useState(""),
+    [streamerPickerOpen, setStreamerPickerOpen] = useState(false),
     [rescheduling, setRescheduling] = useState<CollabRequest | null>(null),
     [responseCalendars, setResponseCalendars] = useState<
       Record<string, string>
@@ -172,6 +173,7 @@ export function CollabPlanner({
     const query = streamerQuery.trim().toLocaleLowerCase();
     return people
       .filter((person) => person.id !== me)
+      .filter((person) => !form.recipientIds.includes(String(person.id)))
       .filter(
         (person) =>
           !query ||
@@ -180,7 +182,14 @@ export function CollabPlanner({
           ),
       )
       .sort((left, right) => left.name.localeCompare(right.name));
-  }, [me, people, streamerQuery]);
+  }, [form.recipientIds, me, people, streamerQuery]);
+  const selectedStreamers = useMemo(
+    () =>
+      form.recipientIds
+        .map((id) => people.find((person) => person.id === Number(id)))
+        .filter((person): person is Person => Boolean(person)),
+    [form.recipientIds, people],
+  );
   const openRequest = (event?: ScheduleEvent) => {
     const next = blank();
     if (event) {
@@ -193,6 +202,7 @@ export function CollabPlanner({
     next.calendarId = ownedStreaming[0]?.id || "";
     setForm(next);
     setStreamerQuery("");
+    setStreamerPickerOpen(false);
     setModal("request");
   };
   const submitRequest = async () => {
@@ -485,59 +495,119 @@ export function CollabPlanner({
             {modal === "request" && (
               <fieldset className="collab-picker-fieldset">
                 <legend>Invited streamers</legend>
-                <div className="collab-picker-search">
-                  <input
-                    type="search"
-                    value={streamerQuery}
-                    onChange={(event) => setStreamerQuery(event.target.value)}
-                    placeholder="Search streamers..."
-                    aria-label="Search streamers"
-                    autoComplete="off"
-                  />
-                  <span>
-                    {form.recipientIds.length
-                      ? `${form.recipientIds.length} selected`
-                      : `${people.filter((person) => person.id !== me).length} available`}
-                  </span>
-                </div>
+                {selectedStreamers.length > 0 && (
+                  <div
+                    className="collab-selected-streamers"
+                    aria-label="Selected streamers"
+                  >
+                    {selectedStreamers.map((person) => (
+                      <span key={person.id}>
+                        <span className="avatar">
+                          {person.avatar ? (
+                            <img src={person.avatar} alt="" />
+                          ) : (
+                            person.name.slice(0, 1)
+                          )}
+                        </span>
+                        <span>
+                          {person.name}
+                          <small>{person.timezone}</small>
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${person.name}`}
+                          title={`Remove ${person.name}`}
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              recipientIds: form.recipientIds.filter(
+                                (id) => id !== String(person.id),
+                              ),
+                            })
+                          }
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div
-                  className="collab-person-picker"
-                  role="group"
-                  aria-label="Available streamers"
+                  className="collab-picker-combobox"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget))
+                      setStreamerPickerOpen(false);
+                  }}
                 >
-                  {availableStreamers.map((p) => (
-                    <label key={p.id}>
-                      <input
-                        type="checkbox"
-                        checked={form.recipientIds.includes(String(p.id))}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            recipientIds: e.target.checked
-                              ? [...form.recipientIds, String(p.id)]
-                              : form.recipientIds.filter(
-                                  (id) => id !== String(p.id),
-                                ),
-                          })
+                  <div className="collab-picker-search">
+                    <input
+                      type="search"
+                      value={streamerQuery}
+                      onFocus={() => setStreamerPickerOpen(true)}
+                      onChange={(event) => {
+                        setStreamerQuery(event.target.value);
+                        setStreamerPickerOpen(true);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          setStreamerPickerOpen(false);
+                          event.currentTarget.blur();
                         }
-                      />
-                      <span className="avatar">
-                        {p.avatar ? (
-                          <img src={p.avatar} alt="" />
-                        ) : (
-                          p.name.slice(0, 1)
-                        )}
-                      </span>
-                      <span>
-                        {p.name}
-                        <small>{p.timezone}</small>
-                      </span>
-                    </label>
-                  ))}
-                  {!availableStreamers.length && (
-                    <p className="collab-picker-empty">
-                      No streamers match “{streamerQuery.trim()}”.
-                    </p>
+                      }}
+                      placeholder="Search streamers..."
+                      aria-label="Search streamers"
+                      role="combobox"
+                      aria-expanded={streamerPickerOpen}
+                      aria-controls="collab-streamer-options"
+                      autoComplete="off"
+                    />
+                    <span>{form.recipientIds.length} selected</span>
+                  </div>
+                  {streamerPickerOpen && (
+                    <div
+                      id="collab-streamer-options"
+                      className="collab-person-picker"
+                      role="listbox"
+                      aria-label="Available streamers"
+                    >
+                      {availableStreamers.map((p) => (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected="false"
+                          key={p.id}
+                          onClick={() => {
+                            setForm({
+                              ...form,
+                              recipientIds: [
+                                ...form.recipientIds,
+                                String(p.id),
+                              ],
+                            });
+                            setStreamerQuery("");
+                          }}
+                        >
+                          <span className="avatar">
+                            {p.avatar ? (
+                              <img src={p.avatar} alt="" />
+                            ) : (
+                              p.name.slice(0, 1)
+                            )}
+                          </span>
+                          <span>
+                            {p.name}
+                            <small>{p.timezone}</small>
+                          </span>
+                        </button>
+                      ))}
+                      {!availableStreamers.length && (
+                        <p className="collab-picker-empty">
+                          {streamerQuery.trim()
+                            ? `No streamers match “${streamerQuery.trim()}”.`
+                            : "All available streamers are selected."}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </fieldset>
