@@ -255,6 +255,15 @@ export function CollabPlanner({
     participantUserId?: number,
   ) => {
     try {
+      if (
+        action === "cancel" &&
+        !window.confirm(
+          item.status === "accepted"
+            ? `Cancel “${item.title}” for everyone? The linked calendar events will be cancelled and all invited streamers will be notified.`
+            : `Cancel the request for “${item.title}”? All invited streamers will be notified.`,
+        )
+      )
+        return;
       const body: Record<string, unknown> = {
         action,
         participantUserId,
@@ -282,7 +291,13 @@ export function CollabPlanner({
         headers: jsonHeaders,
         body: JSON.stringify(body),
       });
-      notify(`Collaboration request ${action}ed`);
+      notify(
+        action === "cancel"
+          ? item.status === "accepted"
+            ? "Collaboration cancelled for everyone"
+            : "Collaboration request cancelled"
+          : `Collaboration request ${action}ed`,
+      );
       await load();
     } catch (error) {
       notify((error as Error).message);
@@ -866,14 +881,26 @@ function RequestCard({
           </button>
         </div>
       )}
-      {item.status === "accepted" && !item.reschedule && (
-        <button
-          className="secondary wide collab-reschedule-button"
-          onClick={() => openReschedule(item)}
-          title="I can't make this time — propose another"
-        >
-          Reschedule collab
-        </button>
+      {item.status === "accepted" && (
+        <div className="collab-confirmed-actions">
+          {!item.reschedule && (
+            <button
+              className="secondary wide collab-reschedule-button"
+              onClick={() => openReschedule(item)}
+              title="I can't make this time — propose another"
+            >
+              Reschedule collab
+            </button>
+          )}
+          {!incoming && (
+            <button
+              className="collab-cancel-button"
+              onClick={() => void respond(item, "cancel")}
+            >
+              Cancel collab for everyone
+            </button>
+          )}
+        </div>
       )}
     </article>
   );

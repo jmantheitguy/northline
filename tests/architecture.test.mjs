@@ -740,6 +740,8 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(response, /collab_request_participants/);
   assert.match(response, /participantUserId/);
   assert.match(response, /group time cannot change after someone has accepted/);
+  assert.match(response, /UPDATE calendar_events SET status='cancelled'/);
+  assert.match(response, /Only the organizer can cancel the collaboration/);
   assert.match(proposeReschedule, /accepted collaboration participants/);
   assert.match(proposeReschedule, /collab_reschedule_responses/);
   assert.match(
@@ -752,6 +754,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(ui, /Team stream schedule/);
   assert.match(ui, /Ask to collab/);
   assert.match(ui, /Reschedule collab/);
+  assert.match(ui, /Cancel collab for everyone/);
   assert.match(ui, /Search streamers/);
   assert.match(ui, /availableStreamers/);
   assert.match(ui, /streamerPickerOpen/);

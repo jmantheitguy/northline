@@ -51,18 +51,28 @@ export async function PATCH(
       action = String(body.action || "");
     if (action === "cancel") {
       if (row.requester_id !== user.id)
-        throw new Error("Only the requester can cancel");
-      if (!["pending", "countered"].includes(row.status))
+        throw new Error("Only the organizer can cancel the collaboration");
+      if (!["pending", "countered", "accepted"].includes(row.status))
         throw new Error("This collaboration request is already closed");
       db.transaction(() => {
         db.prepare(
           "UPDATE collab_requests SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE id=?",
         ).run(row.id);
         db.prepare(
-          "UPDATE collab_request_participants SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status IN ('pending','countered')",
+          "UPDATE collab_request_participants SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status IN ('pending','countered','accepted')",
+        ).run(row.id);
+        db.prepare(
+          "UPDATE calendar_events SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND deleted_at IS NULL",
+        ).run(row.id);
+        db.prepare(
+          "UPDATE collab_reschedule_proposals SET status='cancelled',resolved_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status='pending'",
         ).run(row.id);
         for (const p of participants(row.id))
-          queue(row.id, p.user_id, `${user.name} cancelled “${row.title}”.`);
+          queue(
+            row.id,
+            p.user_id,
+            `${user.name} cancelled the collaboration “${row.title}”.`,
+          );
       })();
       return NextResponse.json({ ok: true });
     }

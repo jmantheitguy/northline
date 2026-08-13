@@ -1,10 +1,13 @@
 # Northline release history
 
-## Beta v0.8.10 — Scrollable calendar event editor
+## Beta v0.8.10 — Calendar editor and collab cancellation
 
 - Keep calendar and collaboration event editors within the visible browser viewport.
 - Add an internal vertical scrollbar for longer event forms on shorter screens.
 - Contain scroll momentum inside the editor so the calendar behind it remains stationary.
+- Let collaboration organizers cancel an accepted collab for everyone after explicit confirmation.
+- Cancel every linked calendar event and pending reschedule proposal when the organizer cancels a collab.
+- Notify all invited streamers privately through Task Buddy when a collab is cancelled.
 
 ## Beta v0.8.9 — Member contact cards
 
