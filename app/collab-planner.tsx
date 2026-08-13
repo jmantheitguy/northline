@@ -760,8 +760,12 @@ function RequestCard({
         </div>
       )}
       {item.status === "accepted" && !item.reschedule && (
-        <button className="secondary wide" onClick={() => openReschedule(item)}>
-          I can&apos;t make this time · Propose another
+        <button
+          className="secondary wide collab-reschedule-button"
+          onClick={() => openReschedule(item)}
+          title="I can't make this time — propose another"
+        >
+          Reschedule collab
         </button>
       )}
     </article>

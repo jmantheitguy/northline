@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.8.3 — Collab inbox presentation fix
+
+- Replace the wrapping post-acceptance action with a concise “Reschedule collab” button and descriptive hover text.
+- Widen the desktop collaboration inbox while preserving its single-column responsive layout on smaller screens.
+- Keep the reschedule action full-width, vertically aligned, and single-line wherever the available viewport permits.
+
 ## Beta v0.8.2 — Collaboration rescheduling
 
 - Let organizers and accepted participants propose a replacement time after a collaboration has been confirmed.
