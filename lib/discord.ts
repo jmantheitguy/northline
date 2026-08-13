@@ -26,11 +26,12 @@ export async function listDiscordChannels() {
 export async function discordMemberProfile(userId: string) {
   const guild = process.env.NORTHLINE_DISCORD_GUILD_ID;
   if (!guild) return null;
-  const member = await discord(`/guilds/${guild}/members/${encodeURIComponent(userId)}`) as {user?:{id?:string;avatar?:string|null}};
+  const member = await discord(`/guilds/${guild}/members/${encodeURIComponent(userId)}`) as {user?:{id?:string;username?:string;global_name?:string|null;avatar?:string|null}};
   const id=member.user?.id||userId,avatar=member.user?.avatar;
-  if(!avatar)return {id,avatarUrl:null};
+  const identity={id,username:member.user?.username||null,globalName:member.user?.global_name||null};
+  if(!avatar)return {...identity,avatarUrl:null};
   const extension=avatar.startsWith("a_")?"gif":"png";
-  return {id,avatarUrl:`https://cdn.discordapp.com/avatars/${id}/${avatar}.${extension}?size=128`};
+  return {...identity,avatarUrl:`https://cdn.discordapp.com/avatars/${id}/${avatar}.${extension}?size=128`};
 }
 
 export async function sendDiscordDirectMessage(userId: string, content: string) {

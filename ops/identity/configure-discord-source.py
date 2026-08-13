@@ -42,6 +42,7 @@ if info.get("id") and info.get("avatar"):
     extension = "gif" if str(info["avatar"]).startswith("a_") else "png"
     avatar_url = f"https://cdn.discordapp.com/avatars/{info['id']}/{info['avatar']}.{extension}?size=128"
 return {
+    "attributes.avatar": avatar_url,
     "attributes.discord": {
         "id": info.get("id"),
         "username": info.get("username"),

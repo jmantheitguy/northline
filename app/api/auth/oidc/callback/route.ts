@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { oidcConfig } from "@/lib/oidc";
+import { syncAuthentikDirectory } from "@/lib/authentik-directory";
 
 type UserInfo={sub:string;email?:string;name?:string;preferred_username?:string;picture?:string;groups?:string[]};
 
@@ -54,6 +55,7 @@ export async function GET(request:NextRequest) {
   let userId:number;
   try{userId=resolveIdentity({sub:profile.sub,email,name,avatar:profile.picture||null,role});}
   catch(error){console.error("OIDC identity resolution failed",error instanceof Error?error.message:"unknown error");jar.delete("northline_oidc_state");jar.delete("northline_oidc_verifier");return NextResponse.redirect(new URL("/?auth_error=identity_conflict",config.publicUrl));}
+  try{await syncAuthentikDirectory(true);}catch(error){console.error("Post-login Authentik directory sync failed",error);}
   await createSession(userId);
   jar.delete("northline_oidc_state"); jar.delete("northline_oidc_verifier");
   return NextResponse.redirect(config.publicUrl);

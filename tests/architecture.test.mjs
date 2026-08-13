@@ -272,6 +272,10 @@ test("directory, login, and Discord identities remain separate", async () => {
   assert.doesNotMatch(sync, /oidc_subject=excluded\.oidc_subject/);
   assert.match(sync, /user_connections\/all/);
   assert.match(sync, /discordMemberProfile/);
+  assert.match(sync, /backfillDiscordIdentity/);
+  assert.match(sync, /\.\.\.\(user\.attributes\|\|\{\}\)/);
+  assert.match(callback, /syncAuthentikDirectory\(true\)/);
+  assert.match(discordSource, /"attributes\.avatar": avatar_url/);
   assert.match(discordSource, /"promoted": False/);
   assert.match(discordSource, /selected_sources\.remove/);
   assert.match(worker, /discordUserId/);

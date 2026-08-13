@@ -2,10 +2,31 @@ import db from "./db";
 import { discordMemberProfile } from "./discord";
 
 type AuthentikGroup=string|{name?:string};
-type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?:string;avatar?:string;is_active?:boolean;groups?:AuthentikGroup[];groups_obj?:AuthentikGroup[];attributes?:{discord?:{id?:string;avatar_url?:string}}};
+type DiscordAttributes={id?:string;username?:string|null;global_name?:string|null;avatar_url?:string|null};
+type AuthentikAttributes=Record<string,unknown>&{discord?:DiscordAttributes;avatar?:string};
+type AuthentikUser={pk?:number;uuid?:string;username?:string;name?:string;email?:string;avatar?:string;is_active?:boolean;groups?:AuthentikGroup[];groups_obj?:AuthentikGroup[];attributes?:AuthentikAttributes};
 type SourceConnection={user?:number;identifier?:string;source?:string};
+type DiscordProfile={id:string;username:string|null;globalName:string|null;avatarUrl:string|null};
 
 const groupNames=(user:AuthentikUser)=>[...(user.groups||[]),...(user.groups_obj||[])].map(group=>typeof group==="string"?group:group.name||"");
+
+async function backfillDiscordIdentity(base:string,token:string,user:AuthentikUser,profile:DiscordProfile){
+  if(!user.pk)return false;
+  const current=user.attributes?.discord;
+  if(current?.id===profile.id&&current.avatar_url===profile.avatarUrl)return false;
+  const discord={id:profile.id,username:profile.username,global_name:profile.globalName,avatar_url:profile.avatarUrl};
+  const attributes={...(user.attributes||{}),discord,...(profile.avatarUrl?{avatar:profile.avatarUrl}:{})};
+  const response=await fetch(`${base}/api/v3/core/users/${user.pk}/`,{
+    method:"PATCH",
+    headers:{Authorization:`Bearer ${token}`,Accept:"application/json","Content-Type":"application/json"},
+    body:JSON.stringify({attributes}),
+    cache:"no-store",
+  });
+  if(!response.ok)throw new Error(`Authentik Discord profile backfill returned ${response.status}`);
+  user.attributes=attributes;
+  user.avatar=profile.avatarUrl||user.avatar;
+  return true;
+}
 
 export async function syncAuthentikDirectory(force=false){
   const base=process.env.NORTHLINE_AUTHENTIK_API_URL?.replace(/\/$/,"");
@@ -25,8 +46,17 @@ export async function syncAuthentikDirectory(force=false){
   const connectionsPayload=connectionsResponse.ok?await connectionsResponse.json() as {results?:SourceConnection[]}:{results:[]};
   const discordSource=sourcePayload.results?.[0]?.pk;
   const connectionByUser=new Map((connectionsPayload.results||[]).filter(item=>item.source===discordSource&&item.user&&item.identifier).map(item=>[item.user as number,item.identifier as string]));
-  const discordProfiles=new Map<number,{id:string;avatarUrl:string|null}>();
-  for(const remote of users){const linkedId=remote.pk?connectionByUser.get(remote.pk):undefined;if(linkedId){const profile=await discordMemberProfile(linkedId).catch(()=>null);if(profile)discordProfiles.set(remote.pk as number,profile);}}
+  const discordProfiles=new Map<number,DiscordProfile>();
+  let discordProfilesBackfilled=0;
+  for(const remote of users){
+    const linkedId=remote.pk?connectionByUser.get(remote.pk):undefined;
+    if(!linkedId)continue;
+    const profile=await discordMemberProfile(linkedId).catch(()=>null);
+    if(!profile)continue;
+    discordProfiles.set(remote.pk as number,profile);
+    try{if(await backfillDiscordIdentity(base,token,remote,profile))discordProfilesBackfilled++;}
+    catch(error){console.error(`Authentik Discord profile backfill failed for user ${remote.pk}`,error);}
+  }
   if(users.length&&!users.some(user=>Array.isArray(user.groups_obj)))throw new Error("Authentik response did not include expanded group membership");
   const activeDirectoryIds:string[]=[];
   db.transaction(()=>{
@@ -47,5 +77,5 @@ export async function syncAuthentikDirectory(force=false){
     for(const local of managed)if(!activeDirectoryIds.includes(local.directoryId)){db.prepare("UPDATE users SET status='Suspended',identity_synced_at=CURRENT_TIMESTAMP WHERE id=?").run(local.id);db.prepare("DELETE FROM sessions WHERE user_id=?").run(local.id);}
     db.prepare("INSERT INTO app_meta(key,value) VALUES('authentik_directory_synced_at',CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=CURRENT_TIMESTAMP").run();
   })();
-  return {configured:true,synced:activeDirectoryIds.length};
+  return {configured:true,synced:activeDirectoryIds.length,discordProfilesBackfilled};
 }

@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.7.2 — Discord profile synchronization
+
+- Preserve Discord usernames, display names, IDs, and avatar URLs in Authentik when a member links Discord.
+- Reconcile incomplete Discord source connections during Northline directory synchronization without replacing unrelated Authentik attributes.
+- Run identity reconciliation after the member's first Northline sign-in so the supported Authentik → Discord link → Northline onboarding sequence repairs missed source mappings automatically.
+- Continue using Authentik as the authoritative sign-in identity while Discord remains optional and limited to profile pictures and private Task Buddy delivery.
+
 ## Beta v0.7.1 — Calendar stabilization
 
 - Correct My Work summary cards so destructive-button styling cannot collapse the Overdue metric or distort the four-column layout.
