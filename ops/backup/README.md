@@ -2,7 +2,7 @@
 
 The production backup job protects Northline only. It creates a consistent snapshot of the Northline SQLite database, includes Northline's private environment configuration and the exact deployed Git commit, records checksums, and encrypts the archive with AES-256-CBC using PBKDF2. It does not back up, pause, or otherwise operate on Authentik or the mail stack.
 
-The production systemd timer runs once daily with a randomized delay. After a new encrypted archive is created and its NAS copy is verified, the job retains the four newest archives at each configured destination and removes older generations. Exact schedules, share names, mount details, and credentials are intentionally excluded from this public repository.
+The production systemd timer runs once daily with a randomized delay and retains the four newest encrypted archives in the configured local destination. The script can optionally copy to a separately mounted destination, but production must not report off-host replication unless that mount is explicitly configured and verified. Exact schedules, paths, mount details, and credentials are intentionally excluded from this public repository.
 
 Each successful backup writes `runtime-status/backup.json`; each successful restore drill writes `runtime-status/restore.json`. The Northline container mounts this directory read-only and displays both reports in **Administration > Health**. `nasReplicated: true` confirms that a verified copy reached the NAS, not merely the VM.
 
