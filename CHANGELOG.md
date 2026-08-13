@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.8.4 — Searchable streamer picker
+
+- Add instant filtering by streamer name, email address, or time zone to the collaboration request form.
+- Keep the multi-select streamer directory in an independently scrollable area for teams of any size.
+- Show the available or selected streamer count and visually distinguish selected invitees.
+- Improve keyboard and screen-reader semantics with a labeled search field and grouped checkbox controls.
+
 ## Beta v0.8.3 — Collab inbox presentation fix
 
 - Replace the wrapping post-acceptance action with a concise “Reschedule collab” button and descriptive hover text.

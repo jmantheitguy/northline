@@ -115,6 +115,7 @@ export function CollabPlanner({
       "request" | "availability" | "reschedule" | null
     >(null),
     [form, setForm] = useState(blank()),
+    [streamerQuery, setStreamerQuery] = useState(""),
     [rescheduling, setRescheduling] = useState<CollabRequest | null>(null),
     [responseCalendars, setResponseCalendars] = useState<
       Record<string, string>
@@ -167,6 +168,19 @@ export function CollabPlanner({
       ),
     [events],
   );
+  const availableStreamers = useMemo(() => {
+    const query = streamerQuery.trim().toLocaleLowerCase();
+    return people
+      .filter((person) => person.id !== me)
+      .filter(
+        (person) =>
+          !query ||
+          [person.name, person.email, person.timezone].some((value) =>
+            value.toLocaleLowerCase().includes(query),
+          ),
+      )
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [me, people, streamerQuery]);
   const openRequest = (event?: ScheduleEvent) => {
     const next = blank();
     if (event) {
@@ -178,6 +192,7 @@ export function CollabPlanner({
     }
     next.calendarId = ownedStreaming[0]?.id || "";
     setForm(next);
+    setStreamerQuery("");
     setModal("request");
   };
   const submitRequest = async () => {
@@ -468,42 +483,64 @@ export function CollabPlanner({
             </h2>
             <p>Times are shown in {zone} and stored in UTC.</p>
             {modal === "request" && (
-              <label>
-                Invited streamers
-                <div className="collab-person-picker">
-                  {people
-                    .filter((p) => p.id !== me)
-                    .map((p) => (
-                      <label key={p.id}>
-                        <input
-                          type="checkbox"
-                          checked={form.recipientIds.includes(String(p.id))}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              recipientIds: e.target.checked
-                                ? [...form.recipientIds, String(p.id)]
-                                : form.recipientIds.filter(
-                                    (id) => id !== String(p.id),
-                                  ),
-                            })
-                          }
-                        />
-                        <span className="avatar">
-                          {p.avatar ? (
-                            <img src={p.avatar} alt="" />
-                          ) : (
-                            p.name.slice(0, 1)
-                          )}
-                        </span>
-                        <span>
-                          {p.name}
-                          <small>{p.timezone}</small>
-                        </span>
-                      </label>
-                    ))}
+              <fieldset className="collab-picker-fieldset">
+                <legend>Invited streamers</legend>
+                <div className="collab-picker-search">
+                  <input
+                    type="search"
+                    value={streamerQuery}
+                    onChange={(event) => setStreamerQuery(event.target.value)}
+                    placeholder="Search streamers..."
+                    aria-label="Search streamers"
+                    autoComplete="off"
+                  />
+                  <span>
+                    {form.recipientIds.length
+                      ? `${form.recipientIds.length} selected`
+                      : `${people.filter((person) => person.id !== me).length} available`}
+                  </span>
                 </div>
-              </label>
+                <div
+                  className="collab-person-picker"
+                  role="group"
+                  aria-label="Available streamers"
+                >
+                  {availableStreamers.map((p) => (
+                    <label key={p.id}>
+                      <input
+                        type="checkbox"
+                        checked={form.recipientIds.includes(String(p.id))}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            recipientIds: e.target.checked
+                              ? [...form.recipientIds, String(p.id)]
+                              : form.recipientIds.filter(
+                                  (id) => id !== String(p.id),
+                                ),
+                          })
+                        }
+                      />
+                      <span className="avatar">
+                        {p.avatar ? (
+                          <img src={p.avatar} alt="" />
+                        ) : (
+                          p.name.slice(0, 1)
+                        )}
+                      </span>
+                      <span>
+                        {p.name}
+                        <small>{p.timezone}</small>
+                      </span>
+                    </label>
+                  ))}
+                  {!availableStreamers.length && (
+                    <p className="collab-picker-empty">
+                      No streamers match “{streamerQuery.trim()}”.
+                    </p>
+                  )}
+                </div>
+              </fieldset>
             )}
             {modal !== "reschedule" && (
               <label>
