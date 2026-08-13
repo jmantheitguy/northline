@@ -2176,8 +2176,14 @@ function Admin({
   notify: (s: string) => void;
 }) {
   const [tab, setTab] = useState<
-    "users" | "boards" | "audit" | "time" | "security" | "health"
-  >("users");
+    | "overview"
+    | "users"
+    | "boards"
+    | "audit"
+    | "time"
+    | "security"
+    | "health"
+  >("overview");
   const [query, setQuery] = useState("");
   const [create, setCreate] = useState(false);
   const [form, setForm] = useState({
@@ -2188,6 +2194,7 @@ function Admin({
   });
   const [overview, setOverview] = useState<any>(null);
   const [health, setHealth] = useState<any>(null);
+  const [adminTime, setAdminTime] = useState<any>(null);
   const loadOverview = () =>
     jsonFetch("/api/admin/overview")
       .then(setOverview)
@@ -2196,6 +2203,9 @@ function Admin({
     void loadOverview();
     jsonFetch("/api/admin/health")
       .then(setHealth)
+      .catch((e) => notify(e.message));
+    jsonFetch("/api/admin/time")
+      .then(setAdminTime)
       .catch((e) => notify(e.message));
   }, []);
   const updateUser = async (id: number, body: any) => {
@@ -2228,9 +2238,12 @@ function Admin({
         <div>
           <span className="admin-kicker">ADMIN CONSOLE</span>
           <h1>Workspace administration</h1>
-          <p>Control members, access, security, and workspace-wide activity.</p>
+          <p>One place for operations, people, access, time, and recovery.</p>
         </div>
-        <div className="shield">♜</div>
+        <div className={`admin-live-status ${health && Object.values([health.database?.status, health.storage?.status, health.discord?.status, health.backup?.status, health.restore?.status]).some((status) => status === "degraded" || status === "unknown") ? "degraded" : "healthy"}`}>
+          <i />
+          <span>{health ? "Live system status" : "Loading status"}</span>
+        </div>
       </div>
       <div className="metric-grid">
         <Metric
@@ -2248,12 +2261,12 @@ function Admin({
             users.filter((u) => u.role === "Admin").length
           }
         />
-        <Metric label="SUSPENDED" value={overview?.metrics.suspended ?? 0} />
+        <Metric label="ACTIVE TIMERS" value={overview?.metrics.activeTimers ?? 0} />
       </div>
       <div className="admin-panel">
         <div className="admin-tabs">
           {(
-            ["users", "boards", "audit", "time", "security", "health"] as const
+            ["overview", "users", "boards", "time", "health", "audit", "security"] as const
           ).map((name) => (
             <button
               key={name}
@@ -2264,6 +2277,65 @@ function Admin({
             </button>
           ))}
         </div>
+        {tab === "overview" && (
+          <div className="admin-dashboard">
+            <div className="admin-dashboard-heading">
+              <div>
+                <span className="eyebrow">LIVE OPERATIONS</span>
+                <h2>Administration overview</h2>
+                <p>Current service health and the tools that need attention.</p>
+              </div>
+              <button
+                className="secondary"
+                onClick={() => {
+                  void loadOverview();
+                  jsonFetch("/api/admin/health").then(setHealth).catch((e) => notify(e.message));
+                  jsonFetch("/api/admin/time").then(setAdminTime).catch((e) => notify(e.message));
+                  notify("Dashboard refreshed");
+                }}
+              >
+                Refresh dashboard
+              </button>
+            </div>
+            <div className="admin-status-grid">
+              <DashboardStatus title="Application" status="healthy" detail={health ? `${health.application.version} · up ${Math.floor(health.application.uptimeSeconds / 60)} min` : "Loading"} />
+              <DashboardStatus title="Database" status={health?.database.status || "unknown"} detail={health ? `${health.database.integrity} · schema v${health.database.migrationVersion}` : "Loading"} />
+              <DashboardStatus title="Task Buddy" status={health?.discord.status || "unknown"} detail={health?.discord.error || (health ? "Private delivery ready" : "Loading")} />
+              <DashboardStatus title="Local backup" status={health?.backup.status || "unknown"} detail={health?.backup.completedAt ? `Last run ${new Date(health.backup.completedAt).toLocaleString()}` : health?.backup.message || "Loading"} />
+              <DashboardStatus title="Restore test" status={health?.restore.status || "unknown"} detail={health?.restore.completedAt ? `Verified ${new Date(health.restore.completedAt).toLocaleString()}` : health?.restore.message || "Loading"} />
+              <DashboardStatus title="VM storage" status={health?.storage.status || "unknown"} detail={health ? `${formatBytes(health.storage.freeBytes)} available` : "Loading"} />
+            </div>
+            <div className="admin-dashboard-columns">
+              <div className="admin-dashboard-card">
+                <header><div><small>WORKSPACE</small><h3>Organization snapshot</h3></div></header>
+                <div className="admin-snapshot-grid">
+                  <DashboardNumber label="Active members" value={overview?.metrics.activeUsers ?? "—"} />
+                  <DashboardNumber label="Workspaces" value={overview?.metrics.workspaces ?? "—"} />
+                  <DashboardNumber label="Boards" value={overview?.metrics.activeBoards ?? "—"} />
+                  <DashboardNumber label="Open tasks" value={overview?.metrics.tasks ?? "—"} />
+                  <DashboardNumber label="Active timers" value={overview?.metrics.activeTimers ?? "—"} />
+                  <DashboardNumber label="Failed reminders" value={overview?.metrics.failedReminders ?? "—"} alert={(overview?.metrics.failedReminders || 0) > 0} />
+                </div>
+              </div>
+              <div className="admin-dashboard-card">
+                <header><div><small>TIME</small><h3>Currently clocked in</h3></div><button onClick={() => setTab("time")}>Open reports</button></header>
+                <div className="admin-active-list">
+                  {(adminTime?.totals || []).filter((item: any) => item.activeSince).length ? (adminTime?.totals || []).filter((item: any) => item.activeSince).map((item: any) => (
+                    <div key={item.userId}><Avatar name={item.userName} avatar={item.userAvatar} /><span><b>{item.userName}</b><small>Since {new Date(item.activeSince).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></span><em>Active</em></div>
+                  )) : <div className="admin-inline-empty">No members are currently clocked in.</div>}
+                </div>
+              </div>
+            </div>
+            <div className="admin-tool-grid">
+              <AdminTool title="People & access" copy="Manage members, roles, status, and Authentik synchronization." action="Manage users" onClick={() => setTab("users")} />
+              <AdminTool title="Board access" copy="Review ownership, sharing, and task totals without bypassing privacy." action="Review boards" onClick={() => setTab("boards")} />
+              <AdminTool title="Time reports" copy="Inspect active timers, totals, audit events, filters, and CSV exports." action="Open time" onClick={() => setTab("time")} />
+              <AdminTool title="System health" copy="Inspect database, storage, backup, restore, sessions, and Task Buddy." action="Open health" onClick={() => setTab("health")} />
+              <AdminTool title="Audit history" copy="Review recent administrative and collaboration activity." action="View audit" onClick={() => setTab("audit")} />
+              <AdminTool title="Security controls" copy="Review identity, recovery access, secrets, and session boundaries." action="View security" onClick={() => setTab("security")} />
+            </div>
+          </div>
+        )}
         {tab === "users" && (
           <>
             <div className="admin-toolbar">
@@ -2464,7 +2536,7 @@ function Admin({
                     }
                   />
                   <HealthCard
-                    title="NAS backup"
+                    title="Local backup"
                     status={health.backup.status}
                     detail={
                       health.backup.message ||
@@ -2584,6 +2656,54 @@ function Metric({ label, value }: { label: string; value: number }) {
       <b>{value}</b>
       <small>Live workspace data</small>
     </div>
+  );
+}
+function DashboardStatus({
+  title,
+  status,
+  detail,
+}: {
+  title: string;
+  status: string;
+  detail: string;
+}) {
+  const normalized = status === "configured" ? "healthy" : status;
+  return (
+    <article className={`dashboard-status ${normalized}`}>
+      <div><i /><span>{normalized}</span></div>
+      <h3>{title}</h3>
+      <p>{detail}</p>
+    </article>
+  );
+}
+function DashboardNumber({
+  label,
+  value,
+  alert = false,
+}: {
+  label: string;
+  value: string | number;
+  alert?: boolean;
+}) {
+  return <div className={alert ? "alert" : ""}><b>{value}</b><span>{label}</span></div>;
+}
+function AdminTool({
+  title,
+  copy,
+  action,
+  onClick,
+}: {
+  title: string;
+  copy: string;
+  action: string;
+  onClick: () => void;
+}) {
+  return (
+    <article className="admin-tool-card">
+      <h3>{title}</h3>
+      <p>{copy}</p>
+      <button onClick={onClick}>{action} →</button>
+    </article>
   );
 }
 function Security({ title, copy }: { title: string; copy: string }) {

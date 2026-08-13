@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.6.1 — Administration dashboard
+
+- Make a live operations overview the default Administration landing page.
+- Surface application, database, Task Buddy, local backup, restore-test, and VM-storage status together.
+- Add organization counts, failed-reminder attention, and a live list of currently clocked-in members.
+- Provide direct dashboard navigation into users, board access, time reporting, health, audit history, and security controls.
+- Replace light-only administration surfaces with theme-aware panels, borders, text, tables, cards, and responsive layouts.
+
 ## Beta v0.6.0 — Time reporting and task timers
 
 - Start a board- and task-linked timer directly from an open task while preserving the single-active-timer rule.

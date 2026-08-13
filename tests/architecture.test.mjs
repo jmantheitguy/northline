@@ -127,10 +127,21 @@ test("reminder management supports controlled updates, cancellation, and retry",
 });
 
 test("administration metrics and audit history come from the database", async () => {
-  const overview = await read("app/api/admin/overview/route.ts");
+  const [overview, ui, styles] = await Promise.all([
+    read("app/api/admin/overview/route.ts"),
+    read("app/northline-app.tsx"),
+    read("app/globals.css"),
+  ]);
   assert.match(overview, /requireAdmin\(\)/);
   assert.match(overview, /SELECT COUNT\(\*\) count FROM boards/);
   assert.match(overview, /FROM audit_log a/);
+  assert.match(overview, /activeTimers/);
+  assert.match(overview, /failedReminders/);
+  assert.match(ui, /Administration overview/);
+  assert.match(ui, /Currently clocked in/);
+  assert.match(ui, /Local backup/);
+  assert.match(styles, /admin-status-grid/);
+  assert.match(styles, /html\[data-theme="dark"\] \.admin-dashboard/);
 });
 
 test("release health and workflow tools remain permission constrained", async () => {

@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.6.0 — Time reporting and task timers**
+Current release: **Beta v0.6.1 — Administration dashboard**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -67,7 +67,7 @@ The application combines visual task boards, private collaboration, user adminis
 
 ### Administration
 
-- Dedicated administration console visible only to administrators
+- Dedicated dark-mode-aware administration overview with live service status, organization counts, active timers, alerts, and direct access to every administrative tool
 - Workspace membership and role metrics
 - User search and account-management tools
 - Board ownership and access overview
