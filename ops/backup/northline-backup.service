@@ -1,12 +1,13 @@
 [Unit]
-Description=Create an encrypted Northline and Authentik backup
+Description=Create an encrypted Northline backup
 Requires=docker.service
 After=docker.service
 
 [Service]
 Type=oneshot
 Environment=NORTHLINE_NAS_ROOT=/mnt/northline-backups/Northline-Backups
-Environment=NORTHLINE_NAS_RETENTION_DAYS=60
+Environment=NORTHLINE_BACKUP_KEEP_COUNT=4
+Environment=NORTHLINE_NAS_KEEP_COUNT=4
 ExecStart=/usr/local/sbin/northline-backup
 Nice=10
 IOSchedulingClass=best-effort

@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily Northline and Authentik backup
+Description=Daily Northline backup
 
 [Timer]
 OnCalendar=*-*-* 03:17:00
