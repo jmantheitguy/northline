@@ -556,3 +556,35 @@ test("private calendars use opaque identifiers and explicit per-calendar permiss
   assert.match(ui, /viewer.*editor/s);
   assert.match(app, /CalendarHub/);
 });
+
+test("calendar stabilization keeps reminders and recovery private", async () => {
+  const [schema, detail, restoreCalendar, restoreEvent, reminders, worker, ui, styles] =
+    await Promise.all([
+      read("lib/db.ts"),
+      read("app/api/calendars/[id]/route.ts"),
+      read("app/api/calendars/[id]/restore/route.ts"),
+      read("app/api/calendar-events/[id]/restore/route.ts"),
+      read("app/api/calendar-events/[id]/reminders/route.ts"),
+      read("lib/reminder-worker.ts"),
+      read("app/calendar-hub.tsx"),
+      read("app/globals.css"),
+    ]);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS calendar_reminders/);
+  assert.match(schema, /calendar reminders and recoverable deletion/);
+  assert.match(schema, /ALTER TABLE calendars ADD COLUMN deleted_at/);
+  assert.match(schema, /ALTER TABLE calendar_events ADD COLUMN deleted_at/);
+  assert.match(detail, /permission\s*===\s*"owner"[\s\S]*deletedEvents/);
+  assert.match(restoreCalendar, /owner_id=\?/);
+  assert.match(restoreCalendar, /datetime\('now','-30 days'\)/);
+  assert.match(restoreEvent, /calendarPermission\(user, event\.calendarId\) !== "owner"/);
+  assert.match(reminders, /calendarPermission\(user, event\.calendarId\)/);
+  assert.match(reminders, /recipient_user_id/);
+  assert.match(worker, /calendar_reminders/);
+  assert.match(worker, /sendDiscordDirectMessage/);
+  assert.match(ui, /Calendar activity/);
+  assert.match(ui, /Recently deleted/);
+  assert.match(ui, /Task Buddy reminder/);
+  assert.match(ui, /Discard your unsaved event changes/);
+  assert.match(styles, /\.my-work-metrics article\.danger/);
+  assert.match(styles, /\.audit-row > span\.audit-event-icon/);
+});

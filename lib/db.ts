@@ -94,8 +94,21 @@ db.exec(`
     detail TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS calendar_reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    calendar_event_id INTEGER NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    remind_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','sent','failed','cancelled')),
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT
+  );
   CREATE INDEX IF NOT EXISTS calendar_events_range_idx ON calendar_events(calendar_id,start_at,end_at);
   CREATE INDEX IF NOT EXISTS calendar_members_user_idx ON calendar_members(user_id,calendar_id);
+  CREATE INDEX IF NOT EXISTS calendar_reminders_due_idx ON calendar_reminders(status,remind_at);
   CREATE TABLE IF NOT EXISTS workspaces (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     public_id TEXT NOT NULL UNIQUE,
@@ -273,6 +286,13 @@ const timeEntryColumns = db
   .all() as Array<{ name: string }>;
 if (!timeEntryColumns.some((column) => column.name === "deleted_at"))
   db.exec("ALTER TABLE time_entries ADD COLUMN deleted_at TEXT");
+
+const calendarColumns = db.prepare("PRAGMA table_info(calendars)").all() as Array<{ name: string }>;
+if (!calendarColumns.some((column) => column.name === "deleted_at"))
+  db.exec("ALTER TABLE calendars ADD COLUMN deleted_at TEXT");
+const calendarEventColumns = db.prepare("PRAGMA table_info(calendar_events)").all() as Array<{ name: string }>;
+if (!calendarEventColumns.some((column) => column.name === "deleted_at"))
+  db.exec("ALTER TABLE calendar_events ADD COLUMN deleted_at TEXT");
 
 const boardColumns = db.prepare("PRAGMA table_info(boards)").all() as Array<{
   name: string;
@@ -538,6 +558,7 @@ const migrations: [number, string][] = [
   [14, "audited time entry deletion"],
   [15, "descriptive administration audit events"],
   [16, "private calendars and selective sharing"],
+  [17, "calendar reminders and recoverable deletion"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(
@@ -546,6 +567,8 @@ const recordMigrations = db.transaction(() => {
   for (const migration of migrations) insert.run(...migration);
 });
 recordMigrations();
+db.prepare("DELETE FROM calendar_events WHERE deleted_at IS NOT NULL AND datetime(deleted_at)<datetime('now','-30 days')").run();
+db.prepare("DELETE FROM calendars WHERE deleted_at IS NOT NULL AND datetime(deleted_at)<datetime('now','-30 days')").run();
 
 const email = process.env.NORTHLINE_ADMIN_EMAIL;
 const password = process.env.NORTHLINE_ADMIN_PASSWORD;

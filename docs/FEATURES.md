@@ -16,9 +16,9 @@ Global search returns tasks only from boards the signed-in user can access. Dire
 
 ## Private calendars
 
-Each member can maintain multiple private calendars with independent names, colors, descriptions, and IANA time zones. Calendar navigation includes month, week, and agenda views. Events may be timed or all-day and include a title, description, location or link, time zone, and tentative, confirmed, or cancelled state. Times are stored as UTC instants and displayed in the viewer's local browser time.
+Each member can maintain multiple private calendars with independent names, colors, descriptions, and IANA time zones. Calendar navigation includes month, week, day, and agenda views. Events may be timed or all-day and include a title, description, location or link, time zone, and tentative, confirmed, or cancelled state. Times are stored as UTC instants and displayed in the viewer's local browser time.
 
-Calendars are private by default. The owner may share a specific calendar with an active Northline member as a viewer or editor and may revoke access at any time. Viewers cannot change events. Editors can create, update, and delete events but cannot rename, share, or delete the calendar. Administrators have no implicit private-calendar access. Calendar and event URLs use opaque random identifiers, while all authorization remains server-enforced. Settings, sharing, and event changes are retained in calendar activity and the permission-aware audit system.
+Calendars are private by default. The owner may share a specific calendar with an active Northline member as a viewer or editor and may revoke access at any time. Viewers cannot change events. Editors can create, update, and delete events but cannot rename, share, or delete the calendar. Administrators have no implicit private-calendar access. Calendar and event URLs use opaque random identifiers, while all authorization remains server-enforced. Settings, sharing, and event changes are retained in calendar activity and the permission-aware audit system. Owners can review activity and recover deleted calendars or events for 30 days. Members with calendar access can schedule a private Task Buddy reminder to their own linked Discord account without changing calendar authorization.
 
 ## Collaboration and identity
 

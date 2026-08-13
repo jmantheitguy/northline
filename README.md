@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.7.0 — Private calendars**
+Current release: **Beta v0.7.1 — Calendar stabilization**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -57,6 +57,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Opaque random calendar and event identifiers at every browser/API boundary
 - Owner-only sharing, settings, and deletion; editors may manage events and viewers remain read-only
 - Audited event and sharing changes without granting site administrators implicit access to private calendar content
+- Day view, private Task Buddy event reminders, owner-visible activity, and 30-day calendar/event recovery
 
 ### Members and access
 

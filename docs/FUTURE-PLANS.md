@@ -15,9 +15,9 @@ The delivered foundation provides:
 - Private calendar and event IDs cannot be enumerated or opened through guessed URLs.
 - Event changes and sharing changes produce an auditable activity record.
 - Calendar data is covered by the existing local backup and restore process before production use.
-- Desktop and mobile month, week, and agenda journeys pass interactive testing with the production identity flow.
+- Desktop and mobile month, week, day, and agenda journeys must pass interactive testing with the production identity flow before the calendar foundation is considered stable.
 
-Event reminders, public schedule pages, recurring-event edge cases, collaboration requests, guest invitations, `.ics` feeds, and external provider synchronization remain later phases.
+Public schedule pages, recurring-event edge cases, collaboration requests, guest invitations, `.ics` feeds, and external provider synchronization remain later phases. Private one-time event reminders, day view, activity history, and 30-day recovery were added in Beta v0.7.1.
 
 ## Streaming calendars and collaboration planning
 

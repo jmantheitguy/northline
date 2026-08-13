@@ -2,12 +2,13 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.7.0
+## Current — Beta v0.7.1
 
 - Multiple private calendars per user with names, colors, descriptions, and time-zone preferences
 - Responsive month, week, and agenda views for one-time timed and all-day events
 - Explicit per-calendar viewer/editor sharing without implicit administrator access
 - Opaque calendar/event identifiers and audited event, settings, and access changes
+- Calendar day view, Task Buddy event reminders, activity history, and 30-day recovery
 
 - Unsaved-change protection for editable modals
 - Explicit 12-hour reminder scheduling controls
@@ -35,7 +36,7 @@ Northline is being built in public as a self-hosted project workspace for small 
 - Administrator console, audit history, and emergency local recovery access
 - Task Buddy private Discord delivery and scheduled reminders
 - Northline visual identity, application icons, and social preview assets
-- Scheduled encrypted complete-stack backups with a tested restore workflow and NAS replication
+- Scheduled encrypted Northline-only local backups with four-generation retention and a tested restore workflow
 - Task Buddy reminder management with delivery history, editing, cancellation, and retries
 - Automatic Task Buddy notifications for assignment, status, comment, mention, and due-date activity
 - Permission-aware global task search, task duplication, and starter board templates
@@ -75,7 +76,6 @@ Northline is being built in public as a self-hosted project workspace for small 
 - Additional notification providers
 - Public API and webhooks
 - Reporting dashboards
-- Optional multi-workspace support
 
 The complete calendar and collaboration concept is described in [docs/FUTURE-PLANS.md](docs/FUTURE-PLANS.md).
 

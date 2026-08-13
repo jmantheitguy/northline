@@ -1,5 +1,17 @@
 # Northline release history
 
+## Beta v0.7.1 — Calendar stabilization
+
+- Correct My Work summary cards so destructive-button styling cannot collapse the Overdue metric or distort the four-column layout.
+- Correct Administration audit rows so action badges remain compact and timestamps remain aligned and responsive.
+- Add a detailed day view alongside month, week, and agenda calendar navigation.
+- Add owner-visible calendar activity history for event, settings, and sharing changes.
+- Let members schedule private Task Buddy reminders from calendar events to their linked Discord accounts.
+- Replace immediate calendar and event destruction with a 30-day Recently deleted recovery workflow and automatic expiry.
+- Protect calendar and event forms from accidental dismissal when they contain unsaved changes.
+- Improve calendar navigation, activity, recovery, and reminder controls for smaller screens.
+- Expand authorization tests for calendar reminders, recovery, activity privacy, and opaque identifiers.
+
 ## Beta v0.7.0 — Private calendars
 
 - Add multiple private, named, color-coded calendars for every Northline member.

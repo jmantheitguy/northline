@@ -3,54 +3,1211 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type CalendarSummary={id:string;name:string;color:string;description:string;timezone:string;ownerId:number;ownerName:string;permission:"owner"|"editor"|"viewer";eventCount:number};
-type CalendarEvent={id:string;title:string;description:string;location:string;startAt:string;endAt:string;timezone:string;allDay:number;status:string;createdBy:number;creatorName:string};
-type Member={userId:number;name:string;email:string;avatar:string|null;permission:"viewer"|"editor"};
-type Person={id:number;name:string;email:string;avatar:string|null};
-type Detail={calendar:CalendarSummary;events:CalendarEvent[];members:Member[];activity:Array<{id:number;action:string;detail:string;createdAt:string;actorName:string}>};
-const api=async(url:string,options?:RequestInit)=>{const response=await fetch(url,options),body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||"Calendar request failed");return body};
-const headers={"Content-Type":"application/json"};
-const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";
-const localInput=(date:Date)=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
-const initialCalendar={name:"",color:"#7c6ce7",description:"",timezone};
-const initialEvent={title:"",description:"",location:"",startAt:"",endAt:"",allDay:false,status:"confirmed",timezone};
+type CalendarSummary = {
+  id: string;
+  name: string;
+  color: string;
+  description: string;
+  timezone: string;
+  ownerId: number;
+  ownerName: string;
+  permission: "owner" | "editor" | "viewer";
+  eventCount: number;
+};
+type CalendarEvent = {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  startAt: string;
+  endAt: string;
+  timezone: string;
+  allDay: number;
+  status: string;
+  createdBy: number;
+  creatorName: string;
+};
+type Member = {
+  userId: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+  permission: "viewer" | "editor";
+};
+type Person = {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+};
+type DeletedEvent = {
+  id: string;
+  title: string;
+  startAt: string;
+  deletedAt: string;
+};
+type DeletedCalendar = {
+  id: string;
+  name: string;
+  color: string;
+  deletedAt: string;
+};
+type Detail = {
+  calendar: CalendarSummary;
+  events: CalendarEvent[];
+  deletedEvents: DeletedEvent[];
+  members: Member[];
+  activity: Array<{
+    id: number;
+    action: string;
+    detail: string;
+    createdAt: string;
+    actorName: string;
+  }>;
+};
+const api = async (url: string, options?: RequestInit) => {
+  const response = await fetch(url, options),
+    body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Calendar request failed");
+  return body;
+};
+const headers = { "Content-Type": "application/json" };
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const localInput = (date: Date) =>
+  new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+const initialCalendar = {
+  name: "",
+  color: "#7c6ce7",
+  description: "",
+  timezone,
+};
+const initialEvent = {
+  title: "",
+  description: "",
+  location: "",
+  startAt: "",
+  endAt: "",
+  allDay: false,
+  status: "confirmed",
+  timezone,
+};
 
-export function CalendarHub({notify}:{notify:(message:string)=>void}){
-  const [calendars,setCalendars]=useState<CalendarSummary[]>([]),[activeId,setActiveId]=useState<string|null>(null),[detail,setDetail]=useState<Detail|null>(null),[people,setPeople]=useState<Person[]>([]);
-  const [mode,setMode]=useState<"month"|"week"|"agenda">("month"),[cursor,setCursor]=useState(()=>new Date()),[calendarModal,setCalendarModal]=useState<"create"|"settings"|"share"|null>(null),[eventModal,setEventModal]=useState(false),[editing,setEditing]=useState<CalendarEvent|null>(null),[calendarForm,setCalendarForm]=useState(initialCalendar),[eventForm,setEventForm]=useState(initialEvent),[busy,setBusy]=useState(false);
-  const loadCalendars=()=>api("/api/calendars").then(data=>{setCalendars(data.calendars);setActiveId(current=>current&&data.calendars.some((item:CalendarSummary)=>item.id===current)?current:data.calendars[0]?.id||null)}).catch(error=>notify(error.message));
-  const range=useMemo(()=>{const start=new Date(cursor),end=new Date(cursor);if(mode==="month"){start.setDate(1);start.setDate(start.getDate()-start.getDay());end.setMonth(end.getMonth()+1,1);end.setDate(end.getDate()+(7-end.getDay()));}else if(mode==="week"){start.setDate(start.getDate()-start.getDay());end.setTime(start.getTime()+7*86400000);}else{start.setHours(0,0,0,0);end.setTime(start.getTime()+90*86400000);}return{start,end}},[cursor,mode]);
-  const loadDetail=()=>activeId?api(`/api/calendars/${activeId}?from=${encodeURIComponent(range.start.toISOString())}&to=${encodeURIComponent(range.end.toISOString())}`).then(setDetail).catch(error=>notify(error.message)):setDetail(null);
-  useEffect(()=>{void loadCalendars();api("/api/directory").then(data=>setPeople(data.users)).catch(()=>undefined)},[]);
-  useEffect(()=>{void loadDetail()},[activeId,range.start.getTime(),range.end.getTime()]);
-  const events=detail?.events||[],canEdit=detail?.calendar.permission!=="viewer",isOwner=detail?.calendar.permission==="owner";
-  const saveCalendar=async()=>{setBusy(true);try{await api(calendarModal==="settings"?`/api/calendars/${activeId}`:"/api/calendars",{method:calendarModal==="settings"?"PATCH":"POST",headers,body:JSON.stringify(calendarForm)});setCalendarModal(null);await loadCalendars();await loadDetail();notify(calendarModal==="settings"?"Calendar updated":"Calendar created")}catch(error){notify((error as Error).message)}finally{setBusy(false)}};
-  const deleteCalendar=async()=>{if(!window.confirm("Delete this calendar and all of its events? This cannot be undone."))return;try{await api(`/api/calendars/${activeId}`,{method:"DELETE"});setCalendarModal(null);setActiveId(null);await loadCalendars();notify("Calendar deleted")}catch(error){notify((error as Error).message)}};
-  const openEvent=(event?:CalendarEvent,date?:Date)=>{const start=date||new Date(Date.now()+3600000),end=new Date((date||start).getTime()+3600000);setEditing(event||null);setEventForm(event?{title:event.title,description:event.description,location:event.location,startAt:localInput(new Date(event.startAt)),endAt:localInput(new Date(event.endAt)),allDay:event.allDay===1,status:event.status,timezone:event.timezone}:{...initialEvent,startAt:localInput(start),endAt:localInput(end),timezone:detail?.calendar.timezone||timezone});setEventModal(true)};
-  const saveEvent=async()=>{setBusy(true);try{const body={...eventForm,startAt:new Date(eventForm.startAt).toISOString(),endAt:new Date(eventForm.endAt).toISOString()};await api(editing?`/api/calendar-events/${editing.id}`:`/api/calendars/${activeId}/events`,{method:editing?"PATCH":"POST",headers,body:JSON.stringify(body)});setEventModal(false);await loadDetail();notify(editing?"Event updated":"Event created")}catch(error){notify((error as Error).message)}finally{setBusy(false)}};
-  const deleteEvent=async()=>{if(!editing||!window.confirm("Delete this event?"))return;try{await api(`/api/calendar-events/${editing.id}`,{method:"DELETE"});setEventModal(false);await loadDetail();notify("Event deleted")}catch(error){notify((error as Error).message)}};
-  const title=mode==="month"?cursor.toLocaleDateString([],{month:"long",year:"numeric"}):mode==="week"?`Week of ${range.start.toLocaleDateString()}`:"Upcoming events";
-  const shift=(amount:number)=>setCursor(current=>{const next=new Date(current);if(mode==="month")next.setMonth(next.getMonth()+amount);else next.setDate(next.getDate()+amount*(mode==="week"?7:30));return next});
-  return <section className="content calendar-hub">
-    <div className="calendar-page-head"><div><span className="eyebrow">PRIVATE SCHEDULING</span><h1>My calendars</h1><p>Plan privately, then share only the calendars you choose.</p></div><button className="primary" onClick={()=>{setCalendarForm(initialCalendar);setCalendarModal("create")}}>＋ New calendar</button></div>
-    <div className="calendar-shell">
-      <aside className="calendar-list"><header><b>Calendars</b><span>{calendars.length}</span></header>{calendars.map(calendar=><button key={calendar.id} className={calendar.id===activeId?"active":""} onClick={()=>setActiveId(calendar.id)}><i style={{background:calendar.color}}/><span><b>{calendar.name}</b><small>{calendar.permission==="owner"?"Mine":`Shared by ${calendar.ownerName}`}</small></span><em>{calendar.permission}</em></button>)}{!calendars.length&&<p>No calendars yet.</p>}</aside>
-      <main className="calendar-main">{!detail?<div className="calendar-empty"><b>Create your first private calendar</b><span>Calendars remain visible only to you until you share them.</span></div>:<>
-        <div className="calendar-toolbar"><div><i style={{background:detail.calendar.color}}/><span><h2>{detail.calendar.name}</h2><small>{detail.calendar.timezone} · {detail.calendar.permission}</small></span></div><div className="calendar-toolbar-actions">{isOwner&&<><button className="secondary" onClick={()=>setCalendarModal("share")}>Share</button><button className="secondary" onClick={()=>{setCalendarForm({name:detail.calendar.name,color:detail.calendar.color,description:detail.calendar.description,timezone:detail.calendar.timezone});setCalendarModal("settings")}}>Settings</button></>}{canEdit&&<button className="primary" onClick={()=>openEvent()}>＋ Event</button>}</div></div>
-        <div className="calendar-viewbar"><div><button onClick={()=>shift(-1)}>‹</button><button onClick={()=>setCursor(new Date())}>Today</button><button onClick={()=>shift(1)}>›</button><h3>{title}</h3></div><div>{(["month","week","agenda"] as const).map(item=><button className={mode===item?"active":""} key={item} onClick={()=>setMode(item)}>{item}</button>)}</div></div>
-        {mode==="month"&&<MonthView range={range} events={events} color={detail.calendar.color} canEdit={canEdit} openEvent={openEvent}/>} 
-        {mode==="week"&&<WeekView range={range} events={events} color={detail.calendar.color} openEvent={openEvent}/>} 
-        {mode==="agenda"&&<AgendaView events={events} color={detail.calendar.color} openEvent={openEvent}/>} 
-      </>}</main>
-    </div>
-    {calendarModal&&<CalendarModal kind={calendarModal} form={calendarForm} setForm={setCalendarForm} busy={busy} save={saveCalendar} close={()=>setCalendarModal(null)} detail={detail} people={people} reload={loadDetail} notify={notify} remove={deleteCalendar}/>} 
-    {eventModal&&<EventModal form={eventForm} setForm={setEventForm} editing={editing} busy={busy} save={saveEvent} remove={deleteEvent} close={()=>setEventModal(false)}/>} 
-  </section>
+export function CalendarHub({ notify }: { notify: (message: string) => void }) {
+  const [calendars, setCalendars] = useState<CalendarSummary[]>([]),
+    [deletedCalendars, setDeletedCalendars] = useState<DeletedCalendar[]>([]),
+    [activeId, setActiveId] = useState<string | null>(null),
+    [detail, setDetail] = useState<Detail | null>(null),
+    [people, setPeople] = useState<Person[]>([]);
+  const [mode, setMode] = useState<"month" | "week" | "day" | "agenda">(
+      "month",
+    ),
+    [cursor, setCursor] = useState(() => new Date()),
+    [calendarModal, setCalendarModal] = useState<
+      "create" | "settings" | "share" | null
+    >(null),
+    [eventModal, setEventModal] = useState(false),
+    [editing, setEditing] = useState<CalendarEvent | null>(null),
+    [calendarForm, setCalendarForm] = useState(initialCalendar),
+    [eventForm, setEventForm] = useState(initialEvent),
+    [busy, setBusy] = useState(false),
+    [showActivity, setShowActivity] = useState(false),
+    [showTrash, setShowTrash] = useState(false);
+  const loadCalendars = () =>
+    api("/api/calendars")
+      .then((data) => {
+        setCalendars(data.calendars);
+        setDeletedCalendars(data.deletedCalendars || []);
+        setActiveId((current) =>
+          current &&
+          data.calendars.some((item: CalendarSummary) => item.id === current)
+            ? current
+            : data.calendars[0]?.id || null,
+        );
+      })
+      .catch((error) => notify(error.message));
+  const range = useMemo(() => {
+    const start = new Date(cursor),
+      end = new Date(cursor);
+    if (mode === "month") {
+      start.setDate(1);
+      start.setDate(start.getDate() - start.getDay());
+      end.setMonth(end.getMonth() + 1, 1);
+      end.setDate(end.getDate() + (7 - end.getDay()));
+    } else if (mode === "week") {
+      start.setDate(start.getDate() - start.getDay());
+      end.setTime(start.getTime() + 7 * 86400000);
+    } else if (mode === "day") {
+      start.setHours(0, 0, 0, 0);
+      end.setTime(start.getTime() + 86400000);
+    } else {
+      start.setHours(0, 0, 0, 0);
+      end.setTime(start.getTime() + 90 * 86400000);
+    }
+    return { start, end };
+  }, [cursor, mode]);
+  const loadDetail = () =>
+    activeId
+      ? api(
+          `/api/calendars/${activeId}?from=${encodeURIComponent(range.start.toISOString())}&to=${encodeURIComponent(range.end.toISOString())}`,
+        )
+          .then(setDetail)
+          .catch((error) => notify(error.message))
+      : setDetail(null);
+  useEffect(() => {
+    void loadCalendars();
+    api("/api/directory")
+      .then((data) => setPeople(data.users))
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    void loadDetail();
+  }, [activeId, range.start.getTime(), range.end.getTime()]);
+  const events = detail?.events || [],
+    canEdit = detail?.calendar.permission !== "viewer",
+    isOwner = detail?.calendar.permission === "owner";
+  const saveCalendar = async () => {
+    setBusy(true);
+    try {
+      await api(
+        calendarModal === "settings"
+          ? `/api/calendars/${activeId}`
+          : "/api/calendars",
+        {
+          method: calendarModal === "settings" ? "PATCH" : "POST",
+          headers,
+          body: JSON.stringify(calendarForm),
+        },
+      );
+      setCalendarModal(null);
+      await loadCalendars();
+      await loadDetail();
+      notify(
+        calendarModal === "settings" ? "Calendar updated" : "Calendar created",
+      );
+    } catch (error) {
+      notify((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const deleteCalendar = async () => {
+    if (
+      !window.confirm(
+        "Delete this calendar and all of its events? This cannot be undone.",
+      )
+    )
+      return;
+    try {
+      await api(`/api/calendars/${activeId}`, { method: "DELETE" });
+      setCalendarModal(null);
+      setActiveId(null);
+      await loadCalendars();
+      notify("Calendar deleted");
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  const openEvent = (event?: CalendarEvent, date?: Date) => {
+    const start = date || new Date(Date.now() + 3600000),
+      end = new Date((date || start).getTime() + 3600000);
+    setEditing(event || null);
+    setEventForm(
+      event
+        ? {
+            title: event.title,
+            description: event.description,
+            location: event.location,
+            startAt: localInput(new Date(event.startAt)),
+            endAt: localInput(new Date(event.endAt)),
+            allDay: event.allDay === 1,
+            status: event.status,
+            timezone: event.timezone,
+          }
+        : {
+            ...initialEvent,
+            startAt: localInput(start),
+            endAt: localInput(end),
+            timezone: detail?.calendar.timezone || timezone,
+          },
+    );
+    setEventModal(true);
+  };
+  const saveEvent = async () => {
+    setBusy(true);
+    try {
+      const body = {
+        ...eventForm,
+        startAt: new Date(eventForm.startAt).toISOString(),
+        endAt: new Date(eventForm.endAt).toISOString(),
+      };
+      await api(
+        editing
+          ? `/api/calendar-events/${editing.id}`
+          : `/api/calendars/${activeId}/events`,
+        {
+          method: editing ? "PATCH" : "POST",
+          headers,
+          body: JSON.stringify(body),
+        },
+      );
+      setEventModal(false);
+      await loadDetail();
+      notify(editing ? "Event updated" : "Event created");
+    } catch (error) {
+      notify((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const deleteEvent = async () => {
+    if (!editing || !window.confirm("Delete this event?")) return;
+    try {
+      await api(`/api/calendar-events/${editing.id}`, { method: "DELETE" });
+      setEventModal(false);
+      await loadDetail();
+      notify("Event deleted");
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  const title =
+    mode === "month"
+      ? cursor.toLocaleDateString([], { month: "long", year: "numeric" })
+      : mode === "week"
+        ? `Week of ${range.start.toLocaleDateString()}`
+        : mode === "day"
+          ? cursor.toLocaleDateString([], {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Upcoming events";
+  const shift = (amount: number) =>
+    setCursor((current) => {
+      const next = new Date(current);
+      if (mode === "month") next.setMonth(next.getMonth() + amount);
+      else
+        next.setDate(
+          next.getDate() +
+            amount * (mode === "week" ? 7 : mode === "day" ? 1 : 30),
+        );
+      return next;
+    });
+  return (
+    <section className="content calendar-hub">
+      <div className="calendar-page-head">
+        <div>
+          <span className="eyebrow">PRIVATE SCHEDULING</span>
+          <h1>My calendars</h1>
+          <p>Plan privately, then share only the calendars you choose.</p>
+        </div>
+        <button
+          className="primary"
+          onClick={() => {
+            setCalendarForm(initialCalendar);
+            setCalendarModal("create");
+          }}
+        >
+          ＋ New calendar
+        </button>
+      </div>
+      <div className="calendar-shell">
+        <aside className="calendar-list">
+          <header>
+            <b>Calendars</b>
+            <span>{calendars.length}</span>
+          </header>
+          {calendars.map((calendar) => (
+            <button
+              key={calendar.id}
+              className={calendar.id === activeId ? "active" : ""}
+              onClick={() => setActiveId(calendar.id)}
+            >
+              <i style={{ background: calendar.color }} />
+              <span>
+                <b>{calendar.name}</b>
+                <small>
+                  {calendar.permission === "owner"
+                    ? "Mine"
+                    : `Shared by ${calendar.ownerName}`}
+                </small>
+              </span>
+              <em>{calendar.permission}</em>
+            </button>
+          ))}
+          {!calendars.length && <p>No calendars yet.</p>}
+          <button
+            className={showTrash ? "active" : ""}
+            onClick={() => setShowTrash((value) => !value)}
+          >
+            <i />
+            <span>
+              <b>Recently deleted</b>
+              <small>Recoverable for 30 days</small>
+            </span>
+            <em>
+              {deletedCalendars.length + (detail?.deletedEvents?.length || 0)}
+            </em>
+          </button>
+        </aside>
+        <main className="calendar-main">
+          {!detail ? (
+            <div className="calendar-empty">
+              <b>Create your first private calendar</b>
+              <span>
+                Calendars remain visible only to you until you share them.
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="calendar-toolbar">
+                <div>
+                  <i style={{ background: detail.calendar.color }} />
+                  <span>
+                    <h2>{detail.calendar.name}</h2>
+                    <small>
+                      {detail.calendar.timezone} · {detail.calendar.permission}
+                    </small>
+                  </span>
+                </div>
+                <div className="calendar-toolbar-actions">
+                  {isOwner && (
+                    <>
+                      <button
+                        className="secondary"
+                        onClick={() => setShowActivity((value) => !value)}
+                      >
+                        Activity
+                      </button>
+                      <button
+                        className="secondary"
+                        onClick={() => setCalendarModal("share")}
+                      >
+                        Share
+                      </button>
+                      <button
+                        className="secondary"
+                        onClick={() => {
+                          setCalendarForm({
+                            name: detail.calendar.name,
+                            color: detail.calendar.color,
+                            description: detail.calendar.description,
+                            timezone: detail.calendar.timezone,
+                          });
+                          setCalendarModal("settings");
+                        }}
+                      >
+                        Settings
+                      </button>
+                    </>
+                  )}
+                  {canEdit && (
+                    <button className="primary" onClick={() => openEvent()}>
+                      ＋ Event
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="calendar-viewbar">
+                <div>
+                  <button onClick={() => shift(-1)}>‹</button>
+                  <button onClick={() => setCursor(new Date())}>Today</button>
+                  <button onClick={() => shift(1)}>›</button>
+                  <h3>{title}</h3>
+                </div>
+                <div>
+                  {(["month", "week", "day", "agenda"] as const).map((item) => (
+                    <button
+                      className={mode === item ? "active" : ""}
+                      key={item}
+                      onClick={() => setMode(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {mode === "month" && (
+                <MonthView
+                  range={range}
+                  events={events}
+                  color={detail.calendar.color}
+                  canEdit={canEdit}
+                  openEvent={openEvent}
+                />
+              )}
+              {mode === "week" && (
+                <WeekView
+                  range={range}
+                  events={events}
+                  color={detail.calendar.color}
+                  openEvent={openEvent}
+                />
+              )}
+              {mode === "day" && (
+                <DayView
+                  date={cursor}
+                  events={events}
+                  color={detail.calendar.color}
+                  canEdit={canEdit}
+                  openEvent={openEvent}
+                />
+              )}
+              {mode === "agenda" && (
+                <AgendaView
+                  events={events}
+                  color={detail.calendar.color}
+                  openEvent={openEvent}
+                />
+              )}
+              {showActivity && isOwner && (
+                <ActivityPanel activity={detail.activity} />
+              )}
+              {showTrash && isOwner && (
+                <TrashPanel
+                  calendars={deletedCalendars}
+                  events={detail.deletedEvents || []}
+                  notify={notify}
+                  reloadCalendars={loadCalendars}
+                  reloadDetail={loadDetail}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+      {calendarModal && (
+        <CalendarModal
+          kind={calendarModal}
+          form={calendarForm}
+          setForm={setCalendarForm}
+          busy={busy}
+          save={saveCalendar}
+          close={() => setCalendarModal(null)}
+          detail={detail}
+          people={people}
+          reload={loadDetail}
+          notify={notify}
+          remove={deleteCalendar}
+        />
+      )}
+      {eventModal && (
+        <EventModal
+          form={eventForm}
+          setForm={setEventForm}
+          editing={editing}
+          busy={busy}
+          save={saveEvent}
+          remove={deleteEvent}
+          close={() => setEventModal(false)}
+          notify={notify}
+        />
+      )}
+    </section>
+  );
 }
 
-function MonthView({range,events,color,canEdit,openEvent}:{range:{start:Date;end:Date};events:CalendarEvent[];color:string;canEdit:boolean;openEvent:(event?:CalendarEvent,date?:Date)=>void}){const days=[];for(let day=new Date(range.start);day<range.end;day=new Date(day.getTime()+86400000))days.push(day);return <div className="month-calendar"><div className="month-weekdays">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(day=><b key={day}>{day}</b>)}</div><div className="month-grid">{days.map(day=>{const dayEvents=events.filter(event=>new Date(event.startAt).toDateString()===day.toDateString());return <article key={day.toISOString()} className={day.getMonth()!==new Date(range.start.getFullYear(),range.start.getMonth()+1,0).getMonth()?"outside":""} onDoubleClick={()=>canEdit&&openEvent(undefined,new Date(day.getFullYear(),day.getMonth(),day.getDate(),10))}><time>{day.getDate()}</time>{dayEvents.map(event=><button key={event.id} style={{borderLeftColor:color}} onClick={()=>openEvent(event)}><b>{event.allDay?"All day":new Date(event.startAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</b> {event.title}</button>)}</article>})}</div></div>}
-function WeekView({range,events,color,openEvent}:{range:{start:Date};events:CalendarEvent[];color:string;openEvent:(event:CalendarEvent)=>void}){const days=Array.from({length:7},(_,index)=>new Date(range.start.getTime()+index*86400000));return <div className="week-calendar">{days.map(day=><section key={day.toISOString()}><header><small>{day.toLocaleDateString([],{weekday:"short"})}</small><b>{day.getDate()}</b></header><div>{events.filter(event=>new Date(event.startAt).toDateString()===day.toDateString()).map(event=><button key={event.id} style={{borderColor:color}} onClick={()=>openEvent(event)}><time>{new Date(event.startAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</time><b>{event.title}</b><small>{event.location||event.status}</small></button>)}</div></section>)}</div>}
-function AgendaView({events,color,openEvent}:{events:CalendarEvent[];color:string;openEvent:(event:CalendarEvent)=>void}){const grouped=Object.groupBy(events,event=>new Date(event.startAt).toDateString());return <div className="agenda-calendar">{Object.entries(grouped).map(([date,items])=><section key={date}><header><b>{date}</b><span>{items?.length||0} events</span></header>{items?.map(event=><button key={event.id} onClick={()=>openEvent(event)}><i style={{background:color}}/><time><b>{new Date(event.startAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</b><small>{new Date(event.endAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</small></time><span><b>{event.title}</b><small>{event.location||event.description||event.status}</small></span><em>{event.status}</em></button>)}</section>)}{!events.length&&<div className="calendar-empty">No upcoming events in this range.</div>}</div>}
+function MonthView({
+  range,
+  events,
+  color,
+  canEdit,
+  openEvent,
+}: {
+  range: { start: Date; end: Date };
+  events: CalendarEvent[];
+  color: string;
+  canEdit: boolean;
+  openEvent: (event?: CalendarEvent, date?: Date) => void;
+}) {
+  const days = [];
+  for (
+    let day = new Date(range.start);
+    day < range.end;
+    day = new Date(day.getTime() + 86400000)
+  )
+    days.push(day);
+  return (
+    <div className="month-calendar">
+      <div className="month-weekdays">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <b key={day}>{day}</b>
+        ))}
+      </div>
+      <div className="month-grid">
+        {days.map((day) => {
+          const dayEvents = events.filter(
+            (event) =>
+              new Date(event.startAt).toDateString() === day.toDateString(),
+          );
+          return (
+            <article
+              key={day.toISOString()}
+              className={
+                day.getMonth() !==
+                new Date(
+                  range.start.getFullYear(),
+                  range.start.getMonth() + 1,
+                  0,
+                ).getMonth()
+                  ? "outside"
+                  : ""
+              }
+              onDoubleClick={() =>
+                canEdit &&
+                openEvent(
+                  undefined,
+                  new Date(
+                    day.getFullYear(),
+                    day.getMonth(),
+                    day.getDate(),
+                    10,
+                  ),
+                )
+              }
+            >
+              <time>{day.getDate()}</time>
+              {dayEvents.map((event) => (
+                <button
+                  key={event.id}
+                  style={{ borderLeftColor: color }}
+                  onClick={() => openEvent(event)}
+                >
+                  <b>
+                    {event.allDay
+                      ? "All day"
+                      : new Date(event.startAt).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                  </b>{" "}
+                  {event.title}
+                </button>
+              ))}
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function WeekView({
+  range,
+  events,
+  color,
+  openEvent,
+}: {
+  range: { start: Date };
+  events: CalendarEvent[];
+  color: string;
+  openEvent: (event: CalendarEvent) => void;
+}) {
+  const days = Array.from(
+    { length: 7 },
+    (_, index) => new Date(range.start.getTime() + index * 86400000),
+  );
+  return (
+    <div className="week-calendar">
+      {days.map((day) => (
+        <section key={day.toISOString()}>
+          <header>
+            <small>{day.toLocaleDateString([], { weekday: "short" })}</small>
+            <b>{day.getDate()}</b>
+          </header>
+          <div>
+            {events
+              .filter(
+                (event) =>
+                  new Date(event.startAt).toDateString() === day.toDateString(),
+              )
+              .map((event) => (
+                <button
+                  key={event.id}
+                  style={{ borderColor: color }}
+                  onClick={() => openEvent(event)}
+                >
+                  <time>
+                    {new Date(event.startAt).toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  <b>{event.title}</b>
+                  <small>{event.location || event.status}</small>
+                </button>
+              ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+function AgendaView({
+  events,
+  color,
+  openEvent,
+}: {
+  events: CalendarEvent[];
+  color: string;
+  openEvent: (event: CalendarEvent) => void;
+}) {
+  const grouped = Object.groupBy(events, (event) =>
+    new Date(event.startAt).toDateString(),
+  );
+  return (
+    <div className="agenda-calendar">
+      {Object.entries(grouped).map(([date, items]) => (
+        <section key={date}>
+          <header>
+            <b>{date}</b>
+            <span>{items?.length || 0} events</span>
+          </header>
+          {items?.map((event) => (
+            <button key={event.id} onClick={() => openEvent(event)}>
+              <i style={{ background: color }} />
+              <time>
+                <b>
+                  {new Date(event.startAt).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </b>
+                <small>
+                  {new Date(event.endAt).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </small>
+              </time>
+              <span>
+                <b>{event.title}</b>
+                <small>
+                  {event.location || event.description || event.status}
+                </small>
+              </span>
+              <em>{event.status}</em>
+            </button>
+          ))}
+        </section>
+      ))}
+      {!events.length && (
+        <div className="calendar-empty">No upcoming events in this range.</div>
+      )}
+    </div>
+  );
+}
 
-function CalendarModal({kind,form,setForm,busy,save,close,detail,people,reload,notify,remove}:{kind:"create"|"settings"|"share";form:typeof initialCalendar;setForm:(value:typeof initialCalendar)=>void;busy:boolean;save:()=>void;close:()=>void;detail:Detail|null;people:Person[];reload:()=>void;notify:(message:string)=>void;remove:()=>void}){const [userId,setUserId]=useState(""),[permission,setPermission]=useState("viewer");if(kind==="share")return <div className="modal-backdrop"><div className="modal calendar-modal"><button className="modal-close" onClick={close}>×</button><h2>Share {detail?.calendar.name}</h2><p>Sharing this calendar does not expose your other calendars or boards.</p><div className="calendar-members">{detail?.members.map(member=><div key={member.userId}><span><b>{member.name}</b><small>{member.email} · {member.permission}</small></span><button className="danger subtle" onClick={()=>api(`/api/calendars/${detail.calendar.id}/members?userId=${member.userId}`,{method:"DELETE"}).then(reload).catch(error=>notify(error.message))}>Remove</button></div>)}</div><div className="modal-row"><select value={userId} onChange={event=>setUserId(event.target.value)}><option value="">Choose member</option>{people.filter(person=>person.id!==detail?.calendar.ownerId&&!detail?.members.some(member=>member.userId===person.id)).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select><select value={permission} onChange={event=>setPermission(event.target.value)}><option value="viewer">Viewer</option><option value="editor">Editor</option></select></div><button className="primary wide" disabled={!userId} onClick={()=>api(`/api/calendars/${detail?.calendar.id}/members`,{method:"POST",headers,body:JSON.stringify({userId,permission})}).then(()=>{setUserId("");reload();notify("Calendar shared")}).catch(error=>notify(error.message))}>Share calendar</button></div></div>;return <div className="modal-backdrop"><div className="modal calendar-modal"><button className="modal-close" onClick={close}>×</button><h2>{kind==="create"?"New calendar":"Calendar settings"}</h2><label>Name<input maxLength={80} value={form.name} onChange={event=>setForm({...form,name:event.target.value})}/></label><div className="modal-row"><label>Color<input type="color" value={form.color} onChange={event=>setForm({...form,color:event.target.value})}/></label><label>Time zone<input value={form.timezone} onChange={event=>setForm({...form,timezone:event.target.value})}/></label></div><label>Description<textarea maxLength={500} value={form.description} onChange={event=>setForm({...form,description:event.target.value})}/></label><div className="modal-actions">{kind==="settings"&&<button className="danger" onClick={remove}>Delete calendar</button>}<button className="primary" disabled={busy||!form.name.trim()} onClick={save}>{busy?"Saving…":"Save calendar"}</button></div></div></div>}
-function EventModal({form,setForm,editing,busy,save,remove,close}:{form:typeof initialEvent;setForm:(value:typeof initialEvent)=>void;editing:CalendarEvent|null;busy:boolean;save:()=>void;remove:()=>void;close:()=>void}){return <div className="modal-backdrop"><div className="modal calendar-modal"><button className="modal-close" onClick={close}>×</button><h2>{editing?"Edit event":"New event"}</h2><label>Title<input maxLength={160} value={form.title} onChange={event=>setForm({...form,title:event.target.value})}/></label><div className="modal-row"><label>Starts<input type="datetime-local" value={form.startAt} onChange={event=>setForm({...form,startAt:event.target.value})}/></label><label>Ends<input type="datetime-local" value={form.endAt} onChange={event=>setForm({...form,endAt:event.target.value})}/></label></div><div className="modal-row"><label>Time zone<input value={form.timezone} onChange={event=>setForm({...form,timezone:event.target.value})}/></label><label>Status<select value={form.status} onChange={event=>setForm({...form,status:event.target.value})}><option value="tentative">Tentative</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></label></div><label>Location or link<input maxLength={300} value={form.location} onChange={event=>setForm({...form,location:event.target.value})}/></label><label>Description<textarea maxLength={3000} value={form.description} onChange={event=>setForm({...form,description:event.target.value})}/></label><label className="calendar-check"><input type="checkbox" checked={form.allDay} onChange={event=>setForm({...form,allDay:event.target.checked})}/> All-day event</label><div className="modal-actions">{editing&&<button className="danger" onClick={remove}>Delete event</button>}<button className="primary" disabled={busy||!form.title||!form.startAt||!form.endAt} onClick={save}>{busy?"Saving…":"Save event"}</button></div></div></div>}
+function CalendarModal({
+  kind,
+  form,
+  setForm,
+  busy,
+  save,
+  close,
+  detail,
+  people,
+  reload,
+  notify,
+  remove,
+}: {
+  kind: "create" | "settings" | "share";
+  form: typeof initialCalendar;
+  setForm: (value: typeof initialCalendar) => void;
+  busy: boolean;
+  save: () => void;
+  close: () => void;
+  detail: Detail | null;
+  people: Person[];
+  reload: () => void;
+  notify: (message: string) => void;
+  remove: () => void;
+}) {
+  const [userId, setUserId] = useState(""),
+    [permission, setPermission] = useState("viewer"),
+    [initialForm] = useState(() => JSON.stringify(form));
+  const closeEditor = () => {
+    const changed = JSON.stringify(form) !== initialForm;
+    if (changed && !window.confirm("Discard your unsaved calendar changes?"))
+      return;
+    close();
+  };
+  if (kind === "share")
+    return (
+      <div className="modal-backdrop">
+        <div className="modal calendar-modal">
+          <button className="modal-close" onClick={close}>
+            ×
+          </button>
+          <h2>Share {detail?.calendar.name}</h2>
+          <p>
+            Sharing this calendar does not expose your other calendars or
+            boards.
+          </p>
+          <div className="calendar-members">
+            {detail?.members.map((member) => (
+              <div key={member.userId}>
+                <span>
+                  <b>{member.name}</b>
+                  <small>
+                    {member.email} · {member.permission}
+                  </small>
+                </span>
+                <button
+                  className="danger subtle"
+                  onClick={() =>
+                    api(
+                      `/api/calendars/${detail.calendar.id}/members?userId=${member.userId}`,
+                      { method: "DELETE" },
+                    )
+                      .then(reload)
+                      .catch((error) => notify(error.message))
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="modal-row">
+            <select
+              value={userId}
+              onChange={(event) => setUserId(event.target.value)}
+            >
+              <option value="">Choose member</option>
+              {people
+                .filter(
+                  (person) =>
+                    person.id !== detail?.calendar.ownerId &&
+                    !detail?.members.some(
+                      (member) => member.userId === person.id,
+                    ),
+                )
+                .map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.name}
+                  </option>
+                ))}
+            </select>
+            <select
+              value={permission}
+              onChange={(event) => setPermission(event.target.value)}
+            >
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+          </div>
+          <button
+            className="primary wide"
+            disabled={!userId}
+            onClick={() =>
+              api(`/api/calendars/${detail?.calendar.id}/members`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ userId, permission }),
+              })
+                .then(() => {
+                  setUserId("");
+                  reload();
+                  notify("Calendar shared");
+                })
+                .catch((error) => notify(error.message))
+            }
+          >
+            Share calendar
+          </button>
+        </div>
+      </div>
+    );
+  return (
+    <div className="modal-backdrop">
+      <div className="modal calendar-modal">
+        <button className="modal-close" onClick={closeEditor}>
+          ×
+        </button>
+        <h2>{kind === "create" ? "New calendar" : "Calendar settings"}</h2>
+        <label>
+          Name
+          <input
+            maxLength={80}
+            value={form.name}
+            onChange={(event) => setForm({ ...form, name: event.target.value })}
+          />
+        </label>
+        <div className="modal-row">
+          <label>
+            Color
+            <input
+              type="color"
+              value={form.color}
+              onChange={(event) =>
+                setForm({ ...form, color: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Time zone
+            <input
+              value={form.timezone}
+              onChange={(event) =>
+                setForm({ ...form, timezone: event.target.value })
+              }
+            />
+          </label>
+        </div>
+        <label>
+          Description
+          <textarea
+            maxLength={500}
+            value={form.description}
+            onChange={(event) =>
+              setForm({ ...form, description: event.target.value })
+            }
+          />
+        </label>
+        <div className="modal-actions">
+          {kind === "settings" && (
+            <button className="danger" onClick={remove}>
+              Delete calendar
+            </button>
+          )}
+          <button
+            className="primary"
+            disabled={busy || !form.name.trim()}
+            onClick={save}
+          >
+            {busy ? "Saving…" : "Save calendar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function EventModal({
+  form,
+  setForm,
+  editing,
+  busy,
+  save,
+  remove,
+  close,
+  notify,
+}: {
+  form: typeof initialEvent;
+  setForm: (value: typeof initialEvent) => void;
+  editing: CalendarEvent | null;
+  busy: boolean;
+  save: () => void;
+  remove: () => void;
+  close: () => void;
+  notify: (message: string) => void;
+}) {
+  const [remindAt, setRemindAt] = useState("");
+  const [initialForm] = useState(() => JSON.stringify(form));
+  const safeClose = () => {
+    if (JSON.stringify(form) !== initialForm && !window.confirm("Discard your unsaved event changes?"))
+      return;
+    close();
+  };
+  const scheduleReminder = async () => {
+    if (!editing || !remindAt) return;
+    try {
+      await api(`/api/calendar-events/${editing.id}/reminders`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          remindAt: new Date(remindAt).toISOString(),
+          message: `Upcoming: ${editing.title}`,
+        }),
+      });
+      setRemindAt("");
+      notify("Task Buddy reminder scheduled");
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  return (
+    <div className="modal-backdrop">
+      <div className="modal calendar-modal">
+        <button className="modal-close" onClick={safeClose}>
+          ×
+        </button>
+        <h2>{editing ? "Edit event" : "New event"}</h2>
+        <label>
+          Title
+          <input
+            maxLength={160}
+            value={form.title}
+            onChange={(event) =>
+              setForm({ ...form, title: event.target.value })
+            }
+          />
+        </label>
+        <div className="modal-row">
+          <label>
+            Starts
+            <input
+              type="datetime-local"
+              value={form.startAt}
+              onChange={(event) =>
+                setForm({ ...form, startAt: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Ends
+            <input
+              type="datetime-local"
+              value={form.endAt}
+              onChange={(event) =>
+                setForm({ ...form, endAt: event.target.value })
+              }
+            />
+          </label>
+        </div>
+        <div className="modal-row">
+          <label>
+            Time zone
+            <input
+              value={form.timezone}
+              onChange={(event) =>
+                setForm({ ...form, timezone: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Status
+            <select
+              value={form.status}
+              onChange={(event) =>
+                setForm({ ...form, status: event.target.value })
+              }
+            >
+              <option value="tentative">Tentative</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Location or link
+          <input
+            maxLength={300}
+            value={form.location}
+            onChange={(event) =>
+              setForm({ ...form, location: event.target.value })
+            }
+          />
+        </label>
+        <label>
+          Description
+          <textarea
+            maxLength={3000}
+            value={form.description}
+            onChange={(event) =>
+              setForm({ ...form, description: event.target.value })
+            }
+          />
+        </label>
+        <label className="calendar-check">
+          <input
+            type="checkbox"
+            checked={form.allDay}
+            onChange={(event) =>
+              setForm({ ...form, allDay: event.target.checked })
+            }
+          />{" "}
+          All-day event
+        </label>
+        {editing && (
+          <section className="calendar-reminder">
+            <h3>Task Buddy reminder</h3>
+            <p>Schedule a private Discord DM to your linked account.</p>
+            <div className="calendar-reminder-row">
+              <input
+                aria-label="Calendar reminder date and time"
+                type="datetime-local"
+                value={remindAt}
+                onChange={(event) => setRemindAt(event.target.value)}
+              />
+              <button
+                className="secondary"
+                disabled={!remindAt}
+                onClick={scheduleReminder}
+              >
+                Remind me
+              </button>
+            </div>
+          </section>
+        )}
+        <div className="modal-actions">
+          {editing && (
+            <button className="danger" onClick={remove}>
+              Delete event
+            </button>
+          )}
+          <button
+            className="primary"
+            disabled={busy || !form.title || !form.startAt || !form.endAt}
+            onClick={save}
+          >
+            {busy ? "Saving…" : "Save event"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DayView({
+  date,
+  events,
+  color,
+  canEdit,
+  openEvent,
+}: {
+  date: Date;
+  events: CalendarEvent[];
+  color: string;
+  canEdit: boolean;
+  openEvent: (event?: CalendarEvent, date?: Date) => void;
+}) {
+  return (
+    <div className="day-calendar">
+      {Array.from({ length: 24 }, (_, hour) => {
+        const matches = events.filter(
+          (event) => new Date(event.startAt).getHours() === hour,
+        );
+        return (
+          <section
+            key={hour}
+            onDoubleClick={() => {
+              const eventDate = new Date(date);
+              eventDate.setHours(hour, 0, 0, 0);
+              if (canEdit) openEvent(undefined, eventDate);
+            }}
+          >
+            <time>
+              {new Date(2000, 0, 1, hour).toLocaleTimeString([], {
+                hour: "numeric",
+              })}
+            </time>
+            <div>
+              {matches.map((event) => (
+                <button
+                  key={event.id}
+                  style={{ borderLeftColor: color }}
+                  onClick={() => openEvent(event)}
+                >
+                  <b>{event.title}</b>
+                  <small>
+                    {new Date(event.startAt).toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                    –
+                    {new Date(event.endAt).toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                    {event.location ? ` · ${event.location}` : ""}
+                  </small>
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+function ActivityPanel({ activity }: { activity: Detail["activity"] }) {
+  return (
+    <section className="calendar-activity">
+      <h3>Calendar activity</h3>
+      {activity.map((item) => (
+        <article key={item.id}>
+          <span>
+            <b>{item.actorName}</b>
+            <p>{item.detail}</p>
+          </span>
+          <time>{new Date(item.createdAt).toLocaleString()}</time>
+        </article>
+      ))}
+      {!activity.length && <p>No activity yet.</p>}
+    </section>
+  );
+}
+function TrashPanel({
+  calendars,
+  events,
+  notify,
+  reloadCalendars,
+  reloadDetail,
+}: {
+  calendars: DeletedCalendar[];
+  events: DeletedEvent[];
+  notify: (message: string) => void;
+  reloadCalendars: () => void;
+  reloadDetail: () => void;
+}) {
+  const restore = async (url: string, label: string) => {
+    try {
+      await api(url, { method: "POST" });
+      await reloadCalendars();
+      await reloadDetail();
+      notify(`${label} restored`);
+    } catch (error) {
+      notify((error as Error).message);
+    }
+  };
+  return (
+    <section className="calendar-trash">
+      <h3>Recently deleted</h3>
+      <p>Items can be restored for 30 days.</p>
+      {calendars.map((item) => (
+        <article key={item.id}>
+          <i style={{ background: item.color }} />
+          <span>
+            <b>{item.name}</b>
+            <small>
+              Calendar · deleted {new Date(item.deletedAt).toLocaleString()}
+            </small>
+          </span>
+          <button
+            className="secondary"
+            onClick={() =>
+              restore(`/api/calendars/${item.id}/restore`, "Calendar")
+            }
+          >
+            Restore
+          </button>
+        </article>
+      ))}
+      {events.map((item) => (
+        <article key={item.id}>
+          <i />
+          <span>
+            <b>{item.title}</b>
+            <small>
+              Event · deleted {new Date(item.deletedAt).toLocaleString()}
+            </small>
+          </span>
+          <button
+            className="secondary"
+            onClick={() =>
+              restore(`/api/calendar-events/${item.id}/restore`, "Event")
+            }
+          >
+            Restore
+          </button>
+        </article>
+      ))}
+      {!calendars.length && !events.length && (
+        <p>Nothing is waiting for recovery.</p>
+      )}
+    </section>
+  );
+}

@@ -11,11 +11,10 @@ export function calendarPermission(
     .prepare(
       `SELECT c.owner_id ownerId,cm.permission
        FROM calendars c LEFT JOIN calendar_members cm ON cm.calendar_id=c.id AND cm.user_id=?
-       WHERE c.id=?`,
+       WHERE c.id=? AND c.deleted_at IS NULL`,
     )
     .get(user.id, calendarId) as
-    | { ownerId: number; permission: "viewer" | "editor" | null }
-    | undefined;
+    { ownerId: number; permission: "viewer" | "editor" | null } | undefined;
   if (!calendar) return null;
   if (calendar.ownerId === user.id) return "owner";
   return calendar.permission || null;
@@ -26,14 +25,18 @@ export const canEditCalendar = (permission: CalendarPermission | null) =>
 
 export function calendarIdByKey(key: string) {
   const calendar = db
-    .prepare("SELECT id FROM calendars WHERE public_id=?")
+    .prepare(
+      "SELECT id FROM calendars WHERE public_id=? AND deleted_at IS NULL",
+    )
     .get(key) as { id: number } | undefined;
   return calendar?.id || null;
 }
 
 export function calendarEventByKey(key: string) {
   return db
-    .prepare("SELECT id,calendar_id calendarId,title FROM calendar_events WHERE public_id=?")
+    .prepare(
+      "SELECT id,calendar_id calendarId,title FROM calendar_events WHERE public_id=? AND deleted_at IS NULL",
+    )
     .get(key) as { id: number; calendarId: number; title: string } | undefined;
 }
 

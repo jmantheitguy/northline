@@ -24,6 +24,20 @@ async function deliverDueReminders() {
       db.prepare(`INSERT INTO notification_deliveries(reminder_id,board_id_snapshot,board_key,board_name,task_title,created_by,channel_id,channel_name,message,kind,event_type,status,error) VALUES(?,?,?,?,?,?,?,?,?,?,?,'failed',?) ON CONFLICT(reminder_id) DO UPDATE SET status='failed',error=excluded.error`).run(reminder.id,reminder.boardId,reminder.boardKey,reminder.boardName,reminder.taskTitle,reminder.createdBy,reminder.channelId,reminder.channelName,reminder.message,reminder.kind,reminder.eventType,message);
     }
   }
+  const calendarDue = db.prepare(`SELECT r.id,r.message,e.public_id eventKey,e.title,c.public_id calendarKey,c.name calendarName,u.discord_user_id discordUserId
+    FROM calendar_reminders r JOIN calendar_events e ON e.id=r.calendar_event_id JOIN calendars c ON c.id=e.calendar_id JOIN users u ON u.id=r.recipient_user_id
+    WHERE r.status='pending' AND e.deleted_at IS NULL AND c.deleted_at IS NULL AND datetime(r.remind_at)<=datetime('now') ORDER BY r.remind_at LIMIT 20`).all() as Array<{id:number;message:string;eventKey:string;title:string;calendarKey:string;calendarName:string;discordUserId:string|null}>;
+  for (const reminder of calendarDue) {
+    try {
+      if (!reminder.discordUserId) throw new Error("Reminder recipient has not linked Discord");
+      const base=(process.env.NORTHLINE_PUBLIC_URL||"https://northline.vtuberoffices.com").replace(/\/$/,"");
+      await sendDiscordDirectMessage(reminder.discordUserId, `🗓️ **${reminder.calendarName} · ${reminder.title}**\n🔔 ${reminder.message}\n${base}/?calendar=${encodeURIComponent(reminder.calendarKey)}&event=${encodeURIComponent(reminder.eventKey)}`);
+      db.prepare("UPDATE calendar_reminders SET status='sent',sent_at=CURRENT_TIMESTAMP,error=NULL WHERE id=?").run(reminder.id);
+    } catch (error) {
+      const message=error instanceof Error?error.message.slice(0,300):"Delivery failed";
+      db.prepare("UPDATE calendar_reminders SET status='failed',error=? WHERE id=?").run(message,reminder.id);
+    }
+  }
 }
 
 export function startReminderWorker() {
