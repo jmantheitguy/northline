@@ -769,3 +769,19 @@ test("directory profiles expose only explicitly public stream schedules", async 
   assert.match(ui, /No public stream schedule/);
   assert.match(styles, /\.public-schedule-events/);
 });
+
+test("emergency management identities remain outside member-facing directories", async () => {
+  const schema = await read("lib/db.ts");
+  const sync = await read("lib/authentik-directory.ts");
+  const directory = await read("app/api/directory/route.ts");
+  const collabDirectory = await read("app/api/collab/schedule/route.ts");
+  const collabRequests = await read("app/api/collab/requests/route.ts");
+  assert.match(schema, /directory_visible/);
+  assert.match(schema, /management identity directory visibility/);
+  assert.match(schema, /auth_source='local' AND role='Admin'/);
+  assert.match(sync, /is_superuser/);
+  assert.match(sync, /remote\.is_superuser\?0:1/);
+  assert.match(directory, /u\.directory_visible=1/);
+  assert.match(collabDirectory, /directory_visible=1/);
+  assert.match(collabRequests, /directory_visible=1/);
+});

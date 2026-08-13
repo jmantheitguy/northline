@@ -652,6 +652,10 @@ addUserColumn("avatar", "avatar TEXT");
 addUserColumn("directory_id", "directory_id TEXT");
 addUserColumn("discord_user_id", "discord_user_id TEXT");
 addUserColumn("timezone", "timezone TEXT NOT NULL DEFAULT 'UTC'");
+addUserColumn(
+  "directory_visible",
+  "directory_visible INTEGER NOT NULL DEFAULT 1 CHECK(directory_visible IN (0,1))",
+);
 db.prepare(
   "UPDATE users SET directory_id=oidc_subject,oidc_subject=NULL WHERE directory_id IS NULL AND oidc_subject GLOB '????????-????-????-????-????????????'",
 ).run();
@@ -710,6 +714,7 @@ const migrations: [number, string][] = [
   [19, "stream schedules and collaboration requests"],
   [20, "multi-user collaboration participants"],
   [21, "collaboration reschedule proposals"],
+  [22, "management identity directory visibility"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(
@@ -747,5 +752,8 @@ db.transaction(() => {
     ).run("Administrator", email, hashSync(password, 12), "Admin", "Active");
   }
 })();
+db.prepare(
+  "UPDATE users SET directory_visible=0 WHERE auth_source='local' AND role='Admin' AND email=? COLLATE NOCASE",
+).run(email);
 
 export default db;

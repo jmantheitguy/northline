@@ -17,7 +17,7 @@ export async function GET() {
   (SELECT COUNT(*) FROM boards b WHERE b.owner_id=u.id)+(SELECT COUNT(*) FROM board_members bm WHERE bm.user_id=u.id) boards,
   (SELECT COUNT(*) FROM calendars c WHERE c.owner_id=u.id AND c.deleted_at IS NULL AND c.calendar_type='streaming' AND c.visibility='public') publicStreamCalendarCount,
   (SELECT c.name FROM calendars c WHERE c.owner_id=u.id AND c.deleted_at IS NULL AND c.calendar_type='streaming' AND c.visibility='public' ORDER BY c.created_at LIMIT 1) publicStreamCalendarName
-  FROM users u WHERE u.status='Active' ORDER BY u.name COLLATE NOCASE`,
+  FROM users u WHERE u.status='Active' AND u.directory_visible=1 ORDER BY u.name COLLATE NOCASE`,
     )
     .all();
   return NextResponse.json({ users });

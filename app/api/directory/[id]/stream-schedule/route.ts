@@ -15,7 +15,7 @@ export async function GET(
 
   const owner = db
     .prepare(
-      "SELECT id,name,avatar,timezone FROM users WHERE id=? AND status='Active'",
+      "SELECT id,name,avatar,timezone FROM users WHERE id=? AND status='Active' AND directory_visible=1",
     )
     .get(ownerId) as
     | { id: number; name: string; avatar: string | null; timezone: string }

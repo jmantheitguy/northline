@@ -68,7 +68,7 @@ export async function GET(request: Request) {
     });
   const people = db
     .prepare(
-      "SELECT id,name,email,avatar,timezone FROM users WHERE status='Active' ORDER BY name COLLATE NOCASE",
+      "SELECT id,name,email,avatar,timezone FROM users WHERE status='Active' AND directory_visible=1 ORDER BY name COLLATE NOCASE",
     )
     .all();
   return NextResponse.json({ events: groupedEvents, people });

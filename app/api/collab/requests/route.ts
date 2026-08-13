@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     const active = (
       db
         .prepare(
-          `SELECT COUNT(*) count FROM users WHERE status='Active' AND id IN (${recipientIds.map(() => "?").join(",")})`,
+          `SELECT COUNT(*) count FROM users WHERE status='Active' AND directory_visible=1 AND id IN (${recipientIds.map(() => "?").join(",")})`,
         )
         .get(...recipientIds) as { count: number }
     ).count;
