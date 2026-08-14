@@ -1,6 +1,6 @@
 import db from "./db";
 import type { SessionUser } from "./auth";
-import { boardPermission } from "./boards";
+import { accessibleBoardIds, boardPermission } from "./boards";
 
 export const MAX_ENTRY_SECONDS = 7 * 24 * 60 * 60;
 
@@ -62,17 +62,20 @@ export function ensureNoOverlap(
 }
 
 export function timeOptions(user: SessionUser) {
-  const boards = db
-    .prepare(
-      `SELECT DISTINCT b.id,b.name,w.id workspaceId,w.name workspaceName
-    FROM boards b JOIN workspaces w ON w.id=b.workspace_id
-    LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
-    LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
-    WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL
-    ORDER BY w.name,b.name`,
-    )
-    .all(user.id, user.id, user.id, user.id);
-  const boardIds = (boards as Array<{ id: number }>).map((board) => board.id);
+  // Use the same authoritative permission check as every board API. Keeping a
+  // second SQL implementation here risks exposing private board metadata when
+  // workspace or direct-share behavior changes.
+  const boardIds = accessibleBoardIds(user);
+  const boards = boardIds.length
+    ? db
+        .prepare(
+          `SELECT b.id,b.name,w.id workspaceId,w.name workspaceName
+           FROM boards b JOIN workspaces w ON w.id=b.workspace_id
+           WHERE b.id IN (${boardIds.map(() => "?").join(",")})
+           ORDER BY w.name,b.name`,
+        )
+        .all(...boardIds)
+    : [];
   const tasks = boardIds.length
     ? db
         .prepare(

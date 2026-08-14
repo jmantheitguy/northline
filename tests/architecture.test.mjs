@@ -611,6 +611,10 @@ test("persistent personal time cards remain auditable and administrator visible"
   assert.match(timeEntry, /Stop the active timer before deleting it/);
   assert.match(timeCard, /Time entry deleted/);
   assert.match(timeApi, /format.*csv/s);
+  assert.match(timeApi, /timeOptions\(user\)/);
+  const timeOptions = await read("lib/time-entries.ts");
+  assert.match(timeOptions, /accessibleBoardIds\(user\)/);
+  assert.doesNotMatch(timeOptions, /FROM boards b[\s\S]*LEFT JOIN board_members/);
   assert.match(timeEntry, /RESTORE/);
   assert.match(timeClock, /LONG_TIMER_SECONDS/);
   assert.match(timeClock, /northline-open-time-clock/);

@@ -13,5 +13,10 @@ export function boardPermission(user:SessionUser,boardId:number):BoardPermission
   return null;
 }
 
+export function accessibleBoardIds(user:SessionUser):number[] {
+  const boards=db.prepare("SELECT id FROM boards ORDER BY id").all() as Array<{id:number}>;
+  return boards.filter((board)=>boardPermission(user,board.id)!==null).map((board)=>board.id);
+}
+
 export const canEdit=(permission:BoardPermission|null)=>permission==="owner"||permission==="editor";
 export const canShare=(permission:BoardPermission|null)=>permission==="owner";

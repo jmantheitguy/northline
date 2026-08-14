@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.9.3 — Time-clock board privacy hardening
+
+- Build time-clock board options exclusively from Northline's authoritative board-permission check.
+- Continue showing owned boards, direct board shares, and boards inherited from shared workspaces.
+- Prevent private board names and tasks from entering another user's time-clock response.
+- Add a regression guard so the time clock cannot introduce a separate, weaker permission query later.
+
 ## Beta v0.9.2 — Reliable Authentik callback errors
 
 - Return every Authentik callback outcome to Northline's configured public URL instead of the container's internal listening address.
