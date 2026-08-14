@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.9.4 — Reliable Discord identity synchronization
+
+- Synchronize Discord usernames and avatars from the linked Discord account even when Task Buddy cannot resolve that account in its primary configured server.
+- Continue preferring guild-member profiles when available, with a direct Discord user lookup as a safe fallback.
+- Keep Northline display names independent from Discord usernames so creators can use different identities in each service.
+
 ## Beta v0.9.3 — Time-clock board privacy hardening
 
 - Build time-clock board options exclusively from Northline's authoritative board-permission check.
