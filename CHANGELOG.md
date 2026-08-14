@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.9.2 — Reliable Authentik callback errors
+
+- Return every Authentik callback outcome to Northline's configured public URL instead of the container's internal listening address.
+- Preserve the Northline access-group requirement while explaining exactly which Authentik groups grant access.
+- Keep failed, expired, incomplete, conflicting, and denied OIDC sessions on the public login page with a useful message.
+
 ## Beta v0.9.1 — On-demand welcome guide
 
 - Stop opening the welcome guide automatically after sign-in.

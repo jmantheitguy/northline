@@ -941,7 +941,8 @@ function Login({
     if (!code) return;
     const messages: Record<string, string> = {
       invalid_state: "Your sign-in session expired. Please try again.",
-      access_denied: "Your account does not have access to Northline.",
+      access_denied:
+        "Your Authentik account is not in Northline Users or Northline Admins. Ask the site owner to add the correct access group, then try again.",
       identity_conflict:
         "Northline could not safely match this identity. Ask an administrator to review the account.",
       token_exchange: "Authentik could not complete sign-in. Please try again.",

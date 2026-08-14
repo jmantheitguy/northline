@@ -308,7 +308,9 @@ test("directory, login, and Discord identities remain separate", async () => {
   );
   assert.match(callback, /OIDC_IDENTITY_CONFLICT/);
   assert.match(callback, /!byEmail\.directoryId/);
-  assert.match(callback, /auth_error=identity_conflict/);
+  assert.match(callback, /authErrorRedirect\(config\.publicUrl,"identity_conflict"\)/);
+  assert.match(callback, /authErrorRedirect\(config\.publicUrl,"access_denied"\)/);
+  assert.doesNotMatch(callback, /auth_error=access_denied[^\n]*request\.url/);
   assert.match(ui, /Northline could not safely match this identity/);
   assert.match(schema, /directory_id TEXT/);
   assert.match(schema, /discord_user_id TEXT/);

@@ -9,6 +9,12 @@ type UserInfo={sub:string;email?:string;name?:string;preferred_username?:string;
 
 type IdentityUser={id:number;oidcSubject:string|null;directoryId:string|null};
 
+function authErrorRedirect(publicUrl:string,code:string) {
+  const target=new URL(publicUrl);
+  target.searchParams.set("auth_error",code);
+  return NextResponse.redirect(target);
+}
+
 function resolveIdentity(profile:{sub:string;email:string;name:string;avatar:string|null;role:"Admin"|"Member"}) {
   return db.transaction(()=>{
     const bySubject=db.prepare("SELECT id,oidc_subject oidcSubject,directory_id directoryId FROM users WHERE oidc_subject=?").get(profile.sub) as IdentityUser|undefined;
@@ -30,31 +36,31 @@ function resolveIdentity(profile:{sub:string;email:string;name:string;avatar:str
 
 export async function GET(request:NextRequest) {
   const config=oidcConfig();
-  if(!config) return NextResponse.redirect(new URL("/?auth_error=oidc_not_configured",request.url));
+  if(!config) return authErrorRedirect(process.env.NORTHLINE_PUBLIC_URL||request.nextUrl.origin,"oidc_not_configured");
   const code=request.nextUrl.searchParams.get("code");
   const state=request.nextUrl.searchParams.get("state");
   const jar=await cookies();
   const expectedState=jar.get("northline_oidc_state")?.value;
   const verifier=jar.get("northline_oidc_verifier")?.value;
-  if(!code || !state || !expectedState || state!==expectedState || !verifier) return NextResponse.redirect(new URL("/?auth_error=invalid_state",request.url));
+  if(!code || !state || !expectedState || state!==expectedState || !verifier) return authErrorRedirect(config.publicUrl,"invalid_state");
 
   const tokenResponse=await fetch(`${config.origin}/application/o/token/`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:`${config.publicUrl}/api/auth/oidc/callback`,client_id:config.clientId,client_secret:config.clientSecret,code_verifier:verifier})});
-  if(!tokenResponse.ok) return NextResponse.redirect(new URL("/?auth_error=token_exchange",request.url));
+  if(!tokenResponse.ok) return authErrorRedirect(config.publicUrl,"token_exchange");
   const token=await tokenResponse.json() as {access_token:string};
   const userResponse=await fetch(`${config.origin}/application/o/userinfo/`,{headers:{Authorization:`Bearer ${token.access_token}`}});
-  if(!userResponse.ok) return NextResponse.redirect(new URL("/?auth_error=userinfo",request.url));
+  if(!userResponse.ok) return authErrorRedirect(config.publicUrl,"userinfo");
   const profile=await userResponse.json() as UserInfo;
   const groups=Array.isArray(profile.groups)?profile.groups:[];
   const isAdmin=groups.includes("Northline Admins");
   const hasAccess=isAdmin || groups.includes("Northline Users");
-  if(!hasAccess) return NextResponse.redirect(new URL("/?auth_error=access_denied",request.url));
+  if(!hasAccess) return authErrorRedirect(config.publicUrl,"access_denied");
   const email=(profile.email || profile.preferred_username)?.trim().toLowerCase();
-  if(!email || !profile.sub) return NextResponse.redirect(new URL("/?auth_error=incomplete_profile",request.url));
+  if(!email || !profile.sub) return authErrorRedirect(config.publicUrl,"incomplete_profile");
   const name=profile.name || profile.preferred_username || email;
   const role=isAdmin?"Admin":"Member";
   let userId:number;
   try{userId=resolveIdentity({sub:profile.sub,email,name,avatar:profile.picture||null,role});}
-  catch(error){console.error("OIDC identity resolution failed",error instanceof Error?error.message:"unknown error");jar.delete("northline_oidc_state");jar.delete("northline_oidc_verifier");return NextResponse.redirect(new URL("/?auth_error=identity_conflict",config.publicUrl));}
+  catch(error){console.error("OIDC identity resolution failed",error instanceof Error?error.message:"unknown error");jar.delete("northline_oidc_state");jar.delete("northline_oidc_verifier");return authErrorRedirect(config.publicUrl,"identity_conflict");}
   try{await syncAuthentikDirectory(true);}catch(error){console.error("Post-login Authentik directory sync failed",error);}
   await createSession(userId);
   jar.delete("northline_oidc_state"); jar.delete("northline_oidc_verifier");
