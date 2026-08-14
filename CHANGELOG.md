@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.9.5 — Unobstructed alerts and errors
+
+- Keep the floating time-clock button and expanded clock panel behind application alerts.
+- Raise success and error messages above persistent workspace controls so important feedback remains readable and actionable.
+- Preserve the clock's accessibility from normal page content without allowing it to cover notifications.
+
 ## Beta v0.9.4 — Reliable Discord identity synchronization
 
 - Synchronize Discord usernames and avatars from the linked Discord account even when Task Buddy cannot resolve that account in its primary configured server.
