@@ -8,6 +8,7 @@ KEY_FILE="${NORTHLINE_BACKUP_KEY_FILE:-/root/.config/northline-backup.key}"
 KEEP_COUNT="${NORTHLINE_BACKUP_KEEP_COUNT:-4}"
 NAS_ROOT="${NORTHLINE_NAS_ROOT:-}"
 NAS_KEEP_COUNT="${NORTHLINE_NAS_KEEP_COUNT:-$KEEP_COUNT}"
+S3_URI="${NORTHLINE_S3_URI:-}"
 STATUS_ROOT="${NORTHLINE_STATUS_ROOT:-$APP_ROOT/runtime-status}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 WORK_DIR="$(mktemp -d /tmp/northline-backup.XXXXXX)"
@@ -76,9 +77,24 @@ if [[ -n "$NAS_ROOT" ]]; then
   chmod 0600 "$NAS_FILE" || true
   keep_newest_backups "$NAS_ROOT" "$NAS_KEEP_COUNT"
 fi
+
+if [[ -n "$S3_URI" ]]; then
+  command -v aws >/dev/null 2>&1 || { echo "AWS CLI is required for S3 replication" >&2; exit 1; }
+  [[ "$S3_URI" == s3://* ]] || { echo "NORTHLINE_S3_URI must use an s3:// URI" >&2; exit 1; }
+  S3_BUCKET_AND_PREFIX="${S3_URI#s3://}"
+  S3_BUCKET="${S3_BUCKET_AND_PREFIX%%/*}"
+  S3_PREFIX="${S3_BUCKET_AND_PREFIX#"$S3_BUCKET"}"
+  S3_PREFIX="${S3_PREFIX#/}"
+  S3_PREFIX="${S3_PREFIX%/}"
+  S3_KEY="${S3_PREFIX:+$S3_PREFIX/}$(basename "$ENCRYPTED")"
+  aws s3 cp "$ENCRYPTED" "s3://$S3_BUCKET/$S3_KEY" --only-show-errors --sse AES256
+  LOCAL_SIZE="$(stat -c %s "$ENCRYPTED")"
+  REMOTE_SIZE="$(aws s3api head-object --bucket "$S3_BUCKET" --key "$S3_KEY" --query ContentLength --output text)"
+  [[ "$LOCAL_SIZE" == "$REMOTE_SIZE" ]] || { echo "S3 backup size verification failed" >&2; exit 1; }
+fi
 keep_newest_backups "$BACKUP_ROOT" "$KEEP_COUNT"
 STATUS_TEMP="$STATUS_ROOT/backup.json.tmp"
-printf '{"status":"healthy","completedAt":"%s","archive":"%s","nasReplicated":%s,"message":"Encrypted backup and verification completed"}\n' "$(date -u +%FT%TZ)" "$(basename "$ENCRYPTED")" "$([[ -n "$NAS_ROOT" ]] && echo true || echo false)" > "$STATUS_TEMP"
+printf '{"status":"healthy","completedAt":"%s","archive":"%s","nasReplicated":%s,"s3Replicated":%s,"message":"Encrypted backup and verification completed"}\n' "$(date -u +%FT%TZ)" "$(basename "$ENCRYPTED")" "$([[ -n "$NAS_ROOT" ]] && echo true || echo false)" "$([[ -n "$S3_URI" ]] && echo true || echo false)" > "$STATUS_TEMP"
 mv -f -- "$STATUS_TEMP" "$STATUS_ROOT/backup.json"
 chmod 0644 "$STATUS_ROOT/backup.json"
 echo "$ENCRYPTED"

@@ -1,5 +1,12 @@
 # Northline release history
 
+## Beta v0.9.6 — Encrypted off-site backups
+
+- Replicate each encrypted daily Northline backup to private Amazon S3 storage.
+- Verify the uploaded object size before reporting off-site replication as healthy.
+- Keep four fast local restore points while S3 retains recent backups and archives older recovery points automatically.
+- Preserve the recovery key separately from both the application server and backup bucket.
+
 ## Beta v0.9.5 — Unobstructed alerts and errors
 
 - Keep the floating time-clock button and expanded clock panel behind application alerts.

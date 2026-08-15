@@ -2,9 +2,9 @@
 
 The production backup job protects Northline only. It creates a consistent snapshot of the Northline SQLite database, includes Northline's private environment configuration and the exact deployed Git commit, records checksums, and encrypts the archive with AES-256-CBC using PBKDF2. It does not back up, pause, or otherwise operate on Authentik or the mail stack.
 
-The production systemd timer runs once daily with a randomized delay and retains the four newest encrypted archives in the configured local destination. The script can optionally copy to a separately mounted destination, but production must not report off-host replication unless that mount is explicitly configured and verified. Exact schedules, paths, mount details, and credentials are intentionally excluded from this public repository.
+The production systemd timer runs once daily with a randomized delay and retains the four newest encrypted archives in the configured local destination. The script can optionally copy to a separately mounted destination and/or a private S3 prefix, but production must not report off-host replication unless the destination is explicitly configured and verified. Exact schedules, paths, bucket names, and credentials are intentionally excluded from this public repository.
 
-Each successful backup writes `runtime-status/backup.json`; each successful restore drill writes `runtime-status/restore.json`. The Northline container mounts this directory read-only and displays both reports in **Administration > Health**. `nasReplicated: true` confirms that a verified copy reached the NAS, not merely the VM.
+Each successful backup writes `runtime-status/backup.json`; each successful restore drill writes `runtime-status/restore.json`. The Northline container mounts this directory read-only and displays both reports in **Administration > Health**. `nasReplicated: true` confirms that a verified copy reached the NAS, while `s3Replicated: true` confirms that S3 reported the same object size as the local encrypted archive.
 
 The encryption key is stored separately at `/root/.config/northline-backup.key`. Losing both the VM and the off-host copy of this key makes the archives unrecoverable. Never commit the key or an archive to Git.
 
@@ -40,6 +40,10 @@ An archive kept only on the application VM is not a complete disaster-recovery s
 The production VM uses a root-only credentials file and a systemd automount for its SMB backup destination, so boot is not blocked when the NAS is temporarily unavailable. Choose the newest protocol supported by both systems, disable SMB1, restrict the backup account to its destination, and never publish the NAS administration interface or SMB service to the internet.
 
 The NAS contains encrypted archives only. The recovery key remains separate and must never be copied into the backup folder.
+
+## S3 destination
+
+Set `NORTHLINE_S3_URI` to a private `s3://` prefix in the service's host-only configuration. The host identity needs only list access to that prefix plus permission to upload and verify its objects. Keep public access blocked, enable bucket encryption and versioning, and use lifecycle rules to archive or expire older backups. Never commit the bucket name, AWS credentials, or encryption key.
 
 ## What is protected
 
