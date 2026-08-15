@@ -332,7 +332,9 @@ export function NorthlineApp() {
     }
   };
   const loadBoard = async (id: number) => {
-    setBoardData(null);
+    setBoardData((current) =>
+      current?.board.id === id ? current : null,
+    );
     try {
       setBoardData(await jsonFetch(`/api/boards/${id}`));
     } catch (e) {
@@ -3837,6 +3839,7 @@ function NorthlineModal({
         body: JSON.stringify({ userId: Number(selectedUser), permission }),
       });
       await refresh();
+      setSelectedUser("");
       notify("Board access updated");
     });
   const removeMember = (id: number) =>
@@ -4604,7 +4607,7 @@ function NorthlineModal({
             </div>
             <button
               className="primary wide"
-              disabled={!selectedUser}
+              disabled={busy || !selectedUser}
               onClick={share}
             >
               Grant access

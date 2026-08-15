@@ -493,6 +493,13 @@ test("personal and shared workspaces inherit board access safely", async () => {
   assert.match(announce, /allowed_mentions/);
 });
 
+test("board sharing keeps the active board mounted during refresh", async () => {
+  const ui = await read("app/northline-app.tsx");
+  assert.match(ui, /current\?\.board\.id === id \? current : null/);
+  assert.match(ui, /disabled=\{busy \|\| !selectedUser\}/);
+  assert.match(ui, /await refresh\(\);\s*setSelectedUser\(""\);\s*notify\("Board access updated"\)/);
+});
+
 test("release announcements follow successful deployments without duplicates", async () => {
   const deploy = await read("ops/release/deploy-production.sh");
   assert.match(deploy, /docker compose up -d --build/);

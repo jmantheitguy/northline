@@ -1,5 +1,11 @@
 # Northline release history
 
+## Beta v0.9.7 — Stable board sharing
+
+- Keep the active board mounted while its sharing data refreshes so granting access cannot crash the page.
+- Clear the selected member after a successful share and prevent duplicate submissions while the request is running.
+- Add a regression check covering the board-sharing refresh lifecycle.
+
 ## Beta v0.9.6 — Encrypted off-site backups
 
 - Replicate each encrypted daily Northline backup to private Amazon S3 storage.
