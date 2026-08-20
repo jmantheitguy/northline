@@ -15,6 +15,8 @@ type ActiveEntry = {
   taskId: number | null;
   boardName: string | null;
   taskTitle: string | null;
+  pausedAt: string | null;
+  pausedSeconds: number;
 };
 const request = async (url: string, options?: RequestInit) => {
   const response = await fetch(url, options),
@@ -23,6 +25,12 @@ const request = async (url: string, options?: RequestInit) => {
   return data;
 };
 const LONG_TIMER_SECONDS = 12 * 60 * 60;
+const localValue = (iso?: string | null) =>
+  iso
+    ? new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16)
+    : "";
 export const formatDuration = (seconds: number) => {
   const safe = Math.max(0, Math.floor(seconds)),
     hours = Math.floor(safe / 3600),
@@ -39,11 +47,14 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
     [taskId, setTaskId] = useState(""),
     [note, setNote] = useState(""),
     [now, setNow] = useState(0),
+    [editStartedAt, setEditStartedAt] = useState(""),
+    [editReason, setEditReason] = useState(""),
     [busy, setBusy] = useState(false);
   const load = () =>
     request("/api/time")
       .then((data) => {
         setActive(data.active);
+        if (data.active) setEditStartedAt(localValue(data.active.startedAt));
         setOptions(data.options);
       })
       .catch((error) => notify(error.message));
@@ -76,13 +87,13 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
     return () => window.clearInterval(timer);
   }, [active]);
   const elapsed = active
-    ? Math.floor((now - new Date(active.startedAt).getTime()) / 1000)
+    ? Math.max(0, Math.floor((now - new Date(active.startedAt).getTime()) / 1000) - Number(active.pausedSeconds || 0) - (active.pausedAt ? Math.max(0, Math.floor((now - new Date(active.pausedAt).getTime()) / 1000)) : 0))
     : 0;
   const tasks = useMemo(
     () => options.tasks.filter((task) => String(task.boardId) === boardId),
     [options.tasks, boardId],
   );
-  const action = async (kind: "clock-in" | "clock-out") => {
+  const action = async (kind: "clock-in" | "clock-out" | "pause" | "resume" | "edit-clock-in") => {
     setBusy(true);
     try {
       if (kind === "clock-in")
@@ -96,6 +107,12 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
             note,
           }),
         });
+      else if (kind === "edit-clock-in")
+        await request(`/api/time/${active?.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: kind, startedAt: new Date(editStartedAt).toISOString(), reason: editReason }),
+        });
       else
         await request(`/api/time/${active?.id}`, {
           method: "PATCH",
@@ -103,11 +120,12 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
           body: JSON.stringify({ action: kind }),
         });
       setNote("");
+      if (kind === "edit-clock-in") setEditReason("");
       setBoardId("");
       setTaskId("");
       await load();
       window.dispatchEvent(new Event("northline-time-changed"));
-      notify(kind === "clock-in" ? "Clocked in" : "Clocked out");
+      notify(kind === "clock-in" ? "Clocked in" : kind === "clock-out" ? "Clocked out" : kind === "pause" ? "Timer paused" : kind === "resume" ? "Timer resumed" : "Time in updated");
     } catch (error) {
       notify((error as Error).message);
     } finally {
@@ -159,8 +177,8 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
                 </div>
               )}
               <span>
-                Clocked in{" "}
-                {new Date(active.startedAt).toLocaleTimeString([], {
+                {active.pausedAt ? "Paused since " : "Clocked in "}
+                {new Date(active.pausedAt || active.startedAt).toLocaleTimeString([], {
                   hour: "numeric",
                   minute: "2-digit",
                 })}
@@ -171,6 +189,17 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
                   active.note ||
                   "General work"}
               </b>
+              <label className="time-edit-start">
+                Time in
+                <input type="datetime-local" value={editStartedAt} onChange={(event) => setEditStartedAt(event.target.value)} />
+              </label>
+              <label className="time-edit-start">
+                Why change it?
+                <input value={editReason} onChange={(event) => setEditReason(event.target.value)} placeholder="Correction reason" />
+              </label>
+              <button className="secondary" disabled={busy || !editStartedAt || editReason.trim().length < 3} onClick={() => void action("edit-clock-in")}>Save time in</button>
+              <div className="time-punch-actions">
+                <button className="secondary" disabled={busy} onClick={() => void action(active.pausedAt ? "resume" : "pause")}>{active.pausedAt ? "Resume" : "Pause"}</button>
               <button
                 className="time-out-button"
                 disabled={busy}
@@ -178,6 +207,7 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
               >
                 {busy ? "Stopping…" : "Time out"}
               </button>
+              </div>
             </div>
           ) : (
             <div className="punch-form">

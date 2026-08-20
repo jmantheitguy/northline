@@ -1,5 +1,13 @@
 # Northline release history
 
+## Unreleased — Core workflow improvements
+
+- Add permission-checked multi-assignee tasks with a compatibility fallback for older task records.
+- Fan out assignment and due-date reminders to the assigned users' linked Discord accounts.
+- Add board-level filtering by authorized assignee and show multiple assignee avatars in task views.
+- Add auditable pause/resume controls for active timers and allow users to correct time-in with a reason.
+- Keep manual time-out aligned when a time-card owner moves time-in, so the original duration is preserved.
+
 ## Beta v0.9.7 — Stable board sharing
 
 - Keep the active board mounted while its sharing data refreshes so granting access cannot crash the page.

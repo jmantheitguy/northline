@@ -11,13 +11,13 @@ import {
 
 type User = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
-function editable(user: User, key: string) {
-  const event = calendarEventByKey(key);
+async function editable(user: User, key: string) {
+  const event = await calendarEventByKey(key);
   if (!event)
     return {
       error: NextResponse.json({ error: "Event not found" }, { status: 404 }),
     };
-  if (!canEditCalendar(calendarPermission(user, event.calendarId)))
+  if (!canEditCalendar(await calendarPermission(user, event.calendarId)))
     return {
       error: NextResponse.json(
         { error: "You cannot edit this event" },
@@ -34,7 +34,7 @@ export async function PATCH(
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const found = editable(user, (await params).id);
+  const found = await editable(user, (await params).id);
   if (found.error) return found.error;
   try {
     const body = await request.json();
@@ -55,7 +55,7 @@ export async function PATCH(
       end <= start
     )
       throw new Error("Enter a valid title and time range");
-    db.prepare(
+    await db.prepare(
       "UPDATE calendar_events SET title=?,description=?,location=?,start_at=?,end_at=?,timezone=?,all_day=?,status=?,event_kind=?,visibility=?,platform=?,game=?,stream_url=?,collab_enabled=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
     ).run(
       title,
@@ -78,7 +78,7 @@ export async function PATCH(
       body.collabEnabled ? 1 : 0,
       found.event!.id,
     );
-    recordCalendarActivity(
+    await recordCalendarActivity(
       found.event!.calendarId,
       user.id,
       "CALENDAR.EVENT.UPDATE",
@@ -100,15 +100,15 @@ export async function DELETE(
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const found = editable(user, (await params).id);
+  const found = await editable(user, (await params).id);
   if (found.error) return found.error;
-  recordCalendarActivity(
+  await recordCalendarActivity(
     found.event!.calendarId,
     user.id,
     "CALENDAR.EVENT.DELETE",
     `Moved event “${found.event!.title}” to Recently deleted for 30 days`,
   );
-  db.prepare(
+  await db.prepare(
     "UPDATE calendar_events SET deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?",
   ).run(found.event!.id);
   return NextResponse.json({ ok: true });

@@ -7,7 +7,7 @@ export async function GET() {
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const calendars = db
+  const calendars = await db
     .prepare(
       `SELECT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,
     c.owner_id ownerId,u.name ownerName,CASE WHEN c.owner_id=? THEN 'owner' ELSE cm.permission END permission,
@@ -17,7 +17,7 @@ export async function GET() {
     WHERE c.deleted_at IS NULL AND (c.owner_id=? OR cm.user_id=?) ORDER BY CASE WHEN c.owner_id=? THEN 0 ELSE 1 END,c.name COLLATE NOCASE`,
     )
     .all(user.id, user.id, user.id, user.id, user.id);
-  const deletedCalendars = db
+  const deletedCalendars = await db
     .prepare(
       `SELECT public_id id,name,color,deleted_at deletedAt FROM calendars WHERE owner_id=? AND deleted_at IS NOT NULL AND datetime(deleted_at)>=datetime('now','-30 days') ORDER BY deleted_at DESC`,
     )
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     if (!name || name.length > 80)
       throw new Error("Calendar name must be between 1 and 80 characters");
     const key = createCalendarPublicId(),
-      result = db
+      result = await db
         .prepare(
           "INSERT INTO calendars(public_id,owner_id,name,color,description,timezone,calendar_type,visibility) VALUES(?,?,?,?,?,?,?,?)",
         )
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
           visibility,
         );
     const id = Number(result.lastInsertRowid);
-    recordCalendarActivity(
+    await recordCalendarActivity(
       id,
       user.id,
       "CALENDAR.CREATE",

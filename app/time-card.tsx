@@ -231,6 +231,19 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
       setBusy(false);
     }
   };
+  const updateTimeIn = (value: string) => {
+    setForm((current) => {
+      let endedAt = current.endedAt;
+      if (current.startedAt && current.endedAt) {
+        const previousStart = new Date(current.startedAt).getTime();
+        const previousEnd = new Date(current.endedAt).getTime();
+        const duration = previousEnd - previousStart;
+        if (Number.isFinite(duration) && duration > 0)
+          endedAt = localValue(new Date(new Date(value).getTime() + duration).toISOString());
+      }
+      return { ...current, startedAt: value, endedAt };
+    });
+  };
   return (
     <section className="content time-card-page">
       <div className="page-title">
@@ -376,9 +389,7 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
               <TimePicker
                 label="Time in"
                 value={form.startedAt}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, startedAt: value }))
-                }
+                onChange={updateTimeIn}
               />
               <TimePicker
                 label="Time out"

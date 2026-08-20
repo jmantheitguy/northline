@@ -4,21 +4,27 @@ import db from "@/lib/db";
 import { boardPermission,canEdit } from "@/lib/boards";
 import { notifyTaskCreated } from "@/lib/task-notifications";
 import { recordBoardActivity } from "@/lib/activity";
+import { normalizeAssigneeIds, replaceTaskAssignees, validateAssigneeIds } from "@/lib/task-assignments";
 
 const priorities=["Low","Medium","High"];
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){
   const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
-  const boardId=Number((await params).id);if(!canEdit(boardPermission(user,boardId)))return NextResponse.json({error:"Forbidden"},{status:403});
-  const body=await request.json(),firstColumn=db.prepare("SELECT column_key columnKey FROM board_columns WHERE board_id=? ORDER BY position LIMIT 1").get(boardId) as {columnKey:string}|undefined;
+  const boardId=Number((await params).id);if(!canEdit(await boardPermission(user,boardId)))return NextResponse.json({error:"Forbidden"},{status:403});
+  const body=await request.json(),firstColumn=await db.prepare("SELECT column_key columnKey FROM board_columns WHERE board_id=? ORDER BY position LIMIT 1").get(boardId) as {columnKey:string}|undefined;
   const{title,status=firstColumn?.columnKey,priority="Medium",tag="General",dueDate=null,assigneeId=null,description=""}=body;
+  const assigneeIds=normalizeAssigneeIds(body.assigneeIds,assigneeId);
   const cleanTitle=String(title||"").trim(),cleanDescription=String(description||"").trim(),cleanTag=String(tag||"General").trim();
   if(!cleanTitle)return NextResponse.json({error:"Task title is required"},{status:400});
-  const validStatus=db.prepare("SELECT 1 FROM board_columns WHERE board_id=? AND column_key=?").get(boardId,String(status||""));
+  const validStatus=await db.prepare("SELECT 1 FROM board_columns WHERE board_id=? AND column_key=?").get(boardId,String(status||""));
   if(cleanTitle.length>200||cleanDescription.length>5000||cleanTag.length>50||!validStatus||!priorities.includes(priority))return NextResponse.json({error:"Invalid task details"},{status:400});
-  if(assigneeId){const allowed=db.prepare("SELECT 1 FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.id=? AND u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)").get(boardId,Number(assigneeId));if(!allowed)return NextResponse.json({error:"Assignee does not have access to this board"},{status:400});}
-  const result=db.prepare("INSERT INTO tasks(board_id,title,description,status,priority,tag,due_date,assignee_id,created_by) VALUES(?,?,?,?,?,?,?,?,?)").run(boardId,cleanTitle,cleanDescription,status,priority,cleanTag,dueDate||null,assigneeId||null,user.id);
-  db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(boardId);db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(user.id,"TASK.CREATE",String(result.lastInsertRowid),`Created task “${cleanTitle}”`);
-  recordBoardActivity(boardId,user.id,"TASK.CREATE",`Created ${cleanTitle}`);
-  notifyTaskCreated({id:Number(result.lastInsertRowid),boardId,title:cleanTitle,status,assigneeId:assigneeId?Number(assigneeId):null,dueDate:dueDate||null,createdBy:user.id},user.id);
+  try { await validateAssigneeIds(boardId,assigneeIds); } catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  const result=await db.transaction(async () => {
+    const created=await db.prepare("INSERT INTO tasks(board_id,title,description,status,priority,tag,due_date,assignee_id,created_by) VALUES(?,?,?,?,?,?,?,?,?)").run(boardId,cleanTitle,cleanDescription,status,priority,cleanTag,dueDate||null,assigneeIds[0]||null,user.id);
+    await replaceTaskAssignees(Number(created.lastInsertRowid),assigneeIds,user.id);
+    return created;
+  });
+  await db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(boardId);await db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(user.id,"TASK.CREATE",String(result.lastInsertRowid),`Created task “${cleanTitle}”`);
+  await recordBoardActivity(boardId,user.id,"TASK.CREATE",`Created ${cleanTitle}`);
+  await notifyTaskCreated({id:Number(result.lastInsertRowid),boardId,title:cleanTitle,status,assigneeIds,assigneeId:assigneeIds[0]||null,dueDate:dueDate||null,createdBy:user.id},user.id);
   return NextResponse.json({id:Number(result.lastInsertRowid)},{status:201});
 }

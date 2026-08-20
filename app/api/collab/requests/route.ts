@@ -12,7 +12,7 @@ export async function GET() {
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const requests = db
+  const requests = await db
     .prepare(
       `SELECT r.public_id id,r.id internalId,r.requester_id requesterId,
     r.proposed_start_at startAt,r.proposed_end_at endAt,r.timezone,r.title,r.message,r.status,
@@ -28,7 +28,7 @@ export async function GET() {
   >;
   const ids = requests.map((item) => item.internalId);
   const participants = ids.length
-    ? (db
+    ? (await db
         .prepare(
           `SELECT p.collab_request_id requestId,p.user_id userId,u.name,u.avatar,p.status,p.proposed_start_at proposedStartAt,p.proposed_end_at proposedEndAt,p.timezone,p.response_message responseMessage
     FROM collab_request_participants p JOIN users u ON u.id=p.user_id WHERE p.collab_request_id IN (${ids.map(() => "?").join(",")}) ORDER BY u.name COLLATE NOCASE`,
@@ -36,7 +36,7 @@ export async function GET() {
         .all(...ids) as Array<Record<string, unknown> & { requestId: number }>)
     : [];
   const proposals = ids.length
-    ? (db
+    ? (await db
         .prepare(
           `SELECT p.collab_request_id requestId,p.public_id id,p.proposed_by proposedBy,u.name proposedByName,p.proposed_start_at startAt,p.proposed_end_at endAt,p.timezone,p.message,p.status
       FROM collab_reschedule_proposals p JOIN users u ON u.id=p.proposed_by WHERE p.collab_request_id IN (${ids.map(() => "?").join(",")}) AND p.status='pending'`,
@@ -47,7 +47,7 @@ export async function GET() {
     : [];
   const proposalIds = proposals.map((item) => item.id);
   const proposalResponses = proposalIds.length
-    ? (db
+    ? (await db
         .prepare(
           `SELECT p.public_id proposalId,r.user_id userId,u.name,r.status FROM collab_reschedule_responses r JOIN collab_reschedule_proposals p ON p.id=r.proposal_id JOIN users u ON u.id=r.user_id WHERE p.public_id IN (${proposalIds.map(() => "?").join(",")}) ORDER BY u.name COLLATE NOCASE`,
         )
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
           .filter((id: number) => id > 0 && id !== user.id),
       ),
     ] as number[];
-    const calendarId = calendarIdByKey(String(body.calendarId || ""));
+    const calendarId = await calendarIdByKey(String(body.calendarId || ""));
     const start = new Date(body.startAt),
       end = new Date(body.endAt),
       title = String(body.title || "")
@@ -121,12 +121,12 @@ export async function POST(request: Request) {
         .trim()
         .slice(0, 2000),
       timezone = validTimezone(body.timezone);
-    if (!calendarId || !canEditCalendar(calendarPermission(user, calendarId)))
+    if (!calendarId || !canEditCalendar(await calendarPermission(user, calendarId)))
       throw new Error("Choose a calendar you can edit");
     if (!recipientIds.length || recipientIds.length > 20)
       throw new Error("Choose between 1 and 20 streamers");
     const active = (
-      db
+      await db
         .prepare(
           `SELECT COUNT(*) count FROM users WHERE status='Active' AND directory_visible=1 AND id IN (${recipientIds.map(() => "?").join(",")})`,
         )
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     )
       throw new Error("Enter valid streamers, title, and time range");
     const pendingCount = (
-      db
+      await db
         .prepare(
           "SELECT COUNT(*) count FROM collab_requests WHERE requester_id=? AND status IN ('pending','countered')",
         )
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
       );
     let sourceEventId: number | null = null;
     if (body.sourceEventId) {
-      const source = db
+      const source = await db
         .prepare(
           `SELECT e.id,c.owner_id ownerId,c.calendar_type calendarType,c.visibility calendarVisibility,e.visibility,e.collab_enabled collabEnabled FROM calendar_events e JOIN calendars c ON c.id=e.calendar_id WHERE e.public_id=? AND e.deleted_at IS NULL AND c.deleted_at IS NULL`,
         )
@@ -181,8 +181,8 @@ export async function POST(request: Request) {
       sourceEventId = source.id;
     }
     const key = createCollabRequestPublicId();
-    db.transaction(() => {
-      const result = db
+    await db.transaction(async () => {
+      const result = await db
         .prepare(
           `INSERT INTO collab_requests(public_id,source_event_id,requester_id,recipient_id,requester_calendar_id,proposed_start_at,proposed_end_at,timezone,title,message) VALUES(?,?,?,?,?,?,?,?,?,?)`,
         )
@@ -206,18 +206,18 @@ export async function POST(request: Request) {
           "INSERT INTO collab_notifications(collab_request_id,recipient_user_id,message) VALUES(?,?,?)",
         );
       for (const recipientId of recipientIds) {
-        add.run(requestId, recipientId);
+        await add.run(requestId, recipientId);
         const group =
           recipientIds.length > 1
             ? ` and ${recipientIds.length - 1} other streamer${recipientIds.length === 2 ? "" : "s"}`
             : "";
-        notify.run(
+        await notify.run(
           requestId,
           recipientId,
           `${user.name} invited you${group} to collaborate on “${title}”.`,
         );
       }
-    })();
+    });
     return NextResponse.json(
       { id: key, recipients: recipientIds.length },
       { status: 201 },

@@ -8,6 +8,7 @@ import {
   secondsBetween,
   timeOptions,
   validateAssociation,
+  validateClockIn,
 } from "@/lib/time-entries";
 import { zonedDateTimeToUtc } from "@/lib/timezones";
 
@@ -37,15 +38,15 @@ export async function GET(request: NextRequest) {
     conditions.push("e.task_id=?");
     values.push(Number(search.get("taskId")));
   }
-  const entries = db
+  const entries = await db
     .prepare(
       `${entrySelect} WHERE ${conditions.join(" AND ")} ORDER BY e.started_at DESC LIMIT 1000`,
     )
     .all(...values) as Array<Record<string, unknown>>;
   if (search.get("format") === "csv") {
-    const header = ["Date", "Time in", "Time out", "Duration seconds", "Workspace", "Board", "Task", "Note", "Source"];
+    const header = ["Date", "Time in", "Time out", "Duration seconds", "Paused seconds", "Workspace", "Board", "Task", "Note", "Source"];
     const lines = entries.map((entry) =>
-      [entry.startedAt, entry.startedAt, entry.endedAt, entry.durationSeconds, entry.workspaceName, entry.boardName, entry.taskTitle, entry.note, entry.source]
+      [entry.startedAt, entry.startedAt, entry.endedAt, entry.durationSeconds, entry.pausedSeconds, entry.workspaceName, entry.boardName, entry.taskTitle, entry.note, entry.source]
         .map(csvCell)
         .join(","),
     );
@@ -57,15 +58,15 @@ export async function GET(request: NextRequest) {
     });
   }
   const active =
-    db
+    await db
       .prepare(
         `${entrySelect} WHERE e.user_id=? AND e.ended_at IS NULL AND e.deleted_at IS NULL LIMIT 1`,
       )
       .get(user.id) || null;
-  const deleted = db
+  const deleted = await db
     .prepare(`${entrySelect} WHERE e.user_id=? AND e.deleted_at IS NOT NULL AND e.deleted_at>=datetime('now','-30 days') ORDER BY e.deleted_at DESC LIMIT 50`)
     .all(user.id);
-  return NextResponse.json({ active, entries, deleted, options: timeOptions(user) });
+  return NextResponse.json({ active, entries, deleted, options: await timeOptions(user) });
 }
 
 export async function POST(request: Request) {
@@ -74,15 +75,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
   try {
-    const association = validateAssociation(user, body.boardId, body.taskId);
+    const association = await validateAssociation(user, body.boardId, body.taskId);
     const note = String(body.note || "")
       .trim()
       .slice(0, 500);
     if (body.action === "clock-in") {
-      const startedAt = new Date().toISOString();
-      const result = db
+      const startedAt = validateClockIn(new Date().toISOString());
+      const result = await db
         .prepare(
-          "INSERT INTO time_entries(user_id,workspace_id,board_id,task_id,started_at,note,source) VALUES(?,?,?,?,?,?, 'timer')",
+          "INSERT INTO time_entries(user_id,workspace_id,board_id,task_id,started_at,paused_seconds,note,source) VALUES(?,?,?,?,?,0,?, 'timer')",
         )
         .run(
           user.id,
@@ -108,8 +109,8 @@ export async function POST(request: Request) {
       const startedAt = new Date(body.startedAt).toISOString(),
         endedAt = new Date(body.endedAt).toISOString();
       const duration = secondsBetween(startedAt, endedAt);
-      ensureNoOverlap(user.id, startedAt, endedAt);
-      const result = db
+      await ensureNoOverlap(user.id, startedAt, endedAt);
+      const result = await db
         .prepare(
           "INSERT INTO time_entries(user_id,workspace_id,board_id,task_id,started_at,ended_at,duration_seconds,note,source) VALUES(?,?,?,?,?,?,?,?, 'manual')",
         )

@@ -13,7 +13,7 @@ export async function GET(
   if (!Number.isSafeInteger(ownerId) || ownerId < 1)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const owner = db
+  const owner = await db
     .prepare(
       "SELECT id,name,avatar,timezone FROM users WHERE id=? AND status='Active' AND directory_visible=1",
     )
@@ -27,7 +27,7 @@ export async function GET(
   const to =
     url.searchParams.get("to") ||
     new Date(Date.now() + 180 * 86400000).toISOString();
-  const calendars = db
+  const calendars = await db
     .prepare(
       `SELECT public_id id,name,color,description,timezone
        FROM calendars
@@ -36,7 +36,7 @@ export async function GET(
        ORDER BY created_at`,
     )
     .all(ownerId);
-  const events = db
+  const events = await db
     .prepare(
       `SELECT e.public_id id,e.title,e.description,e.start_at startAt,e.end_at endAt,
          e.timezone,e.all_day allDay,e.event_kind kind,e.platform,e.game,

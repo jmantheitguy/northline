@@ -10,7 +10,7 @@ export async function POST(
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const collab = db
+  const collab = await db
     .prepare(
       "SELECT id,requester_id requesterId,title,status FROM collab_requests WHERE public_id=?",
     )
@@ -19,7 +19,7 @@ export async function POST(
     | undefined;
   if (!collab)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const accepted = db
+  const accepted = await db
     .prepare(
       "SELECT user_id userId FROM collab_request_participants WHERE collab_request_id=? AND status='accepted'",
     )
@@ -51,8 +51,8 @@ export async function POST(
     )
       throw new Error("Enter a valid proposed time");
     const key = createCollabReschedulePublicId();
-    db.transaction(() => {
-      const result = db
+    await db.transaction(async () => {
+      const result = await db
         .prepare(
           "INSERT INTO collab_reschedule_proposals(public_id,collab_request_id,proposed_by,proposed_start_at,proposed_end_at,timezone,message) VALUES(?,?,?,?,?,?,?)",
         )
@@ -70,18 +70,18 @@ export async function POST(
           "INSERT INTO collab_reschedule_responses(proposal_id,user_id) VALUES(?,?)",
         );
       for (const memberId of members)
-        if (memberId !== user.id) add.run(proposalId, memberId);
+        if (memberId !== user.id) await add.run(proposalId, memberId);
       const recipients =
         user.id === collab.requesterId
           ? accepted.map((item) => item.userId)
           : [collab.requesterId];
       for (const recipientId of recipients)
-        queue(
+        await queue(
           collab.id,
           recipientId,
           `${user.name} proposed a new time for “${collab.title}”. Review it in the Collab planner.`,
         );
-    })();
+    });
     return NextResponse.json({ id: key }, { status: 201 });
   } catch (error) {
     const message = (error as Error).message.includes("UNIQUE constraint")
@@ -90,8 +90,8 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
-function queue(requestId: number, recipient: number, message: string) {
-  db.prepare(
+async function queue(requestId: number, recipient: number, message: string) {
+  await db.prepare(
     "INSERT INTO collab_notifications(collab_request_id,recipient_user_id,message) VALUES(?,?,?)",
   ).run(requestId, recipient, message);
 }

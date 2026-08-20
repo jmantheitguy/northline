@@ -76,16 +76,16 @@ export async function GET() {
     hostMemory = linuxMemory();
   previousCpu = currentCpu;
   const delivery =
-    db
+    await db
       .prepare(
         "SELECT status,sent_at sentAt,error FROM reminders ORDER BY COALESCE(sent_at,created_at) DESC LIMIT 1",
       )
       .get() || null;
-  const reminders = db
+  const reminders = await db
     .prepare("SELECT status,COUNT(*) count FROM reminders GROUP BY status")
     .all() as Array<{ status: string; count: number }>;
   const sessions = (
-    db
+    await db
       .prepare(
         "SELECT COUNT(*) count FROM sessions WHERE expires_at>datetime('now')",
       )
@@ -105,7 +105,7 @@ export async function GET() {
       discord.error =
         error instanceof Error ? error.message : "Discord check failed";
     }
-  const migration = db
+  const migration = await db
     .prepare(
       "SELECT MAX(version) version,COUNT(*) count FROM schema_migrations",
     )
@@ -172,7 +172,7 @@ export async function POST() {
       { error: "Task Buddy is not configured" },
       { status: 409 },
     );
-  const recipient = db
+  const recipient = await db
     .prepare("SELECT discord_user_id discordUserId FROM users WHERE id=?")
     .get(admin.id) as { discordUserId: string | null } | undefined;
   if (!recipient?.discordUserId)
@@ -184,7 +184,7 @@ export async function POST() {
     recipient.discordUserId,
     `🩺 **Northline health check**\n✅ **${admin.name}** verified private Task Buddy delivery.\n${(process.env.NORTHLINE_PUBLIC_URL || "https://northline.vtuberoffices.com").replace(/\/$/, "")}`,
   );
-  db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(
+  await db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(
     admin.id,
     "HEALTH.DISCORD.TEST",
     "Direct message",

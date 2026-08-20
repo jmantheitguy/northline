@@ -17,19 +17,19 @@ export async function GET(request: NextRequest) {
   if (search.get("from")) { conditions.push("e.started_at>=?"); values.push(zonedDateTimeToUtc(search.get("from")!,"00:00:00",admin.timezone).toISOString()); }
   if (search.get("to")) { const nextDay=new Date(`${search.get("to")}T12:00:00Z`);nextDay.setUTCDate(nextDay.getUTCDate()+1);conditions.push("e.started_at<?"); values.push(zonedDateTimeToUtc(nextDay.toISOString().slice(0,10),"00:00:00",admin.timezone).toISOString()); }
   if (search.get("boardId")) { conditions.push("e.board_id=?"); values.push(Number(search.get("boardId"))); }
-  const entries = db
+  const entries = await db
     .prepare(
       `${entrySelect} WHERE ${conditions.join(" AND ")} ORDER BY e.started_at DESC LIMIT 2000`,
     )
     .all(...values) as Array<Record<string, unknown>>;
   if (search.get("format") === "csv") {
-    const header = ["User", "Time in", "Time out", "Duration seconds", "Workspace", "Board", "Task", "Note", "Source"];
-    const lines = entries.map((entry) => [entry.userName, entry.startedAt, entry.endedAt, entry.durationSeconds, entry.workspaceName, entry.boardName, entry.taskTitle, entry.note, entry.source].map(csvCell).join(","));
+    const header = ["User", "Time in", "Time out", "Duration seconds", "Paused seconds", "Workspace", "Board", "Task", "Note", "Source"];
+    const lines = entries.map((entry) => [entry.userName, entry.startedAt, entry.endedAt, entry.durationSeconds, entry.pausedSeconds, entry.workspaceName, entry.boardName, entry.taskTitle, entry.note, entry.source].map(csvCell).join(","));
     return new Response([header.map(csvCell).join(","), ...lines].join("\r\n"), {
       headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="northline-organization-time.csv"' },
     });
   }
-  const totals = db
+  const totals = await db
     .prepare(
       `SELECT u.id userId,u.name userName,u.avatar userAvatar,
     COALESCE(SUM(CASE WHEN e.ended_at IS NOT NULL THEN e.duration_seconds ELSE 0 END),0) totalSeconds,
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     FROM users u LEFT JOIN time_entries e ON e.user_id=u.id AND e.deleted_at IS NULL WHERE u.status='Active' GROUP BY u.id ORDER BY u.name`,
     )
     .all();
-  const audit = db
+  const audit = await db
     .prepare(
       `SELECT a.id,a.time_entry_id entryId,a.action,a.reason,a.created_at createdAt,u.name actorName
     FROM time_entry_audit a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.id DESC LIMIT 200`,

@@ -35,11 +35,11 @@ export async function PATCH(
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const row = db
+  const row = await db
     .prepare("SELECT * FROM collab_requests WHERE public_id=?")
     .get((await params).id) as Row | undefined;
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const mine = db
+  const mine = await db
     .prepare(
       "SELECT * FROM collab_request_participants WHERE collab_request_id=? AND user_id=?",
     )
@@ -54,39 +54,39 @@ export async function PATCH(
         throw new Error("Only the organizer can cancel the collaboration");
       if (!["pending", "countered", "accepted"].includes(row.status))
         throw new Error("This collaboration request is already closed");
-      db.transaction(() => {
-        db.prepare(
+      await db.transaction(async () => {
+        await db.prepare(
           "UPDATE collab_requests SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE id=?",
         ).run(row.id);
-        db.prepare(
+        await db.prepare(
           "UPDATE collab_request_participants SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status IN ('pending','countered','accepted')",
         ).run(row.id);
-        db.prepare(
+        await db.prepare(
           `UPDATE calendar_events
            SET status='cancelled',deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
            WHERE collab_request_id=? AND deleted_at IS NULL`,
         ).run(row.id);
-        db.prepare(
+        await db.prepare(
           `UPDATE calendar_reminders SET status='cancelled',error=NULL
            WHERE status='pending' AND calendar_event_id IN
              (SELECT id FROM calendar_events WHERE collab_request_id=?)`,
         ).run(row.id);
-        db.prepare(
+        await db.prepare(
           "UPDATE collab_reschedule_proposals SET status='cancelled',resolved_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status='pending'",
         ).run(row.id);
-        for (const p of participants(row.id))
-          queue(
+        for (const p of await participants(row.id))
+          await queue(
             row.id,
             p.user_id,
             `${user.name} cancelled the collaboration “${row.title}”.`,
           );
-      })();
+      });
       return NextResponse.json({ ok: true });
     }
     if (action === "decline") {
       if (!mine || mine.status !== "pending")
         throw new Error("You cannot decline this invitation");
-      db.prepare(
+      await db.prepare(
         "UPDATE collab_request_participants SET status='declined',response_message=?,updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND user_id=?",
       ).run(
         String(body.message || "")
@@ -95,28 +95,28 @@ export async function PATCH(
         row.id,
         user.id,
       );
-      queue(row.id, row.requester_id, `${user.name} declined “${row.title}”.`);
-      refresh(row.id);
+      await queue(row.id, row.requester_id, `${user.name} declined “${row.title}”.`);
+      await refresh(row.id);
       return NextResponse.json({ ok: true });
     }
     if (action === "counter") {
       if (!mine || mine.status !== "pending")
         throw new Error("You cannot counter this invitation");
-      if (participants(row.id).some((p) => p.status === "accepted"))
+      if ((await participants(row.id)).some((p) => p.status === "accepted"))
         throw new Error(
           "A participant has already accepted; ask the organizer to create a new request for a different time",
         );
       const start = new Date(body.startAt),
         end = new Date(body.endAt),
         timezone = validTimezone(body.timezone),
-        calendarId = editableCalendar(user, body.calendarId);
+        calendarId = await editableCalendar(user, body.calendarId);
       if (
         Number.isNaN(start.valueOf()) ||
         Number.isNaN(end.valueOf()) ||
         end <= start
       )
         throw new Error("Enter a valid counterproposal time");
-      db.prepare(
+      await db.prepare(
         "UPDATE collab_request_participants SET status='countered',calendar_id=?,proposed_start_at=?,proposed_end_at=?,timezone=?,response_message=?,updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND user_id=?",
       ).run(
         calendarId,
@@ -129,12 +129,12 @@ export async function PATCH(
         row.id,
         user.id,
       );
-      queue(
+      await queue(
         row.id,
         row.requester_id,
         `${user.name} proposed a new group time for “${row.title}”.`,
       );
-      refresh(row.id);
+      await refresh(row.id);
       return NextResponse.json({ ok: true });
     }
     if (action === "accept") {
@@ -145,19 +145,19 @@ export async function PATCH(
       if (mine && mine.status === "pending")
         participant = {
           ...mine,
-          calendar_id: editableCalendar(user, body.calendarId),
+          calendar_id: await editableCalendar(user, body.calendarId),
         };
       else {
         if (row.requester_id !== user.id)
           throw new Error("Only the organizer can approve a counterproposal");
         const participantUserId = Number(body.participantUserId);
-        participant = db
+        participant = await db
           .prepare(
             "SELECT * FROM collab_request_participants WHERE collab_request_id=? AND user_id=? AND status='countered'",
           )
           .get(row.id, participantUserId) as Participant;
         if (!participant) throw new Error("Choose a counterproposal to accept");
-        if (participants(row.id).some((p) => p.status === "accepted"))
+        if ((await participants(row.id)).some((p) => p.status === "accepted"))
           throw new Error(
             "The group time cannot change after someone has accepted",
           );
@@ -170,29 +170,29 @@ export async function PATCH(
       const create = db.prepare(
         `INSERT INTO calendar_events(public_id,calendar_id,title,description,start_at,end_at,timezone,status,created_by,event_kind,visibility,collab_enabled,collab_request_id) VALUES(?,?,?,?,?,?,?,'confirmed',?,'collab','calendar',0,?)`,
       );
-      db.transaction(() => {
+      await db.transaction(async () => {
         if (mine?.status === "pending") {
-          const counters = participants(row.id).filter(
+          const counters = (await participants(row.id)).filter(
             (p) => p.status === "countered",
           );
-          db.prepare(
+          await db.prepare(
             "UPDATE collab_request_participants SET status='pending',calendar_id=NULL,proposed_start_at=NULL,proposed_end_at=NULL,timezone=NULL,response_message='',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND status='countered'",
           ).run(row.id);
           for (const counter of counters)
-            queue(
+            await queue(
               row.id,
               counter.user_id,
               `The original time for “${row.title}” is now locked because another participant accepted. Please review the invitation again.`,
             );
         }
         if (
-          !db
+          !await db
             .prepare(
               "SELECT 1 FROM calendar_events WHERE collab_request_id=? AND calendar_id=? AND deleted_at IS NULL",
             )
             .get(row.id, row.requester_calendar_id)
         )
-          create.run(
+          await create.run(
             createCalendarEventPublicId(),
             row.requester_calendar_id,
             row.title,
@@ -203,7 +203,7 @@ export async function PATCH(
             row.requester_id,
             row.id,
           );
-        create.run(
+        await create.run(
           createCalendarEventPublicId(),
           participant.calendar_id,
           row.title,
@@ -214,29 +214,29 @@ export async function PATCH(
           participant.user_id,
           row.id,
         );
-        db.prepare(
+        await db.prepare(
           "UPDATE collab_request_participants SET status='accepted',calendar_id=?,proposed_start_at=NULL,proposed_end_at=NULL,timezone=NULL,updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND user_id=?",
         ).run(participant.calendar_id, row.id, participant.user_id);
-        db.prepare(
+        await db.prepare(
           "UPDATE collab_requests SET proposed_start_at=?,proposed_end_at=?,timezone=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
         ).run(start, end, timezone, row.id);
         if (row.requester_id === user.id)
-          for (const p of participants(row.id).filter(
+           for (const p of (await participants(row.id)).filter(
             (p) => p.status === "pending",
           ))
-            queue(
+             await queue(
               row.id,
               p.user_id,
               `${user.name} approved a new group time for “${row.title}”. Please review the updated invitation.`,
             );
-        queue(
+        await queue(
           row.id,
           row.requester_id === user.id ? participant.user_id : row.requester_id,
           `${user.name} accepted “${row.title}”.`,
         );
-        refresh(row.id);
-        scheduleAutomaticReminders(row.id, row.title, start);
-      })();
+        await refresh(row.id);
+        await scheduleAutomaticReminders(row.id, row.title, start);
+      });
       return NextResponse.json({ ok: true });
     }
     throw new Error("Choose a valid response");
@@ -247,15 +247,15 @@ export async function PATCH(
     );
   }
 }
-function participants(id: number) {
-  return db
+async function participants(id: number) {
+  return await db
     .prepare(
       "SELECT * FROM collab_request_participants WHERE collab_request_id=?",
     )
     .all(id) as Participant[];
 }
-function refresh(id: number) {
-  const states = participants(id).map((p) => p.status);
+async function refresh(id: number) {
+  const states = (await participants(id)).map((p) => p.status);
   const status = states.some((s) => s === "countered")
     ? "countered"
     : states.some((s) => s === "pending")
@@ -263,26 +263,26 @@ function refresh(id: number) {
       : states.some((s) => s === "accepted")
         ? "accepted"
         : "declined";
-  db.prepare(
+  await db.prepare(
     "UPDATE collab_requests SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
   ).run(status, id);
 }
-function editableCalendar(
+async function editableCalendar(
   user: NonNullable<Awaited<ReturnType<typeof currentUser>>>,
   key: unknown,
 ) {
-  const id = calendarIdByKey(String(key || ""));
-  if (!id || !canEditCalendar(calendarPermission(user, id)))
+  const id = await calendarIdByKey(String(key || ""));
+  if (!id || !canEditCalendar(await calendarPermission(user, id)))
     throw new Error("Choose a calendar you can edit");
   return id;
 }
-function queue(requestId: number, recipient: number, message: string) {
-  db.prepare(
+async function queue(requestId: number, recipient: number, message: string) {
+  await db.prepare(
     "INSERT INTO collab_notifications(collab_request_id,recipient_user_id,message) VALUES(?,?,?)",
   ).run(requestId, recipient, message);
 }
 
-function scheduleAutomaticReminders(
+async function scheduleAutomaticReminders(
   requestId: number,
   title: string,
   startAt: string,
@@ -290,7 +290,7 @@ function scheduleAutomaticReminders(
   const remindAt = new Date(new Date(startAt).getTime() - 30 * 60 * 1000);
   if (Number.isNaN(remindAt.valueOf()) || remindAt <= new Date()) return;
   const message = `Collab starts in 30 minutes: ${title}`;
-  db.prepare(
+  await db.prepare(
     `INSERT INTO calendar_reminders
        (calendar_event_id,created_by,recipient_user_id,message,remind_at)
      SELECT event.id,event.created_by,event.created_by,?,?

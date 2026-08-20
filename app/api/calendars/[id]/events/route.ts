@@ -16,10 +16,10 @@ export async function POST(
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const calendarId = calendarIdByKey((await params).id);
+  const calendarId = await calendarIdByKey((await params).id);
   if (!calendarId)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canEditCalendar(calendarPermission(user, calendarId)))
+  if (!canEditCalendar(await calendarPermission(user, calendarId)))
     return NextResponse.json(
       { error: "You cannot add events to this calendar" },
       { status: 403 },
@@ -44,7 +44,7 @@ export async function POST(
     )
       throw new Error("Event end must be after its start");
     const key = createCalendarEventPublicId();
-    db.prepare(
+    await db.prepare(
       "INSERT INTO calendar_events(public_id,calendar_id,title,description,location,start_at,end_at,timezone,all_day,status,created_by,event_kind,visibility,platform,game,stream_url,collab_enabled) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       key,
@@ -69,7 +69,7 @@ export async function POST(
       String(body.streamUrl||"").trim().slice(0,500),
       body.collabEnabled ? 1 : 0,
     );
-    recordCalendarActivity(
+    await recordCalendarActivity(
       calendarId,
       user.id,
       "CALENDAR.EVENT.CREATE",

@@ -20,7 +20,7 @@ export async function PATCH(
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const proposal = db
+  const proposal = await db
     .prepare(
       `SELECT p.*,r.title,r.requester_id FROM collab_reschedule_proposals p JOIN collab_requests r ON r.id=p.collab_request_id WHERE p.public_id=?`,
     )
@@ -30,7 +30,7 @@ export async function PATCH(
       { error: "Open reschedule proposal not found" },
       { status: 404 },
     );
-  const response = db
+  const response = await db
     .prepare(
       "SELECT status FROM collab_reschedule_responses WHERE proposal_id=? AND user_id=?",
     )
@@ -46,15 +46,15 @@ export async function PATCH(
       { error: "Choose accept or decline" },
       { status: 400 },
     );
-  db.transaction(() => {
-    db.prepare(
+  await db.transaction(async () => {
+    await db.prepare(
       "UPDATE collab_reschedule_responses SET status=?,responded_at=CURRENT_TIMESTAMP WHERE proposal_id=? AND user_id=?",
     ).run(action === "accept" ? "accepted" : "declined", proposal.id, user.id);
     if (action === "decline") {
-      db.prepare(
+      await db.prepare(
         "UPDATE collab_reschedule_proposals SET status='declined',resolved_at=CURRENT_TIMESTAMP WHERE id=?",
       ).run(proposal.id);
-      queue(
+      await queue(
         proposal.collab_request_id,
         proposal.proposed_by,
         `${user.name} could not accept the proposed new time for “${proposal.title}”.`,
@@ -62,14 +62,14 @@ export async function PATCH(
       return;
     }
     const remaining = (
-      db
+      await db
         .prepare(
           "SELECT COUNT(*) count FROM collab_reschedule_responses WHERE proposal_id=? AND status='pending'",
         )
         .get(proposal.id) as { count: number }
     ).count;
     if (remaining === 0) {
-      db.prepare(
+      await db.prepare(
         "UPDATE calendar_events SET start_at=?,end_at=?,timezone=?,updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND deleted_at IS NULL",
       ).run(
         proposal.proposed_start_at,
@@ -77,7 +77,7 @@ export async function PATCH(
         proposal.timezone,
         proposal.collab_request_id,
       );
-      db.prepare(
+      await db.prepare(
         "UPDATE collab_requests SET proposed_start_at=?,proposed_end_at=?,timezone=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
       ).run(
         proposal.proposed_start_at,
@@ -89,23 +89,23 @@ export async function PATCH(
         new Date(proposal.proposed_start_at).getTime() - 30 * 60 * 1000,
       );
       if (reminderAt > new Date())
-        db.prepare(
+        await db.prepare(
           `UPDATE calendar_reminders SET remind_at=?,error=NULL
            WHERE status='pending' AND message LIKE 'Collab starts in 30 minutes:%'
              AND calendar_event_id IN
                (SELECT id FROM calendar_events WHERE collab_request_id=?)`,
         ).run(reminderAt.toISOString(), proposal.collab_request_id);
       else
-        db.prepare(
+        await db.prepare(
           `UPDATE calendar_reminders SET status='cancelled',error=NULL
            WHERE status='pending' AND message LIKE 'Collab starts in 30 minutes:%'
              AND calendar_event_id IN
                (SELECT id FROM calendar_events WHERE collab_request_id=?)`,
         ).run(proposal.collab_request_id);
-      db.prepare(
+      await db.prepare(
         "UPDATE collab_reschedule_proposals SET status='accepted',resolved_at=CURRENT_TIMESTAMP WHERE id=?",
       ).run(proposal.id);
-      const members = db
+      const members = await db
         .prepare(
           "SELECT user_id userId FROM collab_request_participants WHERE collab_request_id=? AND status='accepted'",
         )
@@ -115,36 +115,36 @@ export async function PATCH(
         ...members.map((item) => item.userId),
       ]))
         if (recipientId !== user.id)
-          queue(
+          await queue(
             proposal.collab_request_id,
             recipientId,
             `The new time for “${proposal.title}” was accepted by everyone and all calendars were updated.`,
           );
     } else {
-      queue(
+      await queue(
         proposal.collab_request_id,
         proposal.proposed_by,
         `${user.name} accepted the proposed new time for “${proposal.title}”.`,
       );
       if (user.id === proposal.requester_id) {
-        const waiting = db
+        const waiting = await db
           .prepare(
             "SELECT user_id userId FROM collab_reschedule_responses WHERE proposal_id=? AND status='pending'",
           )
           .all(proposal.id) as Array<{ userId: number }>;
         for (const item of waiting)
-          queue(
+          await queue(
             proposal.collab_request_id,
             item.userId,
             `The organizer approved a proposed new time for “${proposal.title}”. Please review it in the Collab planner.`,
           );
       }
     }
-  })();
+  });
   return NextResponse.json({ ok: true });
 }
-function queue(requestId: number, recipient: number, message: string) {
-  db.prepare(
+async function queue(requestId: number, recipient: number, message: string) {
+  await db.prepare(
     "INSERT INTO collab_notifications(collab_request_id,recipient_user_id,message) VALUES(?,?,?)",
   ).run(requestId, recipient, message);
 }

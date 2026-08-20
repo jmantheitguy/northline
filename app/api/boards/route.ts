@@ -5,10 +5,10 @@ import { listWorkspaces,workspacePermission,canCreateBoards } from "@/lib/worksp
 
 export async function GET(){
   const user=await currentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
-  const personal=ensurePersonalWorkspace(user.id,user.name);
-  const personalBoardCount=(db.prepare("SELECT COUNT(*) count FROM boards WHERE workspace_id=?").get(personal.id) as {count:number}).count;
-  if(!personalBoardCount){const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id,personal.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id)}
-  const boards=db.prepare(`SELECT DISTINCT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,b.workspace_id workspaceId,
+  const personal=await ensurePersonalWorkspace(user.id,user.name);
+  const personalBoardCount=(await db.prepare("SELECT COUNT(*) count FROM boards WHERE workspace_id=?").get(personal.id) as {count:number}).count;
+  if(!personalBoardCount){const result=await db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id,personal.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();await db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);await createDefaultBoardColumns(id)}
+  const boards=await db.prepare(`SELECT DISTINCT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,b.workspace_id workspaceId,
     CASE WHEN b.owner_id=? OR w.owner_id=? OR wm.user_id IS NOT NULL THEN b.workspace_id ELSE 0 END navigationWorkspaceId,
     CASE WHEN b.owner_id=? OR w.owner_id=? THEN 'owner' WHEN bm.permission='editor' OR wm.permission='editor' THEN 'editor' ELSE 'viewer' END permission,
     (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id AND t.archived_at IS NULL) taskCount
@@ -17,7 +17,7 @@ export async function GET(){
     LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
     WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id);
   const directShares=(boards as Array<{navigationWorkspaceId:number}>).filter(board=>board.navigationWorkspaceId===0).length;
-  const workspaces=listWorkspaces(user) as Array<Record<string,unknown>>;
+  const workspaces=await listWorkspaces(user) as Array<Record<string,unknown>>;
   if(directShares)workspaces.push({id:0,workspaceKey:"shared-with-me",name:"Shared with me",kind:"shared",ownerId:0,ownerName:"Northline",permission:"viewer",boardCount:directShares,memberCount:0,virtual:true});
   return NextResponse.json({boards,workspaces});
 }
@@ -28,9 +28,9 @@ export async function POST(request:Request){
   const cleanName=String(name||"").trim(),cleanDescription=String(description||"").trim();
   if(!cleanName)return NextResponse.json({error:"Board name is required"},{status:400});
   if(cleanName.length>100||cleanDescription.length>1000||!["blank","content","launch"].includes(template))return NextResponse.json({error:"Invalid board details"},{status:400});
-  const personal=ensurePersonalWorkspace(user.id,user.name),targetWorkspace=Number(workspaceId||personal.id);
-  if(!canCreateBoards(workspacePermission(user,targetWorkspace)))return NextResponse.json({error:"You cannot create boards in this workspace"},{status:403});
+  const personal=await ensurePersonalWorkspace(user.id,user.name),targetWorkspace=Number(workspaceId||personal.id);
+  if(!canCreateBoards(await workspacePermission(user,targetWorkspace)))return NextResponse.json({error:"You cannot create boards in this workspace"},{status:403});
   const presets:Record<string,Array<[string,string,string,string]>>={blank:[],content:[["Collect ideas","ideas","Medium","Planning"],["Draft content","ready","High","Production"],["Review and approve","hold","High","Review"],["Publish","done","Medium","Publishing"]],launch:[["Define launch goals","ideas","High","Strategy"],["Prepare assets","ready","High","Production"],["Run launch checklist","progress","High","Launch"],["Post-launch review","hold","Medium","Review"]]};
-  const create=db.transaction(()=>{const result=db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run(cleanName,cleanDescription,user.id,user.id,targetWorkspace),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);createDefaultBoardColumns(id);for(const [title,status,priority,tag] of presets[template])db.prepare("INSERT INTO tasks(board_id,title,status,priority,tag,created_by) VALUES(?,?,?,?,?,?)").run(id,title,status,priority,tag,user.id);db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"BOARD.CREATE",boardKey);return{id,boardKey};});
-  return NextResponse.json(create(),{status:201});
+  const create=await db.transaction(async ()=>{const result=await db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run(cleanName,cleanDescription,user.id,user.id,targetWorkspace),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();await db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);await createDefaultBoardColumns(id);for(const [title,status,priority,tag] of presets[template])await db.prepare("INSERT INTO tasks(board_id,title,status,priority,tag,created_by) VALUES(?,?,?,?,?,?)").run(id,title,status,priority,tag,user.id);await db.prepare("INSERT INTO audit_log(actor_id,action,target) VALUES(?,?,?)").run(user.id,"BOARD.CREATE",boardKey);return{id,boardKey};});
+  return NextResponse.json(create,{status:201});
 }

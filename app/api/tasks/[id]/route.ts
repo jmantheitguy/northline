@@ -4,6 +4,7 @@ import db from "@/lib/db";
 import { boardPermission, canEdit } from "@/lib/boards";
 import { notifyTaskChanges } from "@/lib/task-notifications";
 import { recordBoardActivity } from "@/lib/activity";
+import { normalizeAssigneeIds, replaceTaskAssignees, taskAssigneeIds, validateAssigneeIds } from "@/lib/task-assignments";
 
 const priorities = ["Low", "Medium", "High"];
 export async function PATCH(
@@ -14,7 +15,7 @@ export async function PATCH(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = Number((await params).id),
-    task = db
+    task = await db
       .prepare(
         "SELECT id,board_id boardId,title,status,assignee_id assigneeId,due_date dueDate,created_by createdBy FROM tasks WHERE id=?",
       )
@@ -30,11 +31,16 @@ export async function PATCH(
         }
       | undefined;
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canEdit(boardPermission(user, task.boardId)))
+  if (!canEdit(await boardPermission(user, task.boardId)))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json();
+  const assignmentChanged = Object.prototype.hasOwnProperty.call(body, "assignee_ids") || Object.prototype.hasOwnProperty.call(body, "assigneeIds") || Object.prototype.hasOwnProperty.call(body, "assignee_id");
+  const currentAssigneeIds = await taskAssigneeIds(id);
+  const requestedAssigneeIds = assignmentChanged
+    ? normalizeAssigneeIds(body.assignee_ids ?? body.assigneeIds, body.assignee_id)
+    : currentAssigneeIds;
   if (body.archive !== undefined) {
-    const column = db
+    const column = await db
       .prepare(
         "SELECT is_done isDone FROM board_columns WHERE board_id=? AND column_key=?",
       )
@@ -44,20 +50,20 @@ export async function PATCH(
         { error: "Only completed tasks can be archived" },
         { status: 400 },
       );
-    db.prepare(
+    await db.prepare(
       "UPDATE tasks SET archived_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
     ).run(body.archive === true ? new Date().toISOString() : null, id);
     if (body.archive === true)
-      db.prepare(
+      await db.prepare(
         "UPDATE reminders SET status='cancelled',error='Task archived',updated_at=CURRENT_TIMESTAMP WHERE task_id=? AND status='pending'",
       ).run(id);
-    recordBoardActivity(
+    await recordBoardActivity(
       task.boardId,
       user.id,
       body.archive === true ? "TASK.ARCHIVE" : "TASK.RESTORE",
       `${body.archive === true ? "Archived" : "Restored"} ${task.title}`,
     );
-    db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(
+    await db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(
       user.id,
       body.archive === true ? "TASK.ARCHIVE" : "TASK.RESTORE",
       String(id),
@@ -72,7 +78,7 @@ export async function PATCH(
     );
   const validStatus =
     body.status === undefined ||
-    db
+    await db
       .prepare("SELECT 1 FROM board_columns WHERE board_id=? AND column_key=?")
       .get(task.boardId, String(body.status));
   if (
@@ -86,17 +92,9 @@ export async function PATCH(
       { error: "Invalid task details" },
       { status: 400 },
     );
-  if (body.assignee_id) {
-    const allowed = db
-      .prepare(
-        "SELECT 1 FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.id=? AND u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)",
-      )
-      .get(task.boardId, Number(body.assignee_id));
-    if (!allowed)
-      return NextResponse.json(
-        { error: "Assignee does not have access to this board" },
-        { status: 400 },
-      );
+  if (assignmentChanged) {
+    try { await validateAssigneeIds(task.boardId, requestedAssigneeIds); }
+    catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
   }
   const allowed = [
     "title",
@@ -110,32 +108,33 @@ export async function PATCH(
   const changedFields = allowed
     .filter((key) => Object.prototype.hasOwnProperty.call(body, key))
     .map((key) => key.replace("assignee_id", "assignee").replace("due_date", "due date").replaceAll("_", " "));
-  const update = db.transaction(() => {
+  await db.transaction(async () => {
     for (const key of allowed)
       if (Object.prototype.hasOwnProperty.call(body, key))
-        db.prepare(
+        await db.prepare(
           `UPDATE tasks SET ${key}=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-        ).run(body[key], id);
-    db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(
+        ).run(key === "assignee_id" && assignmentChanged ? requestedAssigneeIds[0] ?? null : body[key], id);
+    if (assignmentChanged) await replaceTaskAssignees(id, requestedAssigneeIds, user.id);
+    await db.prepare("UPDATE boards SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(
       task.boardId,
     );
-    db.prepare(
+    await db.prepare(
       "INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)",
     ).run(user.id, "TASK.UPDATE", String(id), `Updated ${changedFields.join(", ") || "task details"} on “${task.title}”`);
-    recordBoardActivity(
+    await recordBoardActivity(
       task.boardId,
       user.id,
       "TASK.UPDATE",
       `Updated ${task.title}`,
     );
   });
-  update();
-  const after = db
+  const after = await db
     .prepare(
       "SELECT id,board_id boardId,title,status,assignee_id assigneeId,due_date dueDate,created_by createdBy FROM tasks WHERE id=?",
     )
     .get(id) as typeof task;
-  notifyTaskChanges(task, after!, user.id);
+  const afterWithAssignees = { ...after!, assigneeIds: await taskAssigneeIds(id) };
+  await notifyTaskChanges({ ...task, assigneeIds: currentAssigneeIds }, afterWithAssignees, user.id);
   return NextResponse.json({ ok: true });
 }
 export async function DELETE(
@@ -146,22 +145,22 @@ export async function DELETE(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = Number((await params).id),
-    task = db.prepare("SELECT board_id,title FROM tasks WHERE id=?").get(id) as
+    task = await db.prepare("SELECT board_id,title FROM tasks WHERE id=?").get(id) as
       { board_id: number; title: string } | undefined;
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canEdit(boardPermission(user, task.board_id)))
+  if (!canEdit(await boardPermission(user, task.board_id)))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  db.transaction(() => {
-    recordBoardActivity(
+  await db.transaction(async () => {
+    await recordBoardActivity(
       task.board_id,
       user.id,
       "TASK.DELETE",
       `Deleted ${task.title}`,
     );
-    db.prepare("DELETE FROM tasks WHERE id=?").run(id);
-    db.prepare(
+    await db.prepare("DELETE FROM tasks WHERE id=?").run(id);
+    await db.prepare(
       "INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)",
     ).run(user.id, "TASK.DELETE", String(id), `Deleted task “${task.title}”`);
-  })();
+  });
   return NextResponse.json({ ok: true });
 }

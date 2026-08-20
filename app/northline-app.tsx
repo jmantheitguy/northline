@@ -33,6 +33,8 @@ type Task = {
   tag: string;
   priority: Priority;
   comments: number;
+  assigneeIds?: number[];
+  assignees?: Array<{ id: number; name: string; avatar: string | null }>;
 };
 type BoardSummary = {
   id: number;
@@ -233,6 +235,7 @@ const emptyTask = {
   tag: "General",
   dueDate: "",
   assigneeId: "",
+  assigneeIds: [] as string[],
 };
 
 function decorateUsers(list: any[]): WorkspaceUser[] {
@@ -283,6 +286,7 @@ export function NorthlineApp() {
   const [globalResults, setGlobalResults] = useState<SearchResult[]>([]);
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [sort, setSort] = useState<"created" | "due" | "priority">("created");
   const [directoryUsers, setDirectoryUsers] = useState<WorkspaceUser[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
@@ -470,7 +474,8 @@ export function NorthlineApp() {
           .toLowerCase()
           .includes(search.toLowerCase()) &&
         (statusFilter === "all" || t.status === statusFilter) &&
-        (priorityFilter === "all" || t.priority === priorityFilter),
+        (priorityFilter === "all" || t.priority === priorityFilter) &&
+        (assigneeFilter === "all" || (t.assigneeIds || (t.ownerId ? [t.ownerId] : [])).includes(Number(assigneeFilter))),
     );
     if (sort === "due")
       list.sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
@@ -481,7 +486,7 @@ export function NorthlineApp() {
           { High: 0, Medium: 1, Low: 2 }[b.priority],
       );
     return list;
-  }, [boardData, search, statusFilter, priorityFilter, sort]);
+  }, [boardData, search, statusFilter, priorityFilter, assigneeFilter, sort]);
   const activeWorkspace =
     workspaces.find((workspace) => workspace.id === activeWorkspaceId) ||
     workspaces[0];
@@ -797,6 +802,8 @@ export function NorthlineApp() {
               setStatusFilter={setStatusFilter}
               priorityFilter={priorityFilter}
               setPriorityFilter={setPriorityFilter}
+              assigneeFilter={assigneeFilter}
+              setAssigneeFilter={setAssigneeFilter}
               sort={sort}
               setSort={setSort}
               dragged={dragged}
@@ -1476,6 +1483,8 @@ function BoardView({
   setStatusFilter,
   priorityFilter,
   setPriorityFilter,
+  assigneeFilter,
+  setAssigneeFilter,
   sort,
   setSort,
   dragged,
@@ -1611,6 +1620,19 @@ function BoardView({
             <option>High</option>
             <option>Medium</option>
             <option>Low</option>
+          </select>
+        </label>
+        <label>
+          Assigned to
+          <select
+            aria-label="Filter by assigned user"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+          >
+            <option value="all">Everyone</option>
+            {data.assignees.map((person: { id: number; name: string }) => (
+              <option key={person.id} value={person.id}>{person.name}</option>
+            ))}
           </select>
         </label>
         <label>
@@ -1774,10 +1796,12 @@ function TaskCard({
       {task.description && <p className="task-excerpt">{task.description}</p>}
       <span className="tag">{task.tag}</span>
       <div className="card-foot">
-        <Avatar
-          name={task.ownerName || "Unassigned"}
-          avatar={task.ownerAvatar}
-        />
+        <span className="task-assignee-stack">
+          {(task.assignees?.length ? task.assignees.slice(0, 3) : [{ id: 0, name: task.ownerName || "Unassigned", avatar: task.ownerAvatar }]).map((person) => (
+            <Avatar key={person.id} name={person.name} avatar={person.avatar} />
+          ))}
+          {(task.assignees?.length || 0) > 3 && <small>+{task.assignees!.length - 3}</small>}
+        </span>
         <span>◷ {task.due || "No date"}</span>
         <button
           className="comments comment-quick-button"
@@ -1918,11 +1942,12 @@ function TaskList({
                         )}
                       </span>
                       <span className="list-person">
-                        <Avatar
-                          name={task.ownerName || "Unassigned"}
-                          avatar={task.ownerAvatar}
-                        />
-                        <span>{task.ownerName || "Unassigned"}</span>
+                        <span className="task-assignee-stack">
+                          {(task.assignees?.length ? task.assignees.slice(0, 3) : [{ id: 0, name: task.ownerName || "Unassigned", avatar: task.ownerAvatar }]).map((person) => (
+                            <Avatar key={person.id} name={person.name} avatar={person.avatar} />
+                          ))}
+                        </span>
+                        <span>{task.assignees?.length ? task.assignees.map((person) => person.name).join(", ") : task.ownerName || "Unassigned"}</span>
                       </span>
                       <span
                         className="list-status"
@@ -3666,6 +3691,7 @@ function NorthlineModal({
           tag: task.tag,
           dueDate: task.due || "",
           assigneeId: task.ownerId ? String(task.ownerId) : "",
+          assigneeIds: (task.assigneeIds || (task.ownerId ? [task.ownerId] : [])).map(String),
         }
       : { ...emptyTask, status: columns[0]?.key || "" },
   );
@@ -3745,6 +3771,7 @@ function NorthlineModal({
         tag: task.tag,
         dueDate: task.due || "",
         assigneeId: task.ownerId ? String(task.ownerId) : "",
+        assigneeIds: (task.assigneeIds || (task.ownerId ? [task.ownerId] : [])).map(String),
       }
     : { ...emptyTask, status: columns[0]?.key || "" };
   const dirty =
@@ -3770,6 +3797,7 @@ function NorthlineModal({
             assigneeId: taskForm.assigneeId
               ? Number(taskForm.assigneeId)
               : null,
+            assigneeIds: taskForm.assigneeIds.map(Number),
             dueDate: taskForm.dueDate || null,
           }),
         });
@@ -3787,6 +3815,7 @@ function NorthlineModal({
             assignee_id: taskForm.assigneeId
               ? Number(taskForm.assigneeId)
               : null,
+            assignee_ids: taskForm.assigneeIds.map(Number),
           }),
         });
       }
@@ -3993,23 +4022,21 @@ function NorthlineModal({
                 />
               </label>
               <label>
-                Owner
+                Assignees
                 <select
-                  value={taskForm.assigneeId}
-                  onChange={(e) =>
-                    setTaskForm((f: any) => ({
-                      ...f,
-                      assigneeId: e.target.value,
-                    }))
-                  }
+                  multiple
+                  size={Math.min(5, Math.max(3, people.length))}
+                  value={taskForm.assigneeIds}
+                  onChange={(e) => {
+                    const selected = [...e.target.selectedOptions].map((option) => option.value);
+                    setTaskForm((f: any) => ({ ...f, assigneeIds: selected, assigneeId: selected[0] || "" }));
+                  }}
                 >
-                  <option value="">Unassigned</option>
                   {people.map((p: WorkspaceUser) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
+                    <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
+                <small className="field-help">Hold Ctrl/Cmd to select more than one person.</small>
               </label>
             </div>
             <div className="modal-actions task-actions">

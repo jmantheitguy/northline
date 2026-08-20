@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const to =
     url.searchParams.get("to") ||
     new Date(Date.now() + 90 * 86400000).toISOString();
-  const events = db
+  const events = await db
     .prepare(
       `
     SELECT e.public_id id,e.title,e.description,e.start_at startAt,e.end_at endAt,e.timezone,
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     return event;
   });
   const seen = new Set<number>();
-  const groupedEvents = safeEvents
+  const groupedEvents = await Promise.all(safeEvents
     .filter((event) => {
       const requestId = Number(event.collabRequestId || 0);
       if (!requestId) return true;
@@ -56,17 +56,17 @@ export async function GET(request: Request) {
       seen.add(requestId);
       return true;
     })
-    .map((event) => {
+    .map(async (event) => {
       const requestId = Number(event.collabRequestId || 0);
       if (!requestId) return event;
-      const names = db
+      const names = await db
         .prepare(
           `SELECT u.name FROM collab_request_participants p JOIN users u ON u.id=p.user_id WHERE p.collab_request_id=? AND p.status='accepted' ORDER BY u.name COLLATE NOCASE`,
         )
         .all(requestId) as Array<{ name: string }>;
       return { ...event, participantNames: names.map((item) => item.name) };
-    });
-  const people = db
+    }));
+  const people = await db
     .prepare(
       "SELECT id,name,email,avatar,timezone FROM users WHERE status='Active' AND directory_visible=1 ORDER BY name COLLATE NOCASE",
     )

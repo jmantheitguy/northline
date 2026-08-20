@@ -2,13 +2,40 @@
 
 ## Deploy and update
 
-Northline targets a Linux VM with Docker Compose. Keep SQLite and live mail data on local VM storage; use the NAS for encrypted backups. Configure the private `.env`, run `sh ops/release/deploy-production.sh`, publish port 3000 through Cloudflare Tunnel, and restrict direct origin access to the private network.
+Northline production runs on the AWS Lightsail host through Docker Compose. Keep
+the live SQLite data on that host's local Docker volume. Encrypted Northline
+backups are retained locally and replicated to separately configured off-host
+storage, currently S3 when its host-only configuration is present. Do not use a
+network share as live SQLite storage.
 
-For updates, review the release notes, confirm a current backup, and run `sh ops/release/deploy-production.sh`. The workflow fast-forwards to the current `main`, rebuilds the container, waits for a healthy deployment, and then sends one GitHub-style Task Buddy announcement for that deployed commit. Re-running the same deployment does not announce it twice. Ordinary pushes remain silent until that commit is actually deployed. The application performs additive SQLite schema initialization at startup.
+Code push, production deployment, database migration, and Discord release
+announcement are separate actions. A normal local development update is:
+
+1. Review the diff and run the relevant local validation.
+2. Commit the reviewed change and push the intended commit to `main`.
+3. SSH to the Lightsail host using the existing `lightsail` SSH alias. Change to
+   the existing Northline checkout recorded in the private operator runbook.
+4. Confirm the checkout is on `main`, inspect its status, and confirm a recent
+   successful off-host backup in **Administration > Health** or through the
+   backup service journal.
+5. From that checkout, run `sh ops/release/deploy-production.sh`.
+
+The deployment script runs `git pull --ff-only` against the checkout's configured
+upstream, rebuilds and starts the Compose service with `docker compose up -d
+--build`, waits for Docker's `northline` health status, safely prunes Docker
+build cache, and only then sends one GitHub-style Task Buddy announcement for
+the deployed commit. A retry for the same commit does not announce it twice.
+Ordinary GitHub pushes remain silent until that commit is deployed. Application
+startup performs additive SQLite schema initialization.
 
 ## Health dashboard
 
-Open **Administration > Health**. Healthy production should show SQLite `ok`, adequate VM free space, Authentik configured, Task Buddy reachable, no unexplained failed reminders, a recent backup with NAS replication, and a recent successful restore test. The Task Buddy test sends a real private message to the linked Discord account of the administrator running the check and records an audit event.
+Open **Administration > Health**. Healthy production should show SQLite `ok`,
+adequate VM free space, Authentik configured, Task Buddy reachable, no
+unexplained failed reminders, a recent backup with verified off-host replication,
+and a recent successful restore test. The Task Buddy test sends a real private
+message to the linked Discord account of the administrator running the check and
+records an audit event.
 
 ## Routine schedule
 
@@ -23,7 +50,7 @@ Open **Administration > Health**. Healthy production should show SQLite `ok`, ad
 ```bash
 docker compose ps
 docker logs --tail 100 northline
-curl -I http://127.0.0.1:3000/
+docker inspect --format '{{.State.Health.Status}}' northline
 sudo systemctl list-timers northline-backup.timer
 sudo journalctl -u northline-backup.service --since today
 sudo /usr/local/sbin/northline-restore-test

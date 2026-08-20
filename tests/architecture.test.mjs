@@ -12,9 +12,9 @@ test("board mutations enforce server-side permissions", async () => {
   ]);
   assert.match(
     taskRoute,
-    /canEdit\(boardPermission\(user,\s*task\.(?:board_id|boardId)\)\)/,
+    /canEdit\((?:await\s+)?boardPermission\(user,\s*task\.(?:board_id|boardId)\)\)/,
   );
-  assert.match(memberRoute, /canShare\(boardPermission\(user,boardId\)\)/);
+  assert.match(memberRoute, /canShare\((?:await\s+)?boardPermission\(user,boardId\)\)/);
   assert.match(permissions, /permission==="owner"\|\|permission==="editor"/);
   assert.match(permissions, /canShare=.*permission==="owner"/);
   assert.doesNotMatch(permissions, /permission==="admin"|user\.role==="Admin"/);
@@ -29,7 +29,7 @@ test("directory synchronization revokes removed Authentik accounts", async () =>
 });
 
 test("board data is relational and cascade-safe", async () => {
-  const schema = await read("lib/db.ts");
+  const schema = await read("lib/db-sqlite.ts");
   for (const table of [
     "boards",
     "board_members",
@@ -57,7 +57,7 @@ test("board data is relational and cascade-safe", async () => {
 
 test("board references are opaque while creator ownership remains relational", async () => {
   const [schema, boards, detail, worker, ui, permissions] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("app/api/boards/route.ts"),
     read("app/api/boards/[id]/route.ts"),
     read("lib/reminder-worker.ts"),
@@ -84,7 +84,7 @@ test("Task Buddy automatic notifications are creator-routed and preference aware
     assert.match(automation, new RegExp(`\\b${event}\\b`));
   assert.match(automation, /INSERT OR IGNORE INTO reminders/);
   assert.match(automation, /NORTHLINE_PUBLIC_URL/);
-  assert.match(boardRoute, /canShare\(boardPermission/);
+  assert.match(boardRoute, /canShare\((?:await\s+)?boardPermission/);
   assert.match(preferences, /user_notification_settings/);
   assert.match(ui, /Automatic notifications/);
 });
@@ -96,7 +96,7 @@ test("Discord reminders are permission checked and secrets stay server-side", as
     read("lib/reminder-worker.ts"),
     read("compose.yaml"),
   ]);
-  assert.match(route, /canEdit\(boardPermission\(user,Number\(boardId\)\)\)/);
+  assert.match(route, /canEdit\((?:await\s+)?boardPermission\(user,Number\(boardId\)\)\)/);
   assert.match(route, /created_by createdBy/);
   assert.match(route, /has not linked Discord/);
   assert.match(discord, /process\.env\.NORTHLINE_DISCORD_BOT_TOKEN/);
@@ -178,7 +178,7 @@ test("release health and workflow tools remain permission constrained", async ()
   assert.match(health, /memoryUsedPercent/);
   assert.match(search, /b\.owner_id=\?/);
   assert.match(search, /bm\.user_id=\?/);
-  assert.match(duplicate, /canEdit\(boardPermission/);
+  assert.match(duplicate, /canEdit\((?:await\s+)?boardPermission/);
   assert.match(activity, /boardPermission/);
   assert.match(backup, /backup\.json/);
   assert.match(restore, /restore\.json/);
@@ -277,7 +277,7 @@ test("beta security boundary rejects CSRF and throttles sensitive endpoints", as
 
 test("users can inspect and revoke only their own sessions", async () => {
   const [schema, auth, route, ui] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("lib/auth.ts"),
     read("app/api/settings/sessions/route.ts"),
     read("app/northline-app.tsx"),
@@ -296,7 +296,7 @@ test("directory, login, and Discord identities remain separate", async () => {
     [
       read("app/api/auth/oidc/callback/route.ts"),
       read("app/northline-app.tsx"),
-      read("lib/db.ts"),
+      read("lib/db-sqlite.ts"),
       read("lib/authentik-directory.ts"),
       read("ops/identity/configure-discord-source.py"),
       read("lib/reminder-worker.ts"),
@@ -331,7 +331,7 @@ test("directory, login, and Discord identities remain separate", async () => {
 
 test("schema upgrades and operational failures are observable", async () => {
   const [schema, health, backup, restore, compose] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("app/api/admin/health/route.ts"),
     read("ops/backup/northline-backup.sh"),
     read("ops/backup/northline-restore-test.sh"),
@@ -348,7 +348,7 @@ test("schema upgrades and operational failures are observable", async () => {
 test("user time zones are device-synchronized and UTC-safe", async () => {
   const [schema, auth, settings, timezone, time, adminTime, notifications, ui] =
     await Promise.all([
-      read("lib/db.ts"),
+      read("lib/db-sqlite.ts"),
       read("lib/auth.ts"),
       read("app/api/settings/timezone/route.ts"),
       read("lib/timezones.ts"),
@@ -408,7 +408,7 @@ test("site administration does not bypass private board membership", async () =>
       source,
       /\?='Admin'|role==="Admin"|permission==="admin"/,
     );
-  assert.match(detail, /const assignees\s*=\s*db/);
+  assert.match(detail, /const assignees\s*=\s*await db/);
   assert.match(
     detail,
     /u\.id=b\.owner_id OR u\.id=w\.owner_id OR bm\.user_id IS NOT NULL OR wm\.user_id IS NOT NULL/,
@@ -420,7 +420,7 @@ test("site administration does not bypass private board membership", async () =>
 test("board workflow columns are persistent, mutable, and task safe", async () => {
   const [schema, collection, item, detail, createTask, updateTask, ui, styles] =
     await Promise.all([
-      read("lib/db.ts"),
+      read("lib/db-sqlite.ts"),
       read("app/api/boards/[id]/columns/route.ts"),
       read("app/api/boards/[id]/columns/[columnId]/route.ts"),
       read("app/api/boards/[id]/route.ts"),
@@ -433,7 +433,7 @@ test("board workflow columns are persistent, mutable, and task safe", async () =
   assert.match(schema, /custom board workflow columns/);
   assert.match(schema, /CREATE TABLE tasks_dynamic/);
   for (const route of [collection, item])
-    assert.match(route, /canEdit\(boardPermission/);
+    assert.match(route, /canEdit\((?:await\s+)?boardPermission/);
   assert.match(collection, /COLUMN\.REORDER/);
   assert.match(item, /destinationId/);
   assert.match(item, /UPDATE tasks SET status=/);
@@ -461,7 +461,7 @@ test("personal and shared workspaces inherit board access safely", async () => {
     ui,
     announce,
   ] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("lib/boards.ts"),
     read("app/api/boards/route.ts"),
     read("app/api/workspaces/route.ts"),
@@ -528,7 +528,7 @@ test("My Work aggregates only accessible assignments and preserves edit permissi
     /b\.owner_id=\? OR w\.owner_id=\? OR bm\.user_id IS NOT NULL OR wm\.user_id IS NOT NULL/,
   );
   assert.match(route, /CASE[\s\S]*workspace_members/);
-  assert.match(await read("lib/db.ts"), /tasks_assignee_idx/);
+  assert.match(await read("lib/db-sqlite.ts"), /tasks_assignee_idx/);
   assert.doesNotMatch(route, /role.*Admin|Admin.*role/);
   assert.match(ui, /Overdue/);
   assert.match(ui, /Due soon/);
@@ -538,14 +538,14 @@ test("My Work aggregates only accessible assignments and preserves edit permissi
   assert.match(ui, /task\.permission\s*!==\s*"viewer"/);
   for (const field of ["status", "priority", "due_date"])
     assert.match(ui, new RegExp(field));
-  assert.match(taskRoute, /canEdit\(boardPermission/);
+  assert.match(taskRoute, /canEdit\((?:await\s+)?boardPermission/);
   assert.match(styles, /\.my-work-page/);
 });
 
 test("editing, reminder time, and completed task lifecycle are safe", async () => {
   const [schema, task, archive, board, search, myWork, ui, reminders] =
     await Promise.all([
-      read("lib/db.ts"),
+      read("lib/db-sqlite.ts"),
       read("app/api/tasks/[id]/route.ts"),
       read("app/api/boards/[id]/archive/route.ts"),
       read("app/api/boards/[id]/route.ts"),
@@ -587,7 +587,7 @@ test("shared task discussions are available without opening the editor", async (
 test("persistent personal time cards remain auditable and administrator visible", async () => {
   const [schema, timeApi, timeEntry, adminApi, timeClock, timeCard, ui] =
     await Promise.all([
-      read("lib/db.ts"),
+      read("lib/db-sqlite.ts"),
       read("app/api/time/route.ts"),
       read("app/api/time/[id]/route.ts"),
       read("app/api/admin/time/route.ts"),
@@ -631,6 +631,33 @@ test("persistent personal time cards remain auditable and administrator visible"
   assert.match(ui, /Start timer/);
 });
 
+test("core workflow supports authorized multi-assignees and editable pauseable timers", async () => {
+  const [schema, assignments, createTask, updateTask, myWork, timeEntry, clock, card, notifications] = await Promise.all([
+    read("lib/db-sqlite.ts"),
+    read("lib/task-assignments.ts"),
+    read("app/api/boards/[id]/tasks/route.ts"),
+    read("app/api/tasks/[id]/route.ts"),
+    read("app/api/my-work/route.ts"),
+    read("app/api/time/[id]/route.ts"),
+    read("app/time-clock.tsx"),
+    read("app/time-card.tsx"),
+    read("lib/task-notifications.ts"),
+  ]);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS task_assignees/);
+  assert.match(schema, /multi-assignee tasks and pauseable time entries/);
+  assert.match(assignments, /validateAssigneeIds/);
+  assert.match(createTask, /assigneeIds/);
+  assert.match(updateTask, /assignee_ids|assigneeIds/);
+  assert.match(myWork, /task_assignees/);
+  assert.match(timeEntry, /action === "pause"/);
+  assert.match(timeEntry, /action === "resume"/);
+  assert.match(timeEntry, /EDIT_CLOCK_IN/);
+  assert.match(clock, /Save time in/);
+  assert.match(clock, /Pause|Resume/);
+  assert.match(card, /updateTimeIn/);
+  assert.match(notifications, /assigneeIds/);
+});
+
 test("private calendars use opaque identifiers and explicit per-calendar permissions", async () => {
   const [
     schema,
@@ -643,7 +670,7 @@ test("private calendars use opaque identifiers and explicit per-calendar permiss
     ui,
     app,
   ] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("lib/calendars.ts"),
     read("app/api/calendars/route.ts"),
     read("app/api/calendars/[id]/route.ts"),
@@ -688,7 +715,7 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
     ui,
     styles,
   ] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("app/api/calendars/[id]/route.ts"),
     read("app/api/calendars/[id]/restore/route.ts"),
     read("app/api/calendar-events/[id]/restore/route.ts"),
@@ -706,9 +733,9 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
   assert.match(restoreCalendar, /datetime\('now','-30 days'\)/);
   assert.match(
     restoreEvent,
-    /calendarPermission\(user, event\.calendarId\) !== "owner"/,
+    /(?:await\s+)?calendarPermission\(user, event\.calendarId\) !== "owner"/,
   );
-  assert.match(reminders, /calendarPermission\(user, event\.calendarId\)/);
+  assert.match(reminders, /(?:await\s+)?calendarPermission\(user, event\.calendarId\)/);
   assert.match(reminders, /recipient_user_id/);
   assert.match(worker, /calendar_reminders/);
   assert.match(worker, /sendDiscordDirectMessage/);
@@ -732,7 +759,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
     ui,
     styles,
   ] = await Promise.all([
-    read("lib/db.ts"),
+    read("lib/db-sqlite.ts"),
     read("app/api/collab/schedule/route.ts"),
     read("app/api/collab/requests/route.ts"),
     read("app/api/collab/requests/[id]/route.ts"),
@@ -763,7 +790,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(schedule, /c\.visibility IN \('team','public'\)/);
   assert.match(schedule, /event\.visibility === "busy"/);
   assert.match(schedule, /seen\.has\(requestId\)/);
-  assert.match(requests, /canEditCalendar\(calendarPermission/);
+  assert.match(requests, /canEditCalendar\((?:await\s+)?calendarPermission/);
   assert.match(requests, /recipientIds\.includes\(source\.ownerId\)/);
   assert.match(requests, /recipientIds\.length > 20/);
   assert.match(requests, /for \(const recipientId of recipientIds\)/);
@@ -822,7 +849,7 @@ test("directory profiles expose only explicitly public stream schedules", async 
 });
 
 test("emergency management identities remain outside member-facing directories", async () => {
-  const schema = await read("lib/db.ts");
+  const schema = await read("lib/db-sqlite.ts");
   const sync = await read("lib/authentik-directory.ts");
   const directory = await read("app/api/directory/route.ts");
   const collabDirectory = await read("app/api/collab/schedule/route.ts");
@@ -838,7 +865,7 @@ test("emergency management identities remain outside member-facing directories",
 });
 
 test("member contact details stay behind authenticated contact cards", async () => {
-  const schema = await read("lib/db.ts");
+  const schema = await read("lib/db-sqlite.ts");
   const sync = await read("lib/authentik-directory.ts");
   const directory = await read("app/api/directory/route.ts");
   const ui = await read("app/northline-app.tsx");

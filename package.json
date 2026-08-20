@@ -11,12 +11,17 @@
     "start": "next start -H 0.0.0.0 -p 3000",
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "security:scan": "node scripts/secret-scan.mjs && npm audit"
+    "security:scan": "node scripts/secret-scan.mjs && npm audit",
+    "db:postgres:plan": "node scripts/migrate-sqlite-to-postgres.mjs",
+    "db:postgres:migrate": "node scripts/migrate-sqlite-to-postgres.mjs --execute",
+    "agent:preflight": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/northline-agent-preflight.ps1",
+    "agent:test": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-northline-agent.ps1"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "next": "^16.2.6",
+    "pg": "^8.16.3",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
@@ -26,6 +31,7 @@
     "@tailwindcss/postcss": "4.2.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "22.19.19",
+    "@types/pg": "^8.23.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",

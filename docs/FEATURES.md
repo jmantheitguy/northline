@@ -6,7 +6,7 @@ Boards are private to their creator until shared. Every board has an opaque rand
 
 Completed tasks are hidden by default but can be shown per board. Editors can archive completed work without deleting its comments or activity history, inspect the board archive, and restore an archived task later.
 
-My Work gives each member a private cross-board view of tasks assigned to them. Results are limited to boards the member can currently access and are grouped by urgency. Members can filter by workspace, board, priority, status, or text; owners and editors can update status, priority, and due date without leaving the view, while viewer assignments remain read-only.
+My Work gives each member a private cross-board view of tasks assigned to them. Results are limited to boards the member can currently access and are grouped by urgency. Members can filter by workspace, board, priority, status, or text; owners and editors can update status, priority, and due date without leaving the view, while viewer assignments remain read-only. A task may have multiple active assignees, but each assignee must be an active member of the board or inherited shared workspace. Board views can filter tasks by any authorized assignee.
 
 ## Workspaces
 
@@ -36,7 +36,7 @@ Users sign in locally or through Authentik OIDC using their office identity. Aut
 
 ## Task Buddy
 
-Each board can enable assignment, status, comment, mention, and due-date notifications, and users can manage their personal notification preferences. Task Buddy privately DMs automatic events and task-specific reminders to the member who created the task. Board-wide manual reminders create an independent private delivery for every active member with board access. Scheduled reminders support editing, cancellation, failure display, and retry. Delivery fails visibly per recipient when that person has not linked Discord without blocking other members. Messages include a direct clickable task link while suppressing Discord preview embeds, and delivery snapshots preserve history after the original task or board is deleted.
+Each board can enable assignment, status, comment, mention, and due-date notifications, and users can manage their personal notification preferences. Task Buddy privately DMs assignment and due-date events to each current assignee, while task-specific manual reminders remain private to the member who scheduled them. Board-wide manual reminders create an independent private delivery for every active member with board access. Scheduled reminders support editing, cancellation, failure display, and retry. Delivery fails visibly per recipient when that person has not linked Discord without blocking other members. Messages include a direct clickable task link while suppressing Discord preview embeds, and delivery snapshots preserve history after the original task or board is deleted.
 
 Every task has a permission-aware discussion thread. Owners, editors, and viewers who can access the board can read and post comments. Kanban cards provide a direct discussion control so collaborators do not need to open the full task editor merely to participate in the conversation.
 
@@ -46,13 +46,13 @@ Admins can create and manage accounts, review roles/status, inspect board owners
 
 ## Time tracking and reporting
 
-Each member has one persistent timer that can be started from the floating clock or directly from a task. Timers may be associated with an accessible board and task, survive page reloads, and warn after 12 hours without silently changing the recorded session. My Time supports manual entries, audited corrections, soft deletion and 30-day recovery, daily/weekly totals, report filters, and CSV export. Administrators can review active timers, organization totals, filtered entries, CSV exports, and time-entry audit actions; they cannot operate another member's timer.
+Each member has one persistent timer that can be started from the floating clock or directly from a task. Timers may be associated with an accessible board and task, survive page reloads, and warn after 12 hours without silently changing the recorded session. Active timers can be paused and resumed, and the owner can correct the time-in value with a required reason; pause time is excluded from the recorded active duration. My Time supports manual entries, audited corrections, soft deletion and 30-day recovery, daily/weekly totals, report filters, and CSV export. Changing a manual time-in preserves the entry's previous duration by moving time-out with it. Administrators can review active timers, organization totals, filtered entries, CSV exports, and time-entry audit actions; they cannot operate another member's timer.
 
-Each account records the IANA time zone detected from its current browser. Shared timestamps are stored as UTC instants and rendered locally for the viewer, while date-only task deadlines remain stable across locations. Time-report filters use local calendar-day boundaries and Task Buddy calculates due warnings in the task creator's zone.
+Each account records the IANA time zone detected from its current browser. Shared timestamps are stored as UTC instants and rendered locally for the viewer, while date-only task deadlines remain stable across locations. Time-report filters use local calendar-day boundaries and Task Buddy calculates each assignee's due warning in that recipient's time zone.
 
 ## Time cards
 
-Every user has a persistent personal time clock available from the floating clock control and a My Time page. Timers continue on the server through reloads, can be associated with accessible boards and tasks, and are limited to one active timer per user. Users can add manual entries, correct completed entries with a required audit reason, and remove completed entries with confirmation. Removal is an audited soft deletion: the entry leaves normal totals and reports while its audit history remains available. Northline prevents overlapping entries and calculates durations server-side. Administrators can review time totals and entry history for all active users from the Administration Time panel.
+Every user has a persistent personal time clock available from the floating clock control and a My Time page. Timers continue on the server through reloads, can be associated with accessible boards and tasks, and are limited to one active timer per user. Users can pause and resume an active timer, correct its time-in with a required audit reason, add manual entries, correct completed entries, and remove completed entries with confirmation. Removal is an audited soft deletion: the entry leaves normal totals and reports while its audit history remains available. Northline prevents overlapping entries and calculates active durations server-side. Administrators can review time totals and entry history for all active users from the Administration Time panel without operating another user's clock.
 
 ## Experience
 

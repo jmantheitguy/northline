@@ -13,9 +13,9 @@ export async function POST(request: Request, { params }: Context) {
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const id = calendarIdByKey((await params).id);
+  const id = await calendarIdByKey((await params).id);
   if (!id) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (calendarPermission(user, id) !== "owner")
+  if (await calendarPermission(user, id) !== "owner")
     return NextResponse.json(
       { error: "Only the calendar owner can share it" },
       { status: 403 },
@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: Context) {
   const permission = String(body.permission);
   if (!["viewer", "editor"].includes(permission))
     return NextResponse.json({ error: "Invalid permission" }, { status: 400 });
-  const target = db
+  const target = await db
     .prepare("SELECT id,name,status FROM users WHERE id=?")
     .get(userId) as { id: number; name: string; status: string } | undefined;
   if (!target || target.status !== "Active")
@@ -33,10 +33,10 @@ export async function POST(request: Request, { params }: Context) {
       { error: "Active user not found" },
       { status: 404 },
     );
-  db.prepare(
+  await db.prepare(
     "INSERT INTO calendar_members(calendar_id,user_id,permission) VALUES(?,?,?) ON CONFLICT(calendar_id,user_id) DO UPDATE SET permission=excluded.permission",
   ).run(id, userId, permission);
-  recordCalendarActivity(
+  await recordCalendarActivity(
     id,
     user.id,
     "CALENDAR.SHARE",
@@ -49,20 +49,20 @@ export async function DELETE(request: Request, { params }: Context) {
   const user = await currentUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const id = calendarIdByKey((await params).id);
+  const id = await calendarIdByKey((await params).id);
   if (!id) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (calendarPermission(user, id) !== "owner")
+  if (await calendarPermission(user, id) !== "owner")
     return NextResponse.json(
       { error: "Only the calendar owner can change sharing" },
       { status: 403 },
     );
   const userId = Number(new URL(request.url).searchParams.get("userId"));
-  const target = db.prepare("SELECT name FROM users WHERE id=?").get(userId) as
+  const target = await db.prepare("SELECT name FROM users WHERE id=?").get(userId) as
     { name: string } | undefined;
-  db.prepare(
+  await db.prepare(
     "DELETE FROM calendar_members WHERE calendar_id=? AND user_id=?",
   ).run(id, userId);
-  recordCalendarActivity(
+  await recordCalendarActivity(
     id,
     user.id,
     "CALENDAR.UNSHARE",

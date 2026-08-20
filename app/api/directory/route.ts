@@ -11,7 +11,7 @@ export async function GET() {
   } catch (error) {
     console.error("Authentik directory sync failed", error);
   }
-  const users = db
+  const users = await db
     .prepare(
       `SELECT u.id,u.name,u.email,u.avatar,u.role,u.status,u.auth_source authSource,u.discord_username discordUsername,
   (SELECT COUNT(*) FROM boards b WHERE b.owner_id=u.id)+(SELECT COUNT(*) FROM board_members bm WHERE bm.user_id=u.id) boards,

@@ -16,9 +16,11 @@ The application combines visual task boards, private collaboration, user adminis
 | [Architecture](docs/ARCHITECTURE.md)           | Components, data model, trust boundaries, and request flows              |
 | [Operations](docs/OPERATIONS.md)               | Deployment, updates, health monitoring, troubleshooting, and maintenance |
 | [Upgrading](docs/UPGRADING.md)                 | Migration policy, clean-install verification, and rollback procedure     |
+| [Railway migration](docs/RAILWAY-MIGRATION.md) | Staged PostgreSQL, worker, storage, and cutover plan                     |
 | [Member onboarding](docs/ONBOARDING.md)        | Authentik, Discord linking, profiles, access, and first-use steps        |
 | [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release                       |
 | [Beta status](docs/BETA-STATUS.md)             | Verified release evidence and remaining interactive validation           |
+| [Local AI development](docs/CONTINUE-DEVELOPMENT.md) | Continue and Ollama setup, safeguards, and review workflow          |
 | [Future plans](docs/FUTURE-PLANS.md)           | Streaming calendars, collaboration planning, and longer-term directions  |
 | [Backup and recovery](ops/backup/README.md)    | Encrypted VM/NAS backups and non-destructive restore testing             |
 | [Authentik](infra/authentik/README.md)         | Central identity and Northline security groups                           |
@@ -34,7 +36,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Automatic personal workspaces plus owner-managed shared workspaces whose members inherit access to every contained board
 - A personal My Work dashboard with urgency grouping, cross-board filters, and permission-aware quick edits
 - Drag-and-drop task movement
-- Task creation, priorities, categories, due dates, owners, and comments
+- Task creation, priorities, categories, due dates, multiple authorized assignees, and comments
 - Board, list, timeline, and calendar navigation concepts
 - Board-level progress indicators, filtering, and sorting controls
 - Permission-aware search across every accessible board
@@ -45,8 +47,8 @@ The application combines visual task boards, private collaboration, user adminis
 - Long, random public board IDs used by task and reminder links while creator ownership remains private
 - Browser navigation uses random board IDs without treating URL secrecy as authorization
 - Persistent light and dark themes that honor the browser preference on first use
-- A persistent floating Time In/Time Out clock with task-detail shortcuts and long-running timer warnings
-- Personal time cards with daily and weekly totals, date/board/task filters, CSV export, manual entries, audited corrections, and 30-day deletion recovery
+- A persistent floating Time In/Time Out clock with task-detail shortcuts, pause/resume, editable time-in corrections, and long-running timer warnings
+- Personal time cards with daily and weekly totals, date/board/task filters, CSV export, manual entries that preserve duration when time-in moves, audited corrections, and 30-day deletion recovery
 - Filterable organization-wide time reporting, CSV export, active-timer visibility, and audit history for administrators without exposing timer controls across accounts
 
 ### Private calendars
