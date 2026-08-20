@@ -24,6 +24,28 @@ export const createCollabReschedulePublicId = () =>
 db.pragma("busy_timeout = 10000");
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
+
+// Next.js evaluates server modules in parallel during a production build. A
+// check-then-alter sequence can therefore race when two workers initialize
+// the same SQLite database at once. Keep additive upgrades idempotent by
+// treating a duplicate-column result as success; any other schema error must
+// still surface and fail the build/startup.
+const addColumnIfMissing = (table: string, column: string, definition: string) => {
+  const columns = db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all() as Array<{ name: string }>;
+  if (columns.some((entry) => entry.name === column)) return;
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !error.message.toLowerCase().includes("duplicate column name")
+    )
+      throw error;
+  }
+};
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -288,15 +310,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS time_entry_audit_entry_idx ON time_entry_audit(time_entry_id,created_at DESC);
 `);
 
-const timeEntryColumns = db
-  .prepare("PRAGMA table_info(time_entries)")
-  .all() as Array<{ name: string }>;
-if (!timeEntryColumns.some((column) => column.name === "deleted_at"))
-  db.exec("ALTER TABLE time_entries ADD COLUMN deleted_at TEXT");
-if (!timeEntryColumns.some((column) => column.name === "paused_at"))
-  db.exec("ALTER TABLE time_entries ADD COLUMN paused_at TEXT");
-if (!timeEntryColumns.some((column) => column.name === "paused_seconds"))
-  db.exec("ALTER TABLE time_entries ADD COLUMN paused_seconds INTEGER NOT NULL DEFAULT 0");
+addColumnIfMissing("time_entries", "deleted_at", "deleted_at TEXT");
+addColumnIfMissing("time_entries", "paused_at", "paused_at TEXT");
+addColumnIfMissing(
+  "time_entries",
+  "paused_seconds",
+  "paused_seconds INTEGER NOT NULL DEFAULT 0",
+);
 
 const calendarColumns = db
   .prepare("PRAGMA table_info(calendars)")
@@ -598,11 +618,7 @@ if (
 db.exec(
   "CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status); CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date)",
 );
-const taskColumns = db.prepare("PRAGMA table_info(tasks)").all() as Array<{
-  name: string;
-}>;
-if (!taskColumns.some((column) => column.name === "archived_at"))
-  db.exec("ALTER TABLE tasks ADD COLUMN archived_at TEXT");
+addColumnIfMissing("tasks", "archived_at", "archived_at TEXT");
 db.exec(
   "CREATE INDEX IF NOT EXISTS tasks_archive_idx ON tasks(board_id,archived_at)",
 );
@@ -732,7 +748,7 @@ const auditColumns = db.prepare("PRAGMA table_info(audit_log)").all() as Array<{
   name: string;
 }>;
 if (!auditColumns.some((column) => column.name === "detail"))
-  db.exec("ALTER TABLE audit_log ADD COLUMN detail TEXT");
+  addColumnIfMissing("audit_log", "detail", "detail TEXT");
 
 const migrations: [number, string][] = [
   [1, "initial users and sessions"],
