@@ -8,6 +8,9 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - NORTHLINE_DB_DRIVER=${NORTHLINE_DB_DRIVER:-sqlite}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - NORTHLINE_DB_SSL=${NORTHLINE_DB_SSL:-}
       - NORTHLINE_DATA_DIR=/app/data
       - NORTHLINE_ADMIN_EMAIL=${NORTHLINE_ADMIN_EMAIL:?initial administrator email required}
       - NORTHLINE_ADMIN_PASSWORD=${NORTHLINE_ADMIN_PASSWORD:?initial administrator password required}

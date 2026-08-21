@@ -132,12 +132,20 @@ Northline currently uses:
 - Next.js 16 with the App Router
 - React 19 and TypeScript
 - Tailwind CSS
-- SQLite through `better-sqlite3` for users, boards, tasks, comments, and memberships
+- PostgreSQL through `pg` for the runtime database in local development and production
+- SQLite through `better-sqlite3` only for legacy imports, fixtures, and clean-install migration tests
 - bcrypt password hashing
 - Server-side API routes for authentication and administration
 - Docker and Docker Compose for Linux deployment
 
-SQLite runs in WAL mode with foreign-key enforcement. The database contains users, sessions, boards, memberships, tasks, comments, reminders, notification snapshots, board activity, workspace settings, and administrative audit events. Docker stores it in a persistent named volume mounted at `/app/data`. Every board, task, comment, reminder, search, activity, and sharing API verifies the requesting user's permission on the server.
+PostgreSQL uses a transaction-scoped connection pool and forward-only schema
+migrations. The database contains users, sessions, boards, memberships, tasks,
+comments, reminders, notification snapshots, board activity, workspace
+settings, and administrative audit events. Local Docker development stores the
+database in the `northline-postgres-data` named volume; the application volume
+at `/app/data` remains for status and compatibility data. Every board, task,
+comment, reminder, search, activity, and sharing API verifies the requesting
+user's permission on the server.
 
 ## Roles
 
@@ -155,13 +163,22 @@ Requirements:
 
 - Node.js 22.13 or newer
 - npm
+- Docker Desktop (or Docker Engine with Compose)
 
-```bash
-npm install
+Create a local `.env` from `.env.example`, replace every placeholder, and start
+the isolated PostgreSQL service before opening [http://localhost:3000](http://localhost:3000):
+
+```powershell
+docker compose -f compose.yaml -f compose.local-postgres.yaml up -d postgres
 npm run dev
 ```
 
-Create a local `.env` from `.env.example`, replace every placeholder, then open [http://localhost:3000](http://localhost:3000). Northline deliberately has no default administrator password and will refuse to start until the initial administrator email and password are configured.
+For the first run against an existing local SQLite fixture, follow the guarded
+import steps in [the Railway migration guide](docs/RAILWAY-MIGRATION.md). The
+local database must be separate from Railway production; never use the Railway
+production connection string from a workstation. Northline deliberately has no
+default administrator password and will refuse to start until the initial
+administrator email and password are configured.
 
 ## Production configuration
 
@@ -174,6 +191,8 @@ cp .env.example .env
 ```dotenv
 NORTHLINE_ADMIN_EMAIL=admin@example.com
 NORTHLINE_ADMIN_PASSWORD=replace-with-a-long-random-password
+NORTHLINE_DB_DRIVER=postgres
+DATABASE_URL=postgresql://northline:replace-with-a-provider-secret@postgres-host:5432/northline
 NORTHLINE_DATA_DIR=/app/data
 NORTHLINE_PUBLIC_URL=https://northline.example.com
 NORTHLINE_COOKIE_SECURE=true
@@ -205,7 +224,7 @@ git clone https://github.com/jmantheitguy/northline.git
 cd northline
 cp .env.example .env
 # Edit .env before continuing.
-docker compose up -d --build
+docker compose -f compose.yaml -f compose.local-postgres.yaml up -d --build
 ```
 
 Northline will listen on port `3000`. Publish it through the existing Cloudflare Tunnel and keep the origin port restricted to the private network.
@@ -214,7 +233,7 @@ Update the installation with:
 
 ```bash
 git pull
-docker compose up -d --build
+docker compose -f compose.yaml -f compose.local-postgres.yaml up -d --build
 ```
 
 The container uses `restart: unless-stopped`, so it will return after a VM reboot.
@@ -225,7 +244,12 @@ The repository includes a companion [Authentik deployment](infra/authentik/READM
 
 ## Data and backups
 
-The SQLite database is stored in the `northline-data` Docker volume. Back it up regularly to storage outside the VM. A Synology or other NAS is suitable for encrypted backups and attachments, but the live SQLite database should remain on the VM's local disk rather than an NFS or SMB share.
+The runtime PostgreSQL database is stored in Railway's managed PostgreSQL
+service in production and in the local `northline-postgres-data` Docker volume
+for workstation development. Backups should be taken through the provider or
+the documented PostgreSQL backup workflow and stored outside the application
+container. SQLite snapshots are retained only for legacy import and recovery
+workflows; a live database should never run from an NFS or SMB share.
 
 Environment files, local databases, generated builds, and dependencies are excluded from Git.
 

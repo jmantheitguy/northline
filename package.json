@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "db:local:up": "docker compose -f compose.yaml -f compose.local-postgres.yaml up -d postgres",
+    "db:local:down": "docker compose -f compose.yaml -f compose.local-postgres.yaml stop postgres",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .worktrees",
     "security:scan": "node scripts/secret-scan.mjs && npm audit",
     "db:postgres:plan": "node scripts/migrate-sqlite-to-postgres.mjs",

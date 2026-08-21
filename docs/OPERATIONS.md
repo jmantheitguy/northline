@@ -4,9 +4,9 @@
 
 Northline production runs on Railway from the protected `main` branch, with its
 production PostgreSQL service and Authentik services in the same Railway
-environment. The Docker Compose path remains available for local development
-and a self-hosted fallback; keep live SQLite data on that host's local Docker
-volume and never use a network share as live SQLite storage.
+environment. The Docker Compose path remains available for local PostgreSQL
+development and a self-hosted fallback; keep the live PostgreSQL volume on the
+host's local storage and never use a network share as the live database.
 
 Code push, production deployment, database migration, and Discord release
 announcement are separate actions. A normal local development update is:

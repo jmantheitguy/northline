@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: northline-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${NORTHLINE_POSTGRES_DB:-northline}
+      POSTGRES_USER: ${NORTHLINE_POSTGRES_USER:-northline}
+      POSTGRES_PASSWORD: ${NORTHLINE_POSTGRES_PASSWORD:?Set NORTHLINE_POSTGRES_PASSWORD to a local-only URL-safe value}
+    ports:
+      - "55432:5432"
+    volumes:
+      - northline-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  northline:
+    environment:
+      - NORTHLINE_DB_DRIVER=postgres
+      - DATABASE_URL=postgresql://${NORTHLINE_POSTGRES_USER:-northline}:${NORTHLINE_POSTGRES_PASSWORD:?Set NORTHLINE_POSTGRES_PASSWORD to a local-only URL-safe value}@postgres:5432/${NORTHLINE_POSTGRES_DB:-northline}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  northline-postgres-data:

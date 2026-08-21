@@ -5,9 +5,9 @@
 | Component                       | Responsibility                                                                   | Persistent data                  |
 | ------------------------------- | -------------------------------------------------------------------------------- | -------------------------------- |
 | Next.js 16 / React 19           | UI, server rendering, API routes, authorization, reminder worker                 | None outside mounted paths       |
-| SQLite / better-sqlite3         | Users, sessions, boards, tasks, reminders, time cards, activity, audit, settings | `northline-data:/app/data`       |
+| PostgreSQL / `pg`               | Users, sessions, boards, tasks, reminders, time cards, activity, audit, settings | Railway managed PostgreSQL; local `northline-postgres-data` volume |
 | Authentik / PostgreSQL          | Central identity, OIDC, groups, profile sources                                  | Authentik volumes and files      |
-| Task Buddy / Discord API        | Scheduled and automatic private notifications                                    | Delivery state remains in SQLite |
+| Task Buddy / Discord API        | Scheduled and automatic private notifications                                    | Delivery state remains in PostgreSQL |
 | Cloudflare Tunnel               | HTTPS publication without direct origin exposure                                 | Cloudflare configuration         |
 | Stalwart and webmail            | Independent domain mailboxes and JMAP webmail                                    | Mail Docker volumes              |
 | Cloudflare Email Routing Worker | Inbound public SMTP gateway to private ingress                                   | Worker configuration/secrets     |
@@ -18,7 +18,7 @@ The table describes logical responsibilities, not the production network map. In
 
 ## Data and authorization
 
-SQLite uses WAL mode and foreign keys. Board membership is owner, editor, or viewer; Admin is a workspace role. API routes authenticate the session and resolve permissions from the database before reading or mutating board data. Search and activity endpoints use the same accessible-board boundary. Random board IDs reduce enumeration but never replace authorization. Workflow columns are stored per board with stable internal keys and ordered positions. Task status values are validated against that board's columns, and column removal moves affected tasks transactionally to an explicitly selected destination.
+PostgreSQL uses a transaction-scoped connection pool and foreign keys. Board membership is owner, editor, or viewer; Admin is a workspace role. API routes authenticate the session and resolve permissions from the database before reading or mutating board data. Search and activity endpoints use the same accessible-board boundary. Random board IDs reduce enumeration but never replace authorization. Workflow columns are stored per board with stable internal keys and ordered positions. Task status values are validated against that board's columns, and column removal moves affected tasks transactionally to an explicitly selected destination.
 
 Personal and shared workspaces are first-class relational entities. A board belongs to exactly one workspace. Personal workspaces accept no workspace members, preserving private-by-default ownership and optional explicit board shares. Shared workspaces store viewer/editor membership once; board authorization, discovery, assignment, search, and reminders inherit that membership server-side. Explicit board membership can grant additional access but cannot reduce inherited workspace access.
 
@@ -50,4 +50,4 @@ Task mutations create deduplicated reminder records according to board and recip
 
 ## Health and backup flow
 
-The admin health API performs a SQLite quick check, reads process/disk/session/reminder data, tests Discord connectivity, and consumes read-only JSON reports written by the host backup scripts. The daily host job creates a consistent Northline SQLite snapshot, captures Northline's private configuration and deployed commit, adds checksums, encrypts the package, and retains the four newest verified local packages. The restore drill decrypts the newest package into temporary storage and validates the Northline database and configuration without modifying production. Authentik and mail are intentionally outside this backup job's scope. Off-host replication is reported only when a separately mounted destination is deliberately configured.
+The admin health API performs a PostgreSQL integrity check, reads session/reminder data, tests Discord connectivity, and consumes read-only JSON reports written by the host or provider backup workflow. Production backups are taken from managed PostgreSQL and retained outside the application container. SQLite snapshots are used only for legacy import and fixture recovery. Authentik and mail are intentionally outside the Northline backup scope. Off-host replication is reported only when a separately configured destination is verified.

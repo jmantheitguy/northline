@@ -1,9 +1,8 @@
 # Railway migration plan
 
-Northline is a production application with real users. This document describes
-the staged path from the current SQLite/Docker deployment to Railway. It does
-not authorize a production cutover, and it intentionally contains no provider
-credentials, private hostnames, or account identifiers.
+Northline is a production application with real users. This document records
+the PostgreSQL cutover and the safe local-development workflow. It intentionally
+contains no provider credentials, private hostnames, or account identifiers.
 
 ## Recommended target architecture
 
@@ -27,16 +26,55 @@ storage, and usage limits in its platform documentation. Keep the database and
 backup copy independent from the application container. The application must
 never depend on an ephemeral container filesystem for durable data.
 
-## Why this is staged
+## Runtime database parity
 
-PostgreSQL is not a drop-in environment-variable change. Northline now has a
-connection-aware asynchronous PostgreSQL driver behind `lib/db.ts`, while
-SQLite remains the default for local development. The PostgreSQL path translates
-the small set of legacy SQLite date/conflict expressions, preserves the
-case-insensitive email identity rule, and uses a transaction-scoped connection
-pool. The existing authorization and feature tests run against the shared
-database boundary so a backend switch does not weaken board, workspace, time,
-calendar, or administration permissions.
+PostgreSQL is now the runtime database in both Railway production and local
+development. Northline has a connection-aware asynchronous PostgreSQL driver
+behind `lib/db.ts`; the local Compose override starts an isolated PostgreSQL 16
+container on host port `55432`. The driver preserves the case-insensitive email
+identity rule and uses a transaction-scoped connection pool. SQLite remains
+available only for legacy imports, fixtures, and clean-install migration tests,
+so the normal development path exercises the same driver and query behavior as
+production.
+
+The compatibility normalizer in `lib/db-postgres.ts` exists for the small amount
+of SQLite-era SQL retained by shared domain helpers and for the legacy importer;
+it is not a second local runtime. Both normal environments select the same
+PostgreSQL implementation through `NORTHLINE_DB_DRIVER=postgres`.
+
+Never point local `DATABASE_URL` at Railway production. Keep the local password
+URL-safe and set it through an uncommitted `.env` or the process environment.
+
+## Local PostgreSQL workflow
+
+Requirements: Docker Desktop (or Docker Engine with Compose), Node.js 22.13 or
+newer, and an isolated local database. From the repository root:
+
+```powershell
+Copy-Item .env.example .env
+# Edit .env: replace the administrator placeholders and set a local-only,
+# URL-safe NORTHLINE_POSTGRES_PASSWORD.
+docker compose -f compose.yaml -f compose.local-postgres.yaml up -d postgres
+npm install
+npm run dev
+```
+
+The first startup creates the PostgreSQL schema and the configured local
+administrator. For an existing SQLite development snapshot, stop the app,
+start only the local `postgres` service, set `NORTHLINE_MIGRATION_TARGET=staging`
+and the local `DATABASE_URL`, then run the guarded import:
+
+```powershell
+$env:NORTHLINE_MIGRATION_TARGET = "staging"
+$env:DATABASE_URL = "postgresql://northline:<local-only-password>@127.0.0.1:55432/northline"
+node scripts/migrate-sqlite-to-postgres.mjs --source .\data\northline.db --execute
+docker compose -f compose.yaml -f compose.local-postgres.yaml up -d northline
+```
+
+The importer refuses to merge into a non-empty database. It is appropriate for
+an isolated local database only; never use `NORTHLINE_MIGRATION_TARGET=production`
+from a workstation. Resetting local-only data requires an explicit destructive
+Compose volume removal and is not part of normal development.
 
 ## Local migration tooling
 
@@ -66,7 +104,7 @@ into a non-empty target and performs the copy in one transaction.
 
 1. Create a separate Railway staging project and PostgreSQL service.
 2. Add a repository data-access boundary and a PostgreSQL implementation while
-   retaining SQLite for the first local comparison tests.
+   retaining SQLite for legacy import and fixture support.
 3. Port schema migrations and replace SQLite-only SQL (`datetime`, `strftime`,
    `INSERT OR IGNORE`, `lastInsertRowid`, and `PRAGMA` checks) with portable
    equivalents. The runtime now uses PostgreSQL-generated IDs and a
@@ -98,30 +136,24 @@ limit protects the budget by taking workloads offline, so it must be paired with
 monitoring. Start with the smallest web service and worker sizes that pass load
 and health tests, then increase them only from observed metrics.
 
-## Current staging status
+## Current production status
 
-- A separate Railway staging project and private PostgreSQL instance are
-  provisioned with persistent storage. No public database domain is enabled.
-- The staging Northline service is deployed from the isolated
-  `codex/railway-staging` branch at the staging health-check commit, with the
-  root Dockerfile, a `/health` check, restart-on-failure protection, and a
-  persistent application volume mounted at `/app/data`.
-- The staging web service has a Railway-generated HTTPS hostname for browser
-  smoke tests. It is separate from the production origin and is not wired to
-  production DNS, Authentik, or Discord callbacks.
-- A consistent production SQLite snapshot has been captured outside the
-  repository and validated by the read-only migration planner. It has not been
-  uploaded or copied into Railway.
-- No production data has been copied to Railway. The staging service currently
-  uses its own SQLite data volume; the provisioned PostgreSQL service is ready
-  for the rehearsed import but is not yet the application's runtime database.
-- The Northline query layer is now PostgreSQL-capable behind the opt-in
-  `NORTHLINE_DB_DRIVER=postgres` switch. SQLite remains the default until the
-  staging import and smoke tests pass.
-- No DNS, Authentik, Discord, backup, or production deployment changes have
-  been made by this migration foundation.
+- Railway production uses the managed PostgreSQL service through its private
+  `DATABASE_URL`, with the Northline web service and Authentik services in the
+  same Railway environment.
+- Local development uses the isolated Compose PostgreSQL service from
+  `compose.local-postgres.yaml`, so the local and production runtime drivers
+  are identical.
+- SQLite is retained only for legacy import, fixtures, and clean-install
+  migration tests. It is not the normal runtime path.
+- Production DNS, Authentik, Discord, and backups are managed separately from
+  this local-development configuration.
 
-## Authorized cutover runbook
+The staging and cutover notes below are historical reference for the migration
+that has already completed; they are not instructions to repeat against the
+live database.
+
+## Historical cutover runbook
 
 The following sequence is the only supported production cutover. It requires a
 fresh backup and an explicit write freeze; it is not a routine deploy.

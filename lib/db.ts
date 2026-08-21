@@ -3,14 +3,15 @@ import { AsyncLocalStorage } from "node:async_hooks";
 /**
  * Northline's database entry point.
  *
- * SQLite remains the default for local development. PostgreSQL is opt-in via
- * NORTHLINE_DB_DRIVER=postgres so a deployment cannot silently switch storage
- * engines merely because a DATABASE_URL happens to be present.
+ * PostgreSQL is the supported runtime for local development and production.
+ * SQLite remains available only when NORTHLINE_DB_DRIVER=sqlite is explicitly
+ * selected for fixtures, legacy imports, or clean-install migration tests.
  */
 // The two drivers intentionally expose the same runtime surface but have
 // different synchronous/asynchronous method signatures. Keeping this boundary
-// dynamic prevents SQLite's legacy typings from leaking into the PostgreSQL
-// build while each driver is being migrated route-by-route.
+// dynamic lets the PostgreSQL runtime remain the single local/production path
+// while preserving an explicit SQLite compatibility path for fixtures and
+// legacy imports.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the driver boundary intentionally unifies sync SQLite and async PostgreSQL implementations.
 const implementation: any =
   process.env.NORTHLINE_DB_DRIVER === "postgres"

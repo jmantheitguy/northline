@@ -1,8 +1,18 @@
 # Northline backup and recovery
 
-The production backup job protects Northline only. It creates a consistent snapshot of the Northline SQLite database, includes Northline's private environment configuration and the exact deployed Git commit, records checksums, and encrypts the archive with AES-256-CBC using PBKDF2. It does not back up, pause, or otherwise operate on Authentik or the mail stack.
+The self-hosted fallback backup job protects Northline only. It creates a
+consistent snapshot of the fallback SQLite database, includes Northline's
+private environment configuration and the exact deployed Git commit, records
+checksums, and encrypts the archive with AES-256-CBC using PBKDF2. Railway
+production uses managed PostgreSQL backups and its provider recovery workflow;
+this host script is not a production PostgreSQL backup. It does not back up,
+pause, or otherwise operate on Authentik or the mail stack.
 
-The production systemd timer runs once daily with a randomized delay and retains the four newest encrypted archives in the configured local destination. The script can optionally copy to a separately mounted destination and/or a private S3 prefix, but production must not report off-host replication unless the destination is explicitly configured and verified. Exact schedules, paths, bucket names, and credentials are intentionally excluded from this public repository.
+The self-hosted fallback systemd timer runs once daily with a randomized delay
+and retains the four newest encrypted archives in the configured local
+destination. The script can optionally copy to a separately mounted destination
+and/or a private S3 prefix. Exact schedules, paths, bucket names, and
+credentials are intentionally excluded from this public repository.
 
 Each successful backup writes `runtime-status/backup.json`; each successful restore drill writes `runtime-status/restore.json`. The Northline container mounts this directory read-only and displays both reports in **Administration > Health**. `nasReplicated: true` confirms that a verified copy reached the NAS, while `s3Replicated: true` confirms that S3 reported the same object size as the local encrypted archive.
 
@@ -27,7 +37,8 @@ The test decrypts the newest archive, verifies every checksum and the Northline-
 
 1. Install Docker and clone the matching Northline release.
 2. Restore the two environment files with mode `0600`.
-3. Restore the Northline SQLite snapshot into the `northline-data` volume while the application container is stopped.
+3. For the self-hosted fallback only, restore the Northline SQLite snapshot into
+   the `northline-data` volume while the application container is stopped.
 4. Restore the Northline environment file with mode `0600`.
 5. Start Northline and verify sign-in, directory synchronization, board access, timers, and Task Buddy.
 

@@ -3,10 +3,10 @@
 /**
  * Prepare or execute a one-way Northline SQLite -> PostgreSQL migration.
  *
- * This is deliberately separate from the application runtime. SQLite remains
- * the local default and PostgreSQL is selected explicitly by
- * NORTHLINE_DB_DRIVER. The command is read-only by default; writes require
- * --execute and an explicit environment guard.
+ * This is deliberately separate from the application runtime. SQLite is kept
+ * for legacy imports and fixtures; PostgreSQL is the runtime database. The
+ * command is read-only by default; writes require --execute and an explicit
+ * environment guard.
  */
 
 import fs from "node:fs";

@@ -179,6 +179,23 @@ test("board-wide reminders fan out privately to every board member", async () =>
   assert.match(ui, /privately delivered to every active member/);
 });
 
+test("local development uses an isolated PostgreSQL runtime", async () => {
+  const [environment, compose, runtime, migration] = await Promise.all([
+    read(".env.example"),
+    read("compose.local-postgres.yaml"),
+    read("lib/db.ts"),
+    read("scripts/migrate-sqlite-to-postgres.mjs"),
+  ]);
+  assert.match(environment, /NORTHLINE_DB_DRIVER=postgres/);
+  assert.match(environment, /127\.0\.0\.1:55432\/northline/);
+  assert.match(compose, /image: postgres:16-alpine/);
+  assert.match(compose, /55432:5432/);
+  assert.match(compose, /NORTHLINE_DB_DRIVER=postgres/);
+  assert.match(compose, /postgres:5432/);
+  assert.match(runtime, /NORTHLINE_DB_DRIVER=sqlite/);
+  assert.match(migration, /SQLite is kept\s+\*\s+for legacy imports and fixtures/);
+});
+
 test("manual task reminders target assigned people and format delivery guidance", async () => {
   const [route, worker, ui] = await Promise.all([
     read("app/api/reminders/route.ts"),
