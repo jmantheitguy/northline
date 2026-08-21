@@ -16,7 +16,7 @@ The application combines visual task boards, private collaboration, user adminis
 | [Architecture](docs/ARCHITECTURE.md)           | Components, data model, trust boundaries, and request flows              |
 | [Operations](docs/OPERATIONS.md)               | Deployment, updates, health monitoring, troubleshooting, and maintenance |
 | [Upgrading](docs/UPGRADING.md)                 | Migration policy, clean-install verification, and rollback procedure     |
-| [Railway migration](docs/RAILWAY-MIGRATION.md) | Staged PostgreSQL, worker, storage, and cutover plan                     |
+| [Railway migration](docs/RAILWAY-MIGRATION.md) | PostgreSQL runtime parity, local setup, operations, and recovery          |
 | [Member onboarding](docs/ONBOARDING.md)        | Authentik, Discord linking, profiles, access, and first-use steps        |
 | [Release checklist](docs/RELEASE-CHECKLIST.md) | Required validation before and after every release                       |
 | [Beta status](docs/BETA-STATUS.md)             | Verified release evidence and remaining interactive validation           |
