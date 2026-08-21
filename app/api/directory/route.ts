@@ -23,7 +23,11 @@ export async function GET() {
   const configuredMain = await db.prepare("SELECT value FROM app_meta WHERE key='main_team_id'").get() as { value:string } | undefined;
   const mainTeamId = Number(configuredMain?.value || "") || -1;
   for (const user of users as Array<{ id:number; teamNames?:string[] }>) {
-    const memberships = await db.prepare(`SELECT DISTINCT t.id,t.name FROM teams t LEFT JOIN team_members tm ON tm.team_id=t.id AND tm.user_id=? WHERE t.owner_id=? OR tm.user_id=? ORDER BY CASE WHEN t.id=? THEN 0 ELSE 1 END,t.name COLLATE NOCASE`).all(user.id,user.id,user.id,mainTeamId) as Array<{name:string}>;
+    // team_members has a composite primary key, and the join is scoped to one
+    // user, so each team can contribute at most one row. Avoid DISTINCT here:
+    // PostgreSQL rejects ORDER BY expressions that are not in a DISTINCT
+    // select list (the SQLite version accepted this query).
+    const memberships = await db.prepare(`SELECT t.id,t.name FROM teams t LEFT JOIN team_members tm ON tm.team_id=t.id AND tm.user_id=? WHERE t.owner_id=? OR tm.user_id=? ORDER BY CASE WHEN t.id=? THEN 0 ELSE 1 END,t.name COLLATE NOCASE,t.id`).all(user.id,user.id,user.id,mainTeamId) as Array<{name:string}>;
     user.teamNames = memberships.map((item) => item.name);
   }
   return NextResponse.json({ users });

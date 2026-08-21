@@ -399,7 +399,8 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(teamRoute, /role: visibleRole/);
   assert.match(teamSettings, /TEAM\.MAIN\.UPDATE/);
   assert.match(teamSettings, /main_team_id/);
-  assert.match(directory, /SELECT DISTINCT t\.id,t\.name/);
+  assert.match(directory, /SELECT t\.id,t\.name/);
+  assert.doesNotMatch(directory, /SELECT DISTINCT t\.id,t\.name[\s\S]*ORDER BY CASE WHEN t\.id=\? THEN 0 ELSE 1 END,t\.name COLLATE NOCASE/);
   assert.match(ownerRoute, /Only the team owner can transfer ownership/);
   assert.match(ownerRoute, /team_members/);
   assert.match(ownerRoute, /TEAM\.OWNER_TRANSFER/);
@@ -410,6 +411,8 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(boardList, /team.owner_id/);
   assert.match(calendarRoute, /team_id/);
   assert.match(collab, /team_members/);
+  assert.match(collab, /SELECT t\.id,t\.name[\s\S]*ORDER BY CASE WHEN t\.id=\? THEN 0 ELSE 1 END,t\.name COLLATE NOCASE,t\.id/);
+  assert.doesNotMatch(collab, /SELECT DISTINCT t\.id,t\.name[\s\S]*ORDER BY CASE WHEN t\.id=\? THEN 0 ELSE 1 END,t\.name COLLATE NOCASE/);
   assert.match(ui, /Find by team/);
   assert.match(ui, /All streamers/);
   assert.match(teamsUi, /Create a team/);
