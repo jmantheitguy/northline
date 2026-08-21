@@ -308,6 +308,9 @@ export function NorthlineApp() {
   const [directoryUsers, setDirectoryUsers] = useState<WorkspaceUser[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [sidebar, setSidebar] = useState(true);
+  const [sidebarBoardSearch, setSidebarBoardSearch] = useState("");
+  const [myBoardsExpanded, setMyBoardsExpanded] = useState(true);
+  const [sharedBoardsExpanded, setSharedBoardsExpanded] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
   const [toast, setToast] = useState("");
@@ -422,6 +425,10 @@ export function NorthlineApp() {
   useEffect(() => {
     const saved = window.localStorage.getItem("northline-theme");
     const savedTextSize = window.localStorage.getItem("northline-text-size");
+    const savedMyBoards = window.localStorage.getItem("northline-my-boards");
+    const savedSharedBoards = window.localStorage.getItem(
+      "northline-shared-boards",
+    );
     const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
@@ -434,6 +441,8 @@ export function NorthlineApp() {
     ) {
       setTextSize(savedTextSize);
     }
+    if (savedMyBoards === "collapsed") setMyBoardsExpanded(false);
+    if (savedSharedBoards === "collapsed") setSharedBoardsExpanded(false);
     jsonFetch("/api/auth/me")
       .then((d) => setAuthUser(d.user))
       .finally(() => setAuthLoading(false));
@@ -447,6 +456,18 @@ export function NorthlineApp() {
   useEffect(() => {
     window.localStorage.setItem("northline-text-size", textSize);
   }, [textSize]);
+  useEffect(() => {
+    window.localStorage.setItem(
+      "northline-my-boards",
+      myBoardsExpanded ? "expanded" : "collapsed",
+    );
+  }, [myBoardsExpanded]);
+  useEffect(() => {
+    window.localStorage.setItem(
+      "northline-shared-boards",
+      sharedBoardsExpanded ? "expanded" : "collapsed",
+    );
+  }, [sharedBoardsExpanded]);
   useEffect(() => {
     if (window.matchMedia("(max-width: 950px)").matches) setSidebar(false);
     const query = new URLSearchParams(window.location.search),
@@ -575,10 +596,20 @@ export function NorthlineApp() {
       ].map((board) => [board.id, board]),
     ).values(),
   );
+  const visibleBoards = workspaceBoards;
+  const boardSearch = sidebarBoardSearch.trim().toLowerCase();
+  const matchesSidebarBoard = (board: BoardSummary) =>
+    !boardSearch ||
+    [board.name, board.description, board.ownerName, board.workspaceName]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(boardSearch));
+  const filteredVisibleBoards = visibleBoards.filter(matchesSidebarBoard);
+  const filteredSharedBoards = sharedBoards.filter(matchesSidebarBoard);
+  const showMyBoards = myBoardsExpanded || Boolean(boardSearch);
+  const showSharedBoards = sharedBoardsExpanded || Boolean(boardSearch);
   // The API is the authorization boundary, while the selected workspace
   // controls navigation. Never mix boards from another workspace into this
   // view when a workspace has no boards of its own.
-  const visibleBoards = workspaceBoards;
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;
     setBusy(true);
@@ -752,14 +783,48 @@ export function NorthlineApp() {
             <span>◷</span>Reminders
           </button>
         </nav>
+        <label className="sidebar-board-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            value={sidebarBoardSearch}
+            onChange={(event) => setSidebarBoardSearch(event.target.value)}
+            placeholder="Search boards..."
+            aria-label="Search current workspace and shared boards"
+          />
+          {sidebarBoardSearch && (
+            <button
+              type="button"
+              aria-label="Clear board search"
+              onClick={() => setSidebarBoardSearch("")}
+            >
+              ×
+            </button>
+          )}
+        </label>
         <div className="nav-label">
-          <span>MY BOARDS</span>
+          <button
+            type="button"
+            className="nav-section-toggle"
+            aria-expanded={showMyBoards}
+            aria-controls="my-boards-navigation"
+            onClick={() => setMyBoardsExpanded((expanded) => !expanded)}
+          >
+            <span>MY BOARDS</span>
+            <span aria-hidden="true">{showMyBoards ? "⌄" : "›"}</span>
+          </button>
           {activeWorkspace?.permission !== "viewer" && (
-            <button onClick={() => setModal("board-create")}>＋</button>
+            <button
+              type="button"
+              aria-label="Create board"
+              onClick={() => setModal("board-create")}
+            >
+              ＋
+            </button>
           )}
         </div>
-        <nav className="boards">
-          {visibleBoards
+        {showMyBoards && (
+          <nav className="boards" id="my-boards-navigation">
+            {filteredVisibleBoards
             .filter((b) => b.permission === "owner")
             .map((b) => (
               <BoardNav
@@ -772,12 +837,28 @@ export function NorthlineApp() {
                 }}
               />
             ))}
-        </nav>
+            {!filteredVisibleBoards.filter((b) => b.permission === "owner").length && (
+              <span className="nav-empty">
+                {boardSearch ? "No matching boards" : "No boards in this workspace"}
+              </span>
+            )}
+          </nav>
+        )}
         <div className="nav-label">
-          <span>SHARED WITH ME</span>
+          <button
+            type="button"
+            className="nav-section-toggle"
+            aria-expanded={showSharedBoards}
+            aria-controls="shared-boards-navigation"
+            onClick={() => setSharedBoardsExpanded((expanded) => !expanded)}
+          >
+            <span>SHARED WITH ME</span>
+            <span aria-hidden="true">{showSharedBoards ? "⌄" : "›"}</span>
+          </button>
         </div>
-        <nav className="boards">
-          {sharedBoards.map((b) => (
+        {showSharedBoards && (
+          <nav className="boards" id="shared-boards-navigation">
+            {filteredSharedBoards.map((b) => (
               <BoardNav
                 key={b.id}
                 board={b}
@@ -789,8 +870,13 @@ export function NorthlineApp() {
                 }}
               />
             ))}
-          {!sharedBoards.length && <span className="nav-empty">No shared boards</span>}
-        </nav>
+            {!filteredSharedBoards.length && (
+              <span className="nav-empty">
+                {boardSearch ? "No matching boards" : "No shared boards"}
+              </span>
+            )}
+          </nav>
+        )}
         <div className="sidebar-bottom">
           {isAdmin && (
             <button

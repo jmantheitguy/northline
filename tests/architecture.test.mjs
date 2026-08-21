@@ -340,6 +340,22 @@ test("accessibility text sizing is persisted and applies across the shell", asyn
   assert.match(styles, /\.nav-board-copy \.nav-board-name[\s\S]*font-size: 14px/);
 });
 
+test("sidebar board sections can collapse and search authorized navigation", async () => {
+  const [ui, styles] = await Promise.all([
+    read("app/northline-app.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(ui, /Search current workspace and shared boards/);
+  assert.match(ui, /northline-my-boards/);
+  assert.match(ui, /northline-shared-boards/);
+  assert.match(ui, /my-boards-navigation/);
+  assert.match(ui, /shared-boards-navigation/);
+  assert.match(ui, /filteredVisibleBoards/);
+  assert.match(ui, /filteredSharedBoards/);
+  assert.match(styles, /\.sidebar-board-search:focus-within/);
+  assert.match(styles, /\.nav-label \.nav-section-toggle/);
+});
+
 test("search controls render as unified accessible fields", async () => {
   const ui = await read("app/northline-app.tsx");
   const styles = await read("app/globals.css");
