@@ -60,15 +60,33 @@ function statusFile(name: string) {
 export async function GET() {
   if (!(await requireAdmin()))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const isPostgres = process.env.NORTHLINE_DB_DRIVER === "postgres";
   const databasePath = path.join(
     process.env.NORTHLINE_DATA_DIR || path.join(process.cwd(), "data"),
     "northline.db",
   );
-  const memory = process.memoryUsage(),
-    disk = fs.statfsSync(path.dirname(databasePath)),
-    integrity =
-      (db.pragma("quick_check") as Array<{ quick_check: string }>)[0]
-        ?.quick_check || "unknown";
+  const memory = process.memoryUsage();
+  let disk: ReturnType<typeof fs.statfsSync>;
+  try {
+    disk = fs.statfsSync(path.dirname(databasePath));
+  } catch {
+    // PostgreSQL deployments may not mount the SQLite data directory. The
+    // application filesystem is still useful for a storage health signal.
+    disk = fs.statfsSync(process.cwd());
+  }
+  let integrity = "unknown";
+  try {
+    if (isPostgres) {
+      await db.prepare("SELECT 1 AS ok").get();
+      integrity = "ok";
+    } else {
+      integrity =
+        (db.pragma("quick_check") as Array<{ quick_check: string }>)[0]
+          ?.quick_check || "unknown";
+    }
+  } catch {
+    integrity = "degraded";
+  }
   const currentCpu = cpuSample(),
     cpuTotalDelta = currentCpu.total - previousCpu.total,
     cpuIdleDelta = currentCpu.idle - previousCpu.idle,
@@ -112,6 +130,19 @@ export async function GET() {
     .get() as { version: number; count: number };
   const backup = statusFile("backup"),
     restore = statusFile("restore");
+  let databaseSizeBytes = 0;
+  try {
+    if (isPostgres) {
+      const size = await db
+        .prepare("SELECT pg_database_size(current_database()) AS sizeBytes")
+        .get() as { sizeBytes?: number | string } | undefined;
+      databaseSizeBytes = Number(size?.sizeBytes || 0);
+    } else if (fs.existsSync(databasePath)) {
+      databaseSizeBytes = fs.statSync(databasePath).size;
+    }
+  } catch {
+    databaseSizeBytes = 0;
+  }
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     application: {
@@ -125,7 +156,7 @@ export async function GET() {
       status:
         integrity === "ok" && migration.version >= 21 ? "healthy" : "degraded",
       integrity,
-      sizeBytes: fs.statSync(databasePath).size,
+      sizeBytes: databaseSizeBytes,
       migrationVersion: migration.version,
       migrationsApplied: migration.count,
     },

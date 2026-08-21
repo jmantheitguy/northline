@@ -1004,6 +1004,8 @@ test("directory profiles expose only explicitly public stream schedules", async 
   const styles = await read("app/globals.css");
   assert.match(directory, /publicStreamCalendarCount/);
   assert.match(directory, /c\.visibility='public'/);
+  assert.match(directory, /\) AS publicStreamCalendarCount/);
+  assert.match(directory, /\) AS publicStreamCalendarName/);
   assert.match(schedule, /calendar_type='streaming'/);
   assert.match(schedule, /c\.visibility='public'/);
   assert.match(schedule, /e\.visibility IN \('calendar','public'\)/);
@@ -1011,6 +1013,15 @@ test("directory profiles expose only explicitly public stream schedules", async 
   assert.match(ui, /View public stream schedule/);
   assert.match(ui, /No public stream schedule/);
   assert.match(styles, /\.public-schedule-events/);
+});
+
+test("admin health works with the PostgreSQL driver", async () => {
+  const health = await read("app/api/admin/health/route.ts");
+  assert.match(health, /NORTHLINE_DB_DRIVER === "postgres"/);
+  assert.match(health, /SELECT 1 AS ok/);
+  assert.match(health, /pg_database_size\(current_database\(\)\)/);
+  assert.match(health, /fs\.statfsSync\(process\.cwd\(\)\)/);
+  assert.match(health, /fs\.existsSync\(databasePath\)/);
 });
 
 test("emergency management identities remain outside member-facing directories", async () => {
