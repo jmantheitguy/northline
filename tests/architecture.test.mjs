@@ -665,6 +665,12 @@ test("board sharing keeps the active board mounted during refresh", async () => 
   assert.match(ui, /await refresh\(\);\s*setSelectedUser\(""\);\s*notify\("Board access updated"\)/);
 });
 
+test("shared board detail ordering is PostgreSQL-safe", async () => {
+  const route = await read("app/api/boards/[id]/route.ts");
+  assert.match(route, /SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar,access\.permission[\s\S]*ORDER BY u\.name,u\.id/);
+  assert.doesNotMatch(route, /access\.permission[\s\S]*ORDER BY LOWER\(u\.name\),u\.id/);
+});
+
 test("moving boards preserves access and is authorized server-side", async () => {
   const route = await read("app/api/boards/[id]/route.ts");
   const overview = await read("app/api/admin/overview/route.ts");

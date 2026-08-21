@@ -96,7 +96,7 @@ export async function GET(
         UNION ALL SELECT t.owner_id,tw.permission FROM team_workspaces tw JOIN teams t ON t.id=tw.team_id WHERE tw.workspace_id=?
       ) access ON access.user_id=u.id
       WHERE u.status='Active'
-      ORDER BY LOWER(u.name),u.id`).all(board.workspaceId, board.workspaceId, board.workspaceId, board.workspaceId) as AccessRow[];
+      ORDER BY u.name,u.id`).all(board.workspaceId, board.workspaceId, board.workspaceId, board.workspaceId) as AccessRow[];
     for (const row of inherited) addAccess(row, "shared workspace");
   }
   const workspaceMembers = await db
