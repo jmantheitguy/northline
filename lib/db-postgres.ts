@@ -81,7 +81,7 @@ function translateSql(input: string) {
   // compatibility. PostgreSQL will not compare that text directly with
   // CURRENT_TIMESTAMP, so cast timestamp columns at comparison boundaries.
   sql = sql.replace(
-    /\b([A-Za-z_][A-Za-z0-9_.]*_at)\s*(<=|>=|<>|=|<|>)\s*(CURRENT_TIMESTAMP(?:\s*(?:\+|-)\s*INTERVAL\s+'[^']+')?)/gi,
+    /\b([A-Za-z_][A-Za-z0-9_.]*_at)\s*(<=|>=|<>|<|>)\s*(CURRENT_TIMESTAMP(?:\s*(?:\+|-)\s*INTERVAL\s+'[^']+')?)/gi,
     (_match, column, operator, rightHandSide) => `${column}::timestamptz ${operator} ${rightHandSide}`,
   );
   return replaceQuestionMarks(sql);
