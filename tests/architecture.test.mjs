@@ -925,7 +925,9 @@ test("core workflow supports authorized multi-assignees and editable pauseable t
   assert.match(timeEntry, /action === "resume"/);
   assert.match(timeEntry, /EDIT_CLOCK_IN/);
   assert.match(clock, /Save time in/);
-  assert.match(clock, /Pause|Resume/);
+  assert.match(clock, /Pause timer|Resume timer/);
+  assert.match(clock, /aria-pressed=\{Boolean\(active\?\.pausedAt\)\}/);
+  assert.match(clock, /active time is not increasing/);
   assert.match(card, /updateTimeIn/);
   assert.match(notifications, /assigneeIds/);
   assert.match(ui, /assignee-picker/);
@@ -933,6 +935,11 @@ test("core workflow supports authorized multi-assignees and editable pauseable t
   assert.match(assignments, /SELECT assignee_id assigneeId FROM tasks WHERE id=\?/);
   assert.match(boardRoute, /SELECT t\.assignee_id FROM tasks t WHERE t\.id=\?/);
   assert.match(styles, /\.comment > \.avatar/);
+});
+
+test("collapsed sidebar releases the main content offset", async () => {
+  const styles = await read("app/globals.css");
+  assert.match(styles, /\.sidebar\.collapsed \+ \.main\s*\{\s*margin-left:\s*0;/);
 });
 
 test("private calendars use opaque identifiers and explicit per-calendar permissions", async () => {

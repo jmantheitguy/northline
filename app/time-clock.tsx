@@ -147,12 +147,13 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
   return (
     <>
       <button
-        className={`time-clock-fab ${active ? "running" : ""}`}
+        className={`time-clock-fab ${active ? "running" : ""} ${active?.pausedAt ? "paused" : ""}`}
         aria-label={
           active
-            ? `Timer running for ${formatDuration(elapsed)}`
+            ? `${active.pausedAt ? "Timer paused" : "Timer running"} for ${formatDuration(elapsed)}`
             : "Open time clock"
         }
+        aria-pressed={Boolean(active?.pausedAt)}
         onClick={() => setOpen((value) => !value)}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -202,6 +203,9 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
                   active.note ||
                   "General work"}
               </b>
+              <span className={`time-clock-status ${active.pausedAt ? "paused" : "running"}`} role="status">
+                {active.pausedAt ? "Paused — active time is not increasing" : "Running"}
+              </span>
               <label className="time-edit-start">
                 Time in
                 <input type="datetime-local" value={editStartedAt} onChange={(event) => setEditStartedAt(event.target.value)} />
@@ -217,7 +221,9 @@ export function TimeClock({ notify }: { notify: (message: string) => void }) {
               </label>
               <button className="secondary" disabled={busy || !editEndedAt || editReason.trim().length < 3} onClick={() => void action("edit-clock-out")}>Save time out</button>
               <div className="time-punch-actions">
-                <button className="secondary" disabled={busy} onClick={() => void action(active.pausedAt ? "resume" : "pause")}>{active.pausedAt ? "Resume" : "Pause"}</button>
+                <button className="secondary" disabled={busy} onClick={() => void action(active.pausedAt ? "resume" : "pause")}>
+                  {active.pausedAt ? "Resume timer" : "Pause timer"}
+                </button>
               <button
                 className="time-out-button"
                 disabled={busy}
