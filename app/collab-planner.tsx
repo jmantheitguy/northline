@@ -313,7 +313,7 @@ function CollabPlannerContent({
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState<string | null>(null),
     [showPastCollabs, setShowPastCollabs] = useState(false),
-    [hideCancelledCollabs, setHideCancelledCollabs] = useState(false),
+    [hideCancelledCollabs, setHideCancelledCollabs] = useState(true),
     [now, setNow] = useState(() => Date.now());
   const [modal, setModal] = useState<
       "request" | "availability" | "reschedule" | null
