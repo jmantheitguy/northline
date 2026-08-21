@@ -15,6 +15,7 @@ import { HelpCenter, WelcomeGuide, type HelpDestination } from "./help-center";
 import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type Status = string;
+type TextSize = "small" | "default" | "large" | "xlarge";
 type Priority = "Low" | "Medium" | "High";
 type BoardColumn = {
   id: number;
@@ -283,6 +284,7 @@ async function jsonFetch(url: string, options?: RequestInit) {
 
 export function NorthlineApp() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [textSize, setTextSize] = useState<TextSize>("default");
   const [authUser, setAuthUser] = useState<SessionUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [boards, setBoards] = useState<BoardSummary[]>([]);
@@ -419,10 +421,19 @@ export function NorthlineApp() {
   };
   useEffect(() => {
     const saved = window.localStorage.getItem("northline-theme");
+    const savedTextSize = window.localStorage.getItem("northline-text-size");
     const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
     setTheme(saved === "dark" || saved === "light" ? saved : preferred);
+    if (
+      savedTextSize === "small" ||
+      savedTextSize === "default" ||
+      savedTextSize === "large" ||
+      savedTextSize === "xlarge"
+    ) {
+      setTextSize(savedTextSize);
+    }
     jsonFetch("/api/auth/me")
       .then((d) => setAuthUser(d.user))
       .finally(() => setAuthLoading(false));
@@ -433,6 +444,9 @@ export function NorthlineApp() {
     document.documentElement.style.colorScheme = theme;
     window.localStorage.setItem("northline-theme", theme);
   }, [theme]);
+  useEffect(() => {
+    window.localStorage.setItem("northline-text-size", textSize);
+  }, [textSize]);
   useEffect(() => {
     if (window.matchMedia("(max-width: 950px)").matches) setSidebar(false);
     const query = new URLSearchParams(window.location.search),
@@ -610,7 +624,7 @@ export function NorthlineApp() {
       <Login onLogin={setAuthUser} theme={theme} toggleTheme={toggleTheme} />
     );
   return (
-    <div className="app-shell">
+    <div className={`app-shell text-size-${textSize}`}>
       <aside className={sidebar ? "sidebar" : "sidebar collapsed"}>
         <div className="brand">
           <BrandMark priority />
@@ -924,7 +938,12 @@ export function NorthlineApp() {
           />
         )}
         {view === "settings" && (
-          <Settings notify={notify} timezone={authUser.timezone} />
+          <Settings
+            notify={notify}
+            timezone={authUser.timezone}
+            textSize={textSize}
+            setTextSize={setTextSize}
+          />
         )}
         {view === "admin" && isAdmin && (
           <Admin users={users} reloadUsers={loadAdminUsers} notify={notify} />
@@ -2455,9 +2474,13 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
 function Settings({
   notify,
   timezone,
+  textSize,
+  setTextSize,
 }: {
   notify: (s: string) => void;
   timezone: string;
+  textSize: TextSize;
+  setTextSize: (value: TextSize) => void;
 }) {
   const [discord, setDiscord] = useState<{
     configured: boolean;
@@ -2621,6 +2644,28 @@ function Settings({
           </p>
         </div>
         <span className="connected">● Device synchronized</span>
+      </div>
+      <div className="settings-body settings-accessibility">
+        <div>
+          <h3>Accessibility</h3>
+          <p>
+            Adjust text and controls across Northline to make them easier to
+            read. This preference is saved on this device only.
+          </p>
+        </div>
+        <label className="settings-select">
+          <span className="sr-only">Application text size</span>
+          <select
+            value={textSize}
+            aria-label="Application text size"
+            onChange={(event) => setTextSize(event.target.value as TextSize)}
+          >
+            <option value="small">Small</option>
+            <option value="default">Default</option>
+            <option value="large">Large</option>
+            <option value="xlarge">Extra large</option>
+          </select>
+        </label>
       </div>
       <div className="settings-body">
         <div>

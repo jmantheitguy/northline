@@ -325,6 +325,21 @@ test("dark mode is persistent and application-wide", async () => {
   assert.match(styles, /\.modal \{[\s\S]*max-height: calc\(100dvh - 40px\)[\s\S]*overflow-y: auto/);
 });
 
+test("accessibility text sizing is persisted and applies across the shell", async () => {
+  const [ui, styles] = await Promise.all([
+    read("app/northline-app.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(ui, /northline-text-size/);
+  assert.match(ui, /Accessibility/);
+  assert.match(ui, /Application text size/);
+  assert.match(ui, /text-size-\$\{textSize\}/);
+  assert.match(styles, /\.app-shell\.text-size-small/);
+  assert.match(styles, /\.app-shell\.text-size-large/);
+  assert.match(styles, /\.app-shell\.text-size-xlarge/);
+  assert.match(styles, /\.nav-board-copy \.nav-board-name[\s\S]*font-size: 14px/);
+});
+
 test("search controls render as unified accessible fields", async () => {
   const ui = await read("app/northline-app.tsx");
   const styles = await read("app/globals.css");

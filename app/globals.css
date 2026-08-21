@@ -1028,6 +1028,15 @@ button {
   display: flex;
   min-height: 100vh;
 }
+.app-shell.text-size-small {
+  zoom: 0.9;
+}
+.app-shell.text-size-large {
+  zoom: 1.1;
+}
+.app-shell.text-size-xlarge {
+  zoom: 1.2;
+}
 .sidebar {
   width: 244px;
   background: #181820;
@@ -1175,7 +1184,8 @@ button {
 }
 .sidebar nav button,
 .sidebar-bottom > button {
-  height: 35px;
+  min-height: 38px;
+  height: auto;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -1185,6 +1195,7 @@ button {
   display: flex;
   align-items: center;
   gap: 11px;
+  font-size: 14px;
 }
 .sidebar nav button:hover,
 .sidebar nav button.active {
@@ -1202,6 +1213,11 @@ button {
   overscroll-behavior: contain;
   padding-right: 2px;
 }
+.sidebar .boards > button {
+  min-height: 45px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
 .nav-board-copy {
   min-width: 0;
   width: auto !important;
@@ -1215,13 +1231,16 @@ button {
   width: auto;
   min-width: 0;
   text-align: left;
+  font-size: 14px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .nav-board-copy small {
   color: #858391;
-  font-size: 9px;
+  font-size: 11px;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2007,6 +2026,18 @@ button {
   color: var(--muted);
   max-width: 570px;
   line-height: 1.5;
+}
+.settings-accessibility {
+  gap: 24px;
+}
+.settings-select {
+  display: flex;
+  flex: 0 0 170px;
+  flex-direction: column;
+  gap: 5px;
+}
+.settings-select select {
+  min-width: 170px;
 }
 .settings-callout {
   display: flex;

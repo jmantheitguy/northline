@@ -28,6 +28,10 @@ Each member can maintain multiple private calendars with independent names, colo
 
 Calendars are private by default. The owner may share a specific calendar with an active Northline member as a viewer or editor and may revoke access at any time. Viewers cannot change events. Editors can create, update, and delete events but cannot rename, share, or delete the calendar. Administrators have no implicit private-calendar access. Calendar and event URLs use opaque random identifiers, while all authorization remains server-enforced. Settings, sharing, and event changes are retained in calendar activity and the permission-aware audit system. Owners can review activity and recover deleted calendars or events for 30 days. Members with calendar access can schedule a private Task Buddy reminder to their own linked Discord account without changing calendar authorization.
 
+## Accessibility
+
+Each member can choose Small, Default, Large, or Extra large text from Settings → Accessibility. The preference scales the Northline interface consistently and is stored locally on that device, so it does not change another member's view or alter shared data.
+
 ## Stream schedules and collaboration planning
 
 A member may explicitly designate a calendar as a streaming schedule and choose private, Northline-team, or public-ready visibility. A team-visible streaming calendar can optionally be assigned to one of the member's teams; only that team's members can discover it in the Collab planner. An unassigned Northline-team calendar remains visible to eligible signed-in members. The combined Collab planner is authenticated and includes only events whose calendar and entry visibility allow team discovery. A busy-only entry hides its title, description, platform, game, link, and collaboration control from other users. “Public-ready” prepares the data policy but does not create an anonymous public endpoint in the current Beta release.
