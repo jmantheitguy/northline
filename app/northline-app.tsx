@@ -3673,6 +3673,10 @@ function NorthlineModal({
         }
       : { ...emptyTask, status: columns[0]?.key || "" },
   );
+  const [assigneePickerOpen, setAssigneePickerOpen] = useState(false);
+  const selectedAssignees = people.filter((person: WorkspaceUser) =>
+    taskForm.assigneeIds.includes(String(person.id)),
+  );
   const [boardForm, setBoardForm] = useState({
     name: board?.board.name || "",
     description: board?.board.description || "",
@@ -4041,20 +4045,93 @@ function NorthlineModal({
               </label>
               <label>
                 Assignees
-                <select
-                  multiple
-                  size={Math.min(5, Math.max(3, people.length))}
-                  value={taskForm.assigneeIds}
-                  onChange={(e) => {
-                    const selected = [...e.target.selectedOptions].map((option) => option.value);
-                    setTaskForm((f: any) => ({ ...f, assigneeIds: selected, assigneeId: selected[0] || "" }));
-                  }}
-                >
-                  {people.map((p: WorkspaceUser) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-                <small className="field-help">Hold Ctrl/Cmd to select more than one person.</small>
+                <div className="assignee-picker">
+                  <button
+                    type="button"
+                    className="assignee-picker-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded={assigneePickerOpen}
+                    onClick={() => setAssigneePickerOpen((open) => !open)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") setAssigneePickerOpen(false);
+                    }}
+                  >
+                    <span className="assignee-picker-value">
+                      {selectedAssignees.length ? (
+                        <>
+                          {selectedAssignees.slice(0, 2).map((person: WorkspaceUser) => (
+                            <span className="assignee-picker-chip" key={person.id}>
+                              <Avatar name={person.name} avatar={person.avatar} color={person.color} />
+                              <span>{person.name}</span>
+                            </span>
+                          ))}
+                          {selectedAssignees.length > 2 && (
+                            <span className="assignee-picker-more">
+                              +{selectedAssignees.length - 2} more
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="assignee-picker-placeholder">Unassigned</span>
+                      )}
+                    </span>
+                    <span className="assignee-picker-chevron" aria-hidden="true">⌄</span>
+                  </button>
+                  {assigneePickerOpen && (
+                    <div
+                      className="assignee-picker-menu"
+                      role="listbox"
+                      tabIndex={-1}
+                      aria-label="Task assignees"
+                      aria-multiselectable="true"
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setAssigneePickerOpen(false);
+                      }}
+                    >
+                      {people.length ? people.map((person: WorkspaceUser) => {
+                        const selected = taskForm.assigneeIds.includes(String(person.id));
+                        return (
+                          <button
+                            type="button"
+                            className={`assignee-picker-option${selected ? " selected" : ""}`}
+                            role="option"
+                            aria-selected={selected}
+                            key={person.id}
+                            onClick={() => {
+                              const id = String(person.id);
+                              const next = selected
+                                ? taskForm.assigneeIds.filter((value: string) => value !== id)
+                                : [...taskForm.assigneeIds, id];
+                              setTaskForm((f: any) => ({
+                                ...f,
+                                assigneeIds: next,
+                                assigneeId: next[0] || "",
+                              }));
+                            }}
+                          >
+                            <span className="assignee-picker-check" aria-hidden="true">
+                              {selected ? "✓" : ""}
+                            </span>
+                            <Avatar name={person.name} avatar={person.avatar} color={person.color} />
+                            <span className="assignee-picker-option-name">{person.name}</span>
+                          </button>
+                        );
+                      }) : (
+                        <span className="assignee-picker-empty">No people available</span>
+                      )}
+                      {taskForm.assigneeIds.length > 0 && (
+                        <button
+                          type="button"
+                          className="assignee-picker-clear"
+                          onClick={() => setTaskForm((f: any) => ({ ...f, assigneeIds: [], assigneeId: "" }))}
+                        >
+                          Clear all assignees
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <small className="field-help">Select one or more people from the dropdown.</small>
               </label>
             </div>
             <div className="modal-actions task-actions">

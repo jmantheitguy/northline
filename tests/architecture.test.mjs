@@ -828,7 +828,7 @@ test("persistent personal time cards remain auditable and administrator visible"
 });
 
 test("core workflow supports authorized multi-assignees and editable pauseable timers", async () => {
-  const [schema, assignments, createTask, updateTask, myWork, timeEntry, clock, card, notifications] = await Promise.all([
+  const [schema, assignments, createTask, updateTask, myWork, timeEntry, clock, card, notifications, ui] = await Promise.all([
     read("lib/db-sqlite.ts"),
     read("lib/task-assignments.ts"),
     read("app/api/boards/[id]/tasks/route.ts"),
@@ -838,6 +838,7 @@ test("core workflow supports authorized multi-assignees and editable pauseable t
     read("app/time-clock.tsx"),
     read("app/time-card.tsx"),
     read("lib/task-notifications.ts"),
+    read("app/northline-app.tsx"),
   ]);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS task_assignees/);
   assert.match(schema, /multi-assignee tasks and pauseable time entries/);
@@ -852,6 +853,8 @@ test("core workflow supports authorized multi-assignees and editable pauseable t
   assert.match(clock, /Pause|Resume/);
   assert.match(card, /updateTimeIn/);
   assert.match(notifications, /assigneeIds/);
+  assert.match(ui, /assignee-picker/);
+  assert.match(ui, /aria-multiselectable/);
 });
 
 test("private calendars use opaque identifiers and explicit per-calendar permissions", async () => {
