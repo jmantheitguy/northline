@@ -9,6 +9,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
+import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type Calendar = {
   id: string;
@@ -83,13 +84,10 @@ type CollabRequest = {
 };
 const jsonHeaders = { "Content-Type": "application/json" };
 const call = async (url: string, options?: RequestInit) => {
-  const response = await fetch(url, options),
+  const response = await resilientFetch(url, options),
     body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message =
-      typeof body.error === "string" && body.error.trim()
-        ? body.error.trim()
-        : `Request failed (${response.status})`;
+    const message = apiErrorMessage(response, body, `Request failed (${response.status})`);
     throw new Error(`${message} · ${url}`);
   }
   return body;

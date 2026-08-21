@@ -11,6 +11,7 @@ import { AdminTime } from "./admin-time";
 import { CalendarHub } from "./calendar-hub";
 import { CollabPlanner } from "./collab-planner";
 import { HelpCenter, WelcomeGuide, type HelpDestination } from "./help-center";
+import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type Status = string;
 type Priority = "Low" | "Medium" | "High";
@@ -262,9 +263,9 @@ function decorateUsers(list: any[]): WorkspaceUser[] {
   }));
 }
 async function jsonFetch(url: string, options?: RequestInit) {
-  const response = await fetch(url, options);
+  const response = await resilientFetch(url, options);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Something went wrong");
+  if (!response.ok) throw new Error(apiErrorMessage(response, data, "Something went wrong"));
   return data;
 }
 

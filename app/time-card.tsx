@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatDuration } from "./time-clock";
+import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type Entry = {
   id: number;
@@ -22,9 +23,9 @@ type Options = {
   tasks: Array<{ id: number; boardId: number; title: string }>;
 };
 const request = async (url: string, options?: RequestInit) => {
-  const response = await fetch(url, options),
+  const response = await resilientFetch(url, options),
     data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Time card request failed");
+  if (!response.ok) throw new Error(apiErrorMessage(response, data, "Time card request failed"));
   return data;
 };
 const localValue = (iso?: string | null) =>

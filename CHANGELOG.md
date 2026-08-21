@@ -1,5 +1,13 @@
 # Northline release history
 
+## Beta v0.9.8 — Deployment-safe saves
+
+- Retry mutating requests when a rolling deployment briefly returns a gateway or service-unavailable response.
+- Keep the user's form state intact while Northline retries a save, so work is not lost during a rollout.
+- Show a clear, actionable message when a save cannot be confirmed after the retry window.
+- Avoid replaying writes after network errors, preventing duplicate changes when the server may already have committed them.
+- Add focused architecture coverage and document the rollout-safe save behavior for operators.
+
 ## Unreleased — Core workflow improvements
 
 - Add permission-checked multi-assignee tasks with a compatibility fallback for older task records.

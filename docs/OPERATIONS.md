@@ -28,6 +28,16 @@ the deployed commit. A retry for the same commit does not announce it twice.
 Ordinary GitHub pushes remain silent until that commit is deployed. Application
 startup performs additive SQLite schema initialization.
 
+### Save protection during rollouts
+
+The browser treats a 502, 503, or 504 from a mutating API request as a
+short-lived deployment interruption and retries it for up to several seconds.
+If the replacement service is not ready by then, the current form remains in
+the page and Northline reports that the save was not confirmed so the user can
+retry it. Network errors are not automatically replayed because a server may
+have committed the write before the response was lost. Users should only leave
+the page after a visible success confirmation.
+
 ## Health dashboard
 
 Open **Administration > Health**. Healthy production should show SQLite `ok`,

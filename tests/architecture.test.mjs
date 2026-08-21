@@ -211,6 +211,27 @@ test("release health and workflow tools remain permission constrained", async ()
   assert.match(restore, /restore\.json/);
 });
 
+test("mutating browser requests survive short deployment interruptions", async () => {
+  const [fetcher, app, calendar, collab, reminders, timeCard, timeClock] =
+    await Promise.all([
+      read("app/client-fetch.ts"),
+      read("app/northline-app.tsx"),
+      read("app/calendar-hub.tsx"),
+      read("app/collab-planner.tsx"),
+      read("app/reminder-center.tsx"),
+      read("app/time-card.tsx"),
+      read("app/time-clock.tsx"),
+    ]);
+  assert.match(fetcher, /502, 503, 504/);
+  assert.match(fetcher, /retrying a network error could duplicate a/i);
+  assert.match(fetcher, /write whose response was lost/i);
+  assert.match(fetcher, /Your changes were not confirmed/);
+  for (const source of [app, calendar, collab, reminders, timeCard, timeClock]) {
+    assert.match(source, /resilientFetch/);
+    assert.match(source, /apiErrorMessage/);
+  }
+});
+
 test("dark mode is persistent and application-wide", async () => {
   const [ui, styles] = await Promise.all([
     read("app/northline-app.tsx"),

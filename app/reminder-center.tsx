@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 
 import { useEffect, useMemo, useState } from "react";
+import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type ReminderStatus = "pending" | "sent" | "failed" | "cancelled";
 type Reminder = {
@@ -24,9 +25,9 @@ type Reminder = {
 };
 
 async function request(url: string, options?: RequestInit) {
-  const response = await fetch(url, options);
+  const response = await resilientFetch(url, options);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Something went wrong");
+  if (!response.ok) throw new Error(apiErrorMessage(response, data, "Something went wrong"));
   return data;
 }
 function localInput(iso: string) {

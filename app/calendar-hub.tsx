@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CollabPlanner } from "./collab-planner";
+import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type CalendarSummary = {
   id: string;
@@ -75,9 +76,9 @@ type Detail = {
   }>;
 };
 const api = async (url: string, options?: RequestInit) => {
-  const response = await fetch(url, options),
+  const response = await resilientFetch(url, options),
     body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "Calendar request failed");
+  if (!response.ok) throw new Error(apiErrorMessage(response, body, "Calendar request failed"));
   return body;
 };
 const headers = { "Content-Type": "application/json" };

@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 
 import { useEffect, useMemo, useState } from "react";
+import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
 type OptionData = {
   boards: Array<{ id: number; name: string; workspaceName: string }>;
@@ -19,9 +20,9 @@ type ActiveEntry = {
   pausedSeconds: number;
 };
 const request = async (url: string, options?: RequestInit) => {
-  const response = await fetch(url, options),
+  const response = await resilientFetch(url, options),
     data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Time clock request failed");
+  if (!response.ok) throw new Error(apiErrorMessage(response, data, "Time clock request failed"));
   return data;
 };
 const LONG_TIMER_SECONDS = 12 * 60 * 60;
