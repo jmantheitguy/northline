@@ -41,12 +41,26 @@ export async function GET(
     .all(id);
   const workspaceMembers = await db
     .prepare(
-      "SELECT u.id,u.name,u.email,u.avatar,CASE WHEN w.owner_id=u.id THEN 'owner' ELSE wm.permission END permission FROM workspaces w JOIN users u ON u.id=w.owner_id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id WHERE w.id=? UNION SELECT u.id,u.name,u.email,u.avatar,wm.permission FROM workspace_members wm JOIN users u ON u.id=wm.user_id WHERE wm.workspace_id=? ORDER BY name",
+      `SELECT DISTINCT u.id,u.name,u.email,u.avatar,CASE WHEN w.owner_id=u.id THEN 'owner' ELSE COALESCE(wm.permission,tw.permission,'viewer') END permission
+       FROM workspaces w JOIN users u ON u.id=w.owner_id
+       LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id
+       LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id
+       LEFT JOIN teams team ON team.id=tw.team_id
+       LEFT JOIN team_members tm ON tm.team_id=tw.team_id AND tm.user_id=u.id
+       WHERE w.id=?
+       UNION
+       SELECT DISTINCT u.id,u.name,u.email,u.avatar,COALESCE(wm.permission,tw.permission,'viewer') permission
+       FROM users u
+       LEFT JOIN workspace_members wm ON wm.workspace_id=? AND wm.user_id=u.id
+       LEFT JOIN team_workspaces tw ON tw.workspace_id=?
+       LEFT JOIN teams team ON team.id=tw.team_id
+       LEFT JOIN team_members tm ON tm.team_id=tw.team_id AND tm.user_id=u.id
+       WHERE wm.user_id IS NOT NULL OR tm.user_id IS NOT NULL ORDER BY name`,
     )
-    .all(board.workspaceId, board.workspaceId);
+    .all(board.workspaceId, board.workspaceId, board.workspaceId);
   const assignees = await db
     .prepare(
-      `SELECT u.id,u.name,u.email,u.avatar FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL) ORDER BY u.name COLLATE NOCASE`,
+      `SELECT DISTINCT u.id,u.name,u.email,u.avatar FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id LEFT JOIN teams team ON team.id=tw.team_id LEFT JOIN team_members tm ON tm.team_id=tw.team_id AND tm.user_id=u.id WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL OR team.owner_id=u.id OR tm.user_id IS NOT NULL) ORDER BY u.name COLLATE NOCASE`,
     )
     .all(id);
   const columns = await db
@@ -143,9 +157,13 @@ export async function PATCH(
         .prepare(
           `SELECT user_id AS "userId",permission FROM workspace_members WHERE workspace_id=?
            UNION ALL
-           SELECT owner_id AS "userId", 'editor' AS permission FROM workspaces WHERE id=?`,
+           SELECT owner_id AS "userId", 'editor' AS permission FROM workspaces WHERE id=?
+           UNION ALL
+           SELECT tm.user_id AS "userId",tw.permission FROM team_workspaces tw JOIN team_members tm ON tm.team_id=tw.team_id WHERE tw.workspace_id=?
+           UNION ALL
+           SELECT t.owner_id AS "userId",tw.permission FROM team_workspaces tw JOIN teams t ON t.id=tw.team_id WHERE tw.workspace_id=?`,
         )
-        .all(currentBoard.workspaceId, currentBoard.workspaceId) as Array<{
+        .all(currentBoard.workspaceId, currentBoard.workspaceId, currentBoard.workspaceId, currentBoard.workspaceId) as Array<{
         userId: number;
         permission: "viewer" | "editor";
       }>;

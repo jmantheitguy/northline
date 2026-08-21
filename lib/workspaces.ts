@@ -1,5 +1,6 @@
 import db,{ensurePersonalWorkspace} from "./db";
 import type { SessionUser } from "./auth";
+import { teamWorkspacePermission } from "./teams";
 
 export type WorkspacePermission="owner"|"editor"|"viewer";
 
@@ -9,17 +10,22 @@ export async function workspacePermission(user:SessionUser,workspaceId:number):P
   if(workspace.owner_id===user.id)return "owner";
   if(workspace.kind==="personal")return null;
   const member=await db.prepare("SELECT permission FROM workspace_members WHERE workspace_id=? AND user_id=?").get(workspaceId,user.id) as {permission:"viewer"|"editor"}|undefined;
-  return member?.permission||null;
+  if(member?.permission) return member.permission;
+  return await teamWorkspacePermission(user,workspaceId);
 }
 
 export async function listWorkspaces(user:SessionUser){
   await ensurePersonalWorkspace(user.id,user.name);
-  return await db.prepare(`SELECT w.id,w.public_id AS "workspaceKey",w.name,w.kind,w.owner_id AS "ownerId",u.name AS "ownerName",
-    CASE WHEN w.owner_id=? THEN 'owner' ELSE wm.permission END AS permission,
+  const rows=await db.prepare(`SELECT w.id,w.public_id AS "workspaceKey",w.name,w.kind,w.owner_id AS "ownerId",u.name AS "ownerName",
     (SELECT COUNT(*) FROM boards b WHERE b.workspace_id=w.id) AS "boardCount",
     (SELECT COUNT(*) FROM workspace_members m WHERE m.workspace_id=w.id) AS "memberCount"
-    FROM workspaces w JOIN users u ON u.id=w.owner_id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
-    WHERE w.owner_id=? OR wm.user_id=? ORDER BY w.kind='personal' DESC,w.name COLLATE NOCASE`).all(user.id,user.id,user.id,user.id);
+    FROM workspaces w JOIN users u ON u.id=w.owner_id ORDER BY w.kind='personal' DESC,w.name COLLATE NOCASE`).all() as Array<Record<string,unknown>>;
+  const visible=[] as Array<Record<string,unknown>>;
+  for(const row of rows){
+    const permission=await workspacePermission(user,Number(row.id));
+    if(permission) visible.push({...row,permission,boardCount:Number(row.boardCount||0),memberCount:Number(row.memberCount||0)});
+  }
+  return visible;
 }
 
 export const canCreateBoards=(permission:WorkspacePermission|null)=>permission==="owner"||permission==="editor";

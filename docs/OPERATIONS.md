@@ -23,8 +23,11 @@ announcement are separate actions. A normal local development update is:
 The deployment script runs `git pull --ff-only` against the checkout's configured
 upstream, rebuilds and starts the Compose service with `docker compose up -d
 --build`, waits for Docker's `northline` health status, safely prunes Docker
-build cache, and only then sends one GitHub-style Task Buddy announcement for
-the deployed commit. A retry for the same commit does not announce it twice.
+build cache, and only then sends one GitHub-style Task Buddy announcement to
+each channel configured in `NORTHLINE_RELEASE_CHANNEL_IDS` for the deployed
+commit. A retry for the same commit does not announce it twice, even if one
+Discord destination was temporarily unavailable. `NORTHLINE_RELEASE_CHANNEL_ID`
+remains supported for a single-channel deployment.
 Ordinary GitHub pushes remain silent until that commit is deployed. Application
 startup performs additive SQLite schema initialization.
 

@@ -17,6 +17,8 @@ type CalendarSummary = {
   eventCount: number;
   calendarType: "personal" | "streaming";
   visibility: "private" | "team" | "public";
+  teamId?: number | null;
+  teamName?: string | null;
 };
 type CalendarEvent = {
   id: string;
@@ -98,6 +100,7 @@ const initialCalendar = {
   timezone,
   calendarType: "personal" as "personal" | "streaming",
   visibility: "private" as "private" | "team" | "public",
+  teamId: null as number | null,
 };
 const initialEvent = {
   title: "",
@@ -122,6 +125,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
     [activeId, setActiveId] = useState<string | null>(null),
     [detail, setDetail] = useState<Detail | null>(null),
     [people, setPeople] = useState<Person[]>([]);
+  const [teams, setTeams] = useState<Array<{id:number;name:string;role:string}>>([]);
   const [mode, setMode] = useState<"month" | "week" | "day" | "agenda">(
       "month",
     ),
@@ -185,6 +189,9 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
     void loadCalendars();
     api("/api/directory")
       .then((data) => setPeople(data.users))
+      .catch(() => undefined);
+    api("/api/teams")
+      .then((data) => setTeams(Array.isArray(data.teams) ? data.teams : []))
       .catch(() => undefined);
   }, []);
   useEffect(() => {
@@ -422,6 +429,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
                             timezone: detail.calendar.timezone,
                             calendarType: detail.calendar.calendarType,
                             visibility: detail.calendar.visibility,
+                            teamId: detail.calendar.teamId || null,
                           });
                           setCalendarModal("settings");
                         }}
@@ -518,6 +526,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
           reload={loadDetail}
           notify={notify}
           remove={deleteCalendar}
+          teams={teams}
         />
       )}
       {eventModal && (
@@ -738,6 +747,7 @@ function CalendarModal({
   reload,
   notify,
   remove,
+  teams,
 }: {
   kind: "create" | "settings" | "share";
   form: typeof initialCalendar;
@@ -750,6 +760,7 @@ function CalendarModal({
   reload: () => void;
   notify: (message: string) => void;
   remove: () => void;
+  teams: Array<{id:number;name:string;role:string}>;
 }) {
   const [userId, setUserId] = useState(""),
     [permission, setPermission] = useState("viewer"),
@@ -886,7 +897,7 @@ function CalendarModal({
         <div className="modal-row">
           <label>
             Calendar purpose
-            <select value={form.calendarType} onChange={(event)=>setForm({...form,calendarType:event.target.value as "personal"|"streaming",visibility:event.target.value==="streaming"?form.visibility:"private"})}>
+            <select value={form.calendarType} onChange={(event)=>setForm({...form,calendarType:event.target.value as "personal"|"streaming",visibility:event.target.value==="streaming"?form.visibility:"private",teamId:event.target.value==="streaming"?form.teamId:null})}>
               <option value="personal">Personal calendar</option>
               <option value="streaming">Streaming schedule</option>
             </select>
@@ -900,6 +911,14 @@ function CalendarModal({
             </select>
           </label>
         </div>
+        {form.calendarType === "streaming" && form.visibility === "team" && teams.length > 0 && <label>
+          Team (optional)
+          <select value={form.teamId || ""} onChange={(event)=>setForm({...form,teamId:event.target.value?Number(event.target.value):null})}>
+            <option value="">All Northline members</option>
+            {teams.filter((team)=>team.role === "owner").map((team)=><option key={team.id} value={team.id}>{team.name}</option>)}
+          </select>
+          <small className="field-note">A team calendar is visible to that team in collab planning. The team leader controls the calendar.</small>
+        </label>}
         {form.calendarType==="streaming"&&<p className="field-note">Team visibility exposes only eligible entries from this streaming calendar in the Collab planner. Direct calendar sharing remains separate.</p>}
         <label>
           Description

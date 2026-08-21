@@ -21,17 +21,19 @@ export async function GET(request: Request) {
     FROM calendar_events e
     JOIN calendars c ON c.id=e.calendar_id
     JOIN users u ON u.id=c.owner_id
+    LEFT JOIN teams team ON team.id=c.team_id
+    LEFT JOIN team_members tm ON tm.team_id=c.team_id AND tm.user_id=?
     WHERE e.deleted_at IS NULL AND c.deleted_at IS NULL
       AND e.start_at<? AND e.end_at>?
       AND (c.owner_id=? OR (
         c.calendar_type='streaming' AND c.visibility IN ('team','public')
         AND e.visibility IN ('calendar','team','public','busy')
-        AND (c.visibility='public' OR u.status='Active')
+        AND (c.visibility='public' OR (u.status='Active' AND (c.team_id IS NULL OR team.owner_id=? OR tm.user_id IS NOT NULL)))
       ))
     ORDER BY e.start_at,CASE WHEN e.collab_request_id IS NOT NULL AND c.owner_id=(SELECT requester_id FROM collab_requests WHERE id=e.collab_request_id) THEN 0 ELSE 1 END,u.name COLLATE NOCASE
   `,
     )
-    .all(to, from, user.id) as Array<
+    .all(user.id, user.id, to, from, user.id) as Array<
     Record<string, unknown> & { ownerId: number; visibility: string }
   >;
   const safeEvents = events.map((event) => {
@@ -72,5 +74,9 @@ export async function GET(request: Request) {
       "SELECT id,name,email,avatar,timezone FROM users WHERE status='Active' AND directory_visible=1 ORDER BY name COLLATE NOCASE",
     )
     .all();
+  for (const person of people as Array<{id:number;teamNames?:string[]}>) {
+    const memberships = await db.prepare(`SELECT t.name FROM teams t LEFT JOIN team_members tm ON tm.team_id=t.id WHERE t.owner_id=? OR tm.user_id=? ORDER BY t.name COLLATE NOCASE`).all(person.id,person.id) as Array<{name:string}>;
+    person.teamNames = memberships.map((item)=>item.name);
+  }
   return NextResponse.json({ events: groupedEvents, people });
 }

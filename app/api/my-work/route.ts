@@ -13,7 +13,7 @@ export async function GET(){
       c.name statusName,c.color statusColor,c.is_done isDone,
       CASE
         WHEN b.owner_id=? OR w.owner_id=? THEN 'owner'
-        WHEN bm.permission='editor' OR wm.permission='editor' THEN 'editor'
+        WHEN bm.permission='editor' OR wm.permission='editor' OR tw.permission='editor' THEN 'editor'
         ELSE 'viewer'
       END permission
     FROM tasks t
@@ -22,11 +22,14 @@ export async function GET(){
     JOIN board_columns c ON c.board_id=b.id AND c.column_key=t.status
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
       LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
+    LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id
+    LEFT JOIN teams team ON team.id=tw.team_id
+    LEFT JOIN team_members tm ON tm.team_id=tw.team_id AND tm.user_id=?
     LEFT JOIN task_assignees ta ON ta.task_id=t.id AND ta.user_id=?
     WHERE (t.assignee_id=? OR ta.user_id IS NOT NULL) AND t.archived_at IS NULL
-      AND (b.owner_id=? OR w.owner_id=? OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)
+      AND (b.owner_id=? OR w.owner_id=? OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL OR team.owner_id=? OR tm.user_id IS NOT NULL)
     ORDER BY c.is_done,t.due_date IS NULL,t.due_date,t.updated_at DESC
-  `).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id) as Array<WorkTask&Record<string,unknown>>;
+  `).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id) as Array<WorkTask&Record<string,unknown>>;
   const boardIds=[...new Set(tasks.map(task=>task.boardId))];
   const columns=boardIds.length?await db.prepare(`SELECT board_id boardId,column_key key,name,color,position,is_done isDone FROM board_columns WHERE board_id IN (${boardIds.map(()=>"?").join(",")}) ORDER BY board_id,position`).all(...boardIds):[];
   return NextResponse.json({tasks,columns});

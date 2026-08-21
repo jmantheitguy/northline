@@ -70,7 +70,7 @@ test("board references are opaque while creator ownership remains relational", a
     read("lib/boards.ts"),
   ]);
   assert.match(boards, /created_by/);
-  assert.match(boards, /b\.updated_at AS \"updatedAt\"/);
+  assert.match(boards, /b\.updated_at AS "updatedAt"/);
   assert.match(schema, /brd_\$\{randomBytes\(16\)/);
   assert.match(detail, /boardKey/);
   assert.match(worker, /creatorName/);
@@ -79,13 +79,10 @@ test("board references are opaque while creator ownership remains relational", a
   assert.match(permissions, /owner_id/);
 });
 
-test("PostgreSQL board details keep the assignee query orderable", async () => {
+test("PostgreSQL board details keep the team-aware assignee query orderable", async () => {
   const detail = await read("app/api/boards/[id]/route.ts");
-  assert.match(detail, /SELECT u\.id,u\.name,u\.email,u\.avatar FROM users u/);
-  assert.doesNotMatch(
-    detail,
-    /SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar[\s\S]*ORDER BY u\.name COLLATE NOCASE/,
-  );
+  assert.match(detail, /SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar FROM users u/);
+  assert.match(detail, /ORDER BY u\.name COLLATE NOCASE/);
 });
 
 test("board navigation normalizes database identifiers and keeps populated workspaces selected", async () => {
@@ -311,6 +308,32 @@ test("public documentation covers the deployed platform without private network 
   assert.match(combined, /collaboration requests/i);
   assert.doesNotMatch(combined, /192\.168\.\d+\.\d+/);
   assert.doesNotMatch(combined, /Password1!/);
+});
+
+test("teams are a server-authorized access boundary", async () => {
+  const [schema, teamHelper, teamRoute, membersRoute, workspaceRoute, boardList, calendarRoute, collab, ui, teamsUi] = await Promise.all([
+    read("lib/db-sqlite.ts"), read("lib/teams.ts"), read("app/api/teams/[id]/route.ts"),
+    read("app/api/teams/[id]/members/route.ts"), read("app/api/teams/[id]/workspaces/route.ts"),
+    read("app/api/boards/route.ts"), read("app/api/calendars/route.ts"), read("app/api/collab/schedule/route.ts"),
+    read("app/collab-planner.tsx"), read("app/teams.tsx"),
+  ]);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS teams/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS team_members/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS team_workspaces/);
+  assert.match(schema, /reusable teams and team-linked workspaces/);
+  assert.match(teamHelper, /team_members/);
+  assert.match(teamHelper, /team_workspaces/);
+  assert.match(teamRoute, /canManageTeam/);
+  assert.match(membersRoute, /Only the team owner can appoint managers/);
+  assert.match(workspaceRoute, /Only the workspace owner can connect it to a team/);
+  assert.match(boardList, /team_workspaces/);
+  assert.match(boardList, /team.owner_id/);
+  assert.match(calendarRoute, /team_id/);
+  assert.match(collab, /team_members/);
+  assert.match(ui, /Find by team/);
+  assert.match(ui, /All streamers/);
+  assert.match(teamsUi, /Create a team/);
+  assert.match(teamRoute, /Forbidden/);
 });
 
 test("beta security boundary rejects CSRF and throttles sensitive endpoints", async () => {
@@ -539,17 +562,17 @@ test("personal and shared workspaces inherit board access safely", async () => {
     assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.match(schema, /ensurePersonalWorkspace/);
   assert.match(schema, /personal and shared workspaces/);
-  assert.match(permissions, /workspace_permission/);
+  assert.match(permissions, /workspacePermission/);
   assert.match(boards, /workspaceId/);
   assert.match(boards, /workspace_members/);
   assert.match(boards, /navigationWorkspaceId/);
-  assert.match(boards, /AS \"navigationWorkspaceId\"/);
-  assert.match(boards, /AS \"workspaceId\"/);
+  assert.match(boards, /AS "navigationWorkspaceId"/);
+  assert.match(boards, /AS "workspaceId"/);
   assert.match(boards, /Shared with me/);
   assert.match(boards, /navigationWorkspaceId===0/);
   assert.match(workspaces, /kind\).*shared|kind.*shared/s);
-  assert.match(workspaceQueries, /AS \"workspaceKey\"/);
-  assert.match(workspaceQueries, /AS \"boardCount\"/);
+  assert.match(workspaceQueries, /AS "workspaceKey"/);
+  assert.match(workspaceQueries, /AS "boardCount"/);
   assert.match(members, /WORKSPACE\.SHARE/);
   assert.match(search, /workspace_members/);
   assert.match(reminders, /workspace_members/);
@@ -587,16 +610,23 @@ test("moving boards preserves access and is authorized server-side", async () =>
 
 test("release announcements follow successful deployments without duplicates", async () => {
   const deploy = await read("ops/release/deploy-production.sh");
+  const announce = await read("ops/release/announce-discord.mjs");
   assert.match(deploy, /docker compose up -d --build/);
   assert.match(deploy, /health.*healthy/s);
   assert.match(deploy, /last-announced-deploy/);
+  assert.match(deploy, /last-announced-deploy-\$\{channel_hash\}/);
   assert.match(deploy, /announce-discord\.mjs/);
+  assert.match(announce, /NORTHLINE_RELEASE_CHANNEL_IDS/);
+  assert.match(announce, /Promise\.all/);
+  assert.match(announce, /description:`\$\{shortCommit\} \$\{version\}: \$\{summary\}`/);
+  assert.doesNotMatch(announce, /commitUrl|icon_url|https:\/\/github\.com/);
   assert.ok(
     deploy.indexOf('health" = "healthy') <
       deploy.indexOf("announce-discord.mjs"),
   );
   assert.ok(
-    deploy.indexOf("announce-discord.mjs") < deploy.indexOf("printf '%s\\n'"),
+    deploy.indexOf("announce-discord.mjs") <
+      deploy.indexOf('printf \'%s\\n\' "$commit" > "$marker"'),
   );
 });
 
@@ -893,7 +923,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   );
   assert.match(schedule, /c\.calendar_type='streaming'/);
   assert.match(schedule, /c\.visibility IN \('team','public'\)/);
-  assert.match(schedule, /c\.visibility='public' OR u\.status='Active'/);
+  assert.match(schedule, /c\.visibility='public' OR \(u\.status='Active'/);
   assert.match(schedule, /event\.visibility === "busy"/);
   assert.match(schedule, /seen\.has\(requestId\)/);
   assert.match(requests, /canEditCalendar\((?:await\s+)?calendarPermission/);

@@ -6,12 +6,15 @@ import db from "@/lib/db";
 
 export async function GET() {
   const user=await currentUser(); if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
-  const reminders=await db.prepare(`SELECT r.id,r.board_id boardId,r.task_id taskId,r.channel_id channelId,r.channel_name channelName,
+  const reminders=await db.prepare(`SELECT DISTINCT r.id,r.board_id boardId,r.task_id taskId,r.channel_id channelId,r.channel_name channelName,
     r.message,r.remind_at remindAt,r.status,r.error,r.created_at createdAt,r.sent_at sentAt,r.kind,r.event_type eventType,b.name boardName,t.title taskTitle,
-    CASE WHEN b.owner_id=? OR w.owner_id=? OR bm.permission='editor' OR wm.permission='editor' THEN 1 ELSE 0 END canManage
+    CASE WHEN b.owner_id=? OR w.owner_id=? OR bm.permission='editor' OR wm.permission='editor' OR team.owner_id=? OR (tw.permission='editor' AND tm.role IN ('owner','manager')) THEN 1 ELSE 0 END canManage
     FROM reminders r JOIN boards b ON b.id=r.board_id JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN tasks t ON t.id=r.task_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=? LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
-    WHERE (b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=?) AND (r.created_by=? OR r.recipient_user_id=?) ORDER BY r.remind_at DESC LIMIT 100`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id) as Array<Record<string,unknown>>;
+    LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id
+    LEFT JOIN teams team ON team.id=tw.team_id
+    LEFT JOIN team_members tm ON tm.team_id=team.id AND tm.user_id=?
+    WHERE (b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? OR team.owner_id=? OR tm.user_id IS NOT NULL) AND (r.created_by=? OR r.recipient_user_id=?) ORDER BY r.remind_at DESC LIMIT 100`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id) as Array<Record<string,unknown>>;
   const archived=await db.prepare(`SELECT -d.id id,d.board_id_snapshot boardId,NULL taskId,d.channel_id channelId,d.channel_name channelName,d.message,d.created_at remindAt,d.status,d.error,d.created_at createdAt,d.delivered_at sentAt,d.kind,d.event_type eventType,d.board_name boardName,d.task_title taskTitle,0 canManage FROM notification_deliveries d WHERE NOT EXISTS(SELECT 1 FROM reminders r WHERE r.id=d.reminder_id) AND d.created_by=? ORDER BY d.id DESC LIMIT 100`).all(user.id);
   return NextResponse.json({reminders:[...reminders,...archived as Array<Record<string,unknown>>].sort((a,b)=>String(b.remindAt).localeCompare(String(a.remindAt))).slice(0,100)});
 }
@@ -35,7 +38,10 @@ export async function POST(request:Request) {
   const recipients=await db.prepare(`SELECT DISTINCT u.id FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id
     LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id
-    WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)`).all(Number(boardId)) as Array<{id:number}>;
+    LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id
+    LEFT JOIN teams team ON team.id=tw.team_id
+    LEFT JOIN team_members tm ON tm.team_id=team.id AND tm.user_id=u.id
+    WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL OR team.owner_id=u.id OR tm.user_id IS NOT NULL)`).all(Number(boardId)) as Array<{id:number}>;
   const ids=await db.transaction(async()=>{
     const insert=db.prepare("INSERT INTO reminders(board_id,task_id,created_by,recipient_user_id,channel_id,channel_name,message,remind_at) VALUES(?,NULL,?,?,?,?,?,?)");
     const created:number[]=[];

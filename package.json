@@ -1,6 +1,6 @@
 {
   "name": "northline",
-  "version": "0.9.8-beta.0",
+  "version": "1.0.0-beta.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .worktrees",
     "security:scan": "node scripts/secret-scan.mjs && npm audit",
     "db:postgres:plan": "node scripts/migrate-sqlite-to-postgres.mjs",
     "db:postgres:migrate": "node scripts/migrate-sqlite-to-postgres.mjs --execute",

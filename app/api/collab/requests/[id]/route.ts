@@ -83,6 +83,34 @@ export async function PATCH(
       });
       return NextResponse.json({ ok: true });
     }
+    if (action === "add_participant") {
+      if (row.requester_id !== user.id) throw new Error("Only the organizer can change participants");
+      if (!["pending","countered","accepted"].includes(row.status)) throw new Error("This collaboration is closed");
+      const participantUserId = Number(body.userId);
+      if (!Number.isInteger(participantUserId) || participantUserId <= 0 || participantUserId === row.requester_id) throw new Error("Choose a valid streamer");
+      const target = await db.prepare("SELECT id,status,directory_visible FROM users WHERE id=?").get(participantUserId) as {id:number;status:string;directory_visible:number}|undefined;
+      if (!target || target.status !== "Active" || target.directory_visible !== 1) throw new Error("That streamer is not available");
+      if (await db.prepare("SELECT 1 FROM collab_request_participants WHERE collab_request_id=? AND user_id=?").get(row.id,participantUserId)) throw new Error("That streamer is already invited");
+      await db.prepare("INSERT INTO collab_request_participants(collab_request_id,user_id,status) VALUES(?,?,?)").run(row.id,participantUserId,"pending");
+      await queue(row.id,participantUserId,`${user.name} invited you to “${row.title}”.`);
+      await db.prepare("UPDATE collab_requests SET updated_at=CURRENT_TIMESTAMP WHERE id=?").run(row.id);
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "remove_participant") {
+      if (row.requester_id !== user.id) throw new Error("Only the organizer can change participants");
+      const participantUserId = Number(body.userId);
+      if (!Number.isInteger(participantUserId) || participantUserId <= 0) throw new Error("Choose a valid streamer");
+      const target = await db.prepare("SELECT status FROM collab_request_participants WHERE collab_request_id=? AND user_id=?").get(row.id,participantUserId) as {status:string}|undefined;
+      if (!target) throw new Error("That streamer is not part of this collaboration");
+      await db.transaction(async()=>{
+        await db.prepare("UPDATE collab_request_participants SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND user_id=?").run(row.id,participantUserId);
+        await db.prepare("UPDATE calendar_events SET status='cancelled',deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE collab_request_id=? AND created_by=? AND deleted_at IS NULL").run(row.id,participantUserId);
+        await db.prepare("UPDATE calendar_reminders SET status='cancelled',error=NULL WHERE status='pending' AND calendar_event_id IN (SELECT id FROM calendar_events WHERE collab_request_id=? AND created_by=?)").run(row.id,participantUserId);
+        await queue(row.id,participantUserId,`${user.name} removed you from “${row.title}”.`);
+        await refresh(row.id);
+      });
+      return NextResponse.json({ ok: true });
+    }
     if (action === "decline") {
       if (!mine || mine.status !== "pending")
         throw new Error("You cannot decline this invitation");

@@ -16,6 +16,12 @@ Global search returns tasks only from boards the signed-in user can access. Dire
 
 Directly shared boards from another member's private workspace appear in a virtual **Shared with me** workspace. This navigation group exposes only boards explicitly shared with the current member and never reveals the owner's other private boards.
 
+## Teams
+
+Teams are reusable lists of active Northline members. The creator is the team leader and can edit team details, add or remove members, appoint managers, and connect shared workspaces. Managers can maintain ordinary membership but cannot appoint or remove managers. Members can see the team and its linked resources; team-linked workspaces grant inherited viewer or editor access to every board inside that workspace. Direct board shares are preserved and remain independently permissioned.
+
+The Teams page provides member search, role controls, linked-workspace management, and clear empty states. People cards show the teams a person belongs to. The collab planner offers a team filter that puts a member's team roster at hand while retaining an all-streamers search option for cross-team invitations.
+
 ## Private calendars
 
 Each member can maintain multiple private calendars with independent names, colors, descriptions, and IANA time zones. Calendar navigation includes month, week, day, and agenda views. Events may be timed or all-day and include a title, description, location or link, time zone, and tentative, confirmed, or cancelled state. Times are stored as UTC instants and displayed in the viewer's local browser time.
@@ -24,7 +30,7 @@ Calendars are private by default. The owner may share a specific calendar with a
 
 ## Stream schedules and collaboration planning
 
-A member may explicitly designate a calendar as a streaming schedule and choose private, Northline-team, or public-ready visibility. The combined Collab planner is authenticated and includes only events whose calendar and entry visibility allow team discovery. A busy-only entry hides its title, description, platform, game, link, and collaboration control from other users. “Public-ready” prepares the data policy but does not create an anonymous public endpoint in Beta v0.8.0.
+A member may explicitly designate a calendar as a streaming schedule and choose private, Northline-team, or public-ready visibility. A team-visible streaming calendar can optionally be assigned to one of the member's teams; only that team's members can discover it in the Collab planner. An unassigned Northline-team calendar remains visible to eligible signed-in members. The combined Collab planner is authenticated and includes only events whose calendar and entry visibility allow team discovery. A busy-only entry hides its title, description, platform, game, link, and collaboration control from other users. “Public-ready” prepares the data policy but does not create an anonymous public endpoint in the current Beta release.
 
 Streaming entries can record a platform, game or category, stream link, and whether teammates may request a collaboration. Members can also publish availability windows. Collaboration requests contain an opaque ID, proposed UTC interval, organizer time zone, title, private message, and up to 20 active invitees. Each invited streamer may independently accept, decline, or propose another group time and chooses the editable calendar that receives an accepted event; the requester may cancel the open group request. Northline creates the organizer event once and participant events only for accepted invitations, avoiding any automatic grant to the rest of any calendar. Once somebody accepts, later counterproposals cannot silently move the group event. Task Buddy privately notifies linked Discord accounts about relevant request changes, while Northline and Authentik identities remain authoritative for authorization. The Collab planner is account-wide rather than workspace-scoped, so the same team schedule and collaboration inbox are available regardless of which board workspace is selected; private board and calendar permissions remain enforced by their own server-side boundaries.
 

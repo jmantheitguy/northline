@@ -1,5 +1,6 @@
 import db from "./db";
 import type { SessionUser } from "./auth";
+import { teamRole } from "./teams";
 
 export type CalendarPermission = "owner" | "editor" | "viewer";
 
@@ -9,15 +10,22 @@ export async function calendarPermission(
 ): Promise<CalendarPermission | null> {
   const calendar = await db
     .prepare(
-      `SELECT c.owner_id ownerId,cm.permission
+      `SELECT c.owner_id ownerId,c.team_id teamId,cm.permission
        FROM calendars c LEFT JOIN calendar_members cm ON cm.calendar_id=c.id AND cm.user_id=?
        WHERE c.id=? AND c.deleted_at IS NULL`,
     )
     .get(user.id, calendarId) as
-    { ownerId: number; permission: "viewer" | "editor" | null } | undefined;
+    { ownerId: number; teamId: number | null; permission: "viewer" | "editor" | null } | undefined;
   if (!calendar) return null;
   if (calendar.ownerId === user.id) return "owner";
-  return calendar.permission || null;
+  if (calendar.permission) return calendar.permission;
+  if (calendar.teamId) {
+    const role = await teamRole(user, calendar.teamId);
+    if (role === "owner") return "owner";
+    if (role === "manager") return "editor";
+    if (role === "member") return "viewer";
+  }
+  return null;
 }
 
 export const canEditCalendar = (permission: CalendarPermission | null) =>

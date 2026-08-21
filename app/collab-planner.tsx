@@ -24,7 +24,9 @@ type Person = {
   email: string;
   avatar: string | null;
   timezone: string;
+  teamNames?: string[];
 };
+type Team = { id:number; teamKey:string; name:string; role:string; memberCount:number };
 type ScheduleEvent = {
   id: string;
   title: string;
@@ -124,6 +126,7 @@ const normalizePerson = (value: unknown): Person | null => {
     email: asString(row.email),
     avatar: asNullableString(row.avatar),
     timezone: asString(row.timezone, "UTC"),
+    teamNames: Array.isArray(row.teamNames) ? row.teamNames.map((item)=>asString(item)).filter(Boolean) : [],
   };
 };
 const normalizeEvent = (value: unknown): ScheduleEvent | null => {
@@ -303,6 +306,7 @@ function CollabPlannerContent({
 }: CollabPlannerProps) {
   const [events, setEvents] = useState<ScheduleEvent[]>([]),
     [people, setPeople] = useState<Person[]>([]),
+    [teams, setTeams] = useState<Team[]>([]),
     [calendars, setCalendars] = useState<Calendar[]>([]),
     [requests, setRequests] = useState<CollabRequest[]>([]),
     [me, setMe] = useState(0),
@@ -316,7 +320,10 @@ function CollabPlannerContent({
     [form, setForm] = useState(blank()),
     [streamerQuery, setStreamerQuery] = useState(""),
     [streamerPickerOpen, setStreamerPickerOpen] = useState(false),
+    [teamFilter, setTeamFilter] = useState("all"),
     [rescheduling, setRescheduling] = useState<CollabRequest | null>(null),
+    [managing, setManaging] = useState<CollabRequest | null>(null),
+    [manageQuery, setManageQuery] = useState(""),
     [responseCalendars, setResponseCalendars] = useState<
       Record<string, string>
     >({});
@@ -332,13 +339,14 @@ function CollabPlannerContent({
           showPastCollabs ? Date.now() - 365 * 86400000 : Date.now(),
         ),
         end = new Date(Date.now() + 90 * 86400000);
-      const [scheduleResult, requestResult, calendarResult] =
+      const [scheduleResult, requestResult, calendarResult, teamResult] =
         await Promise.allSettled([
         call(
           `/api/collab/schedule?from=${start.toISOString()}&to=${end.toISOString()}`,
         ),
         call("/api/collab/requests"),
         call("/api/calendars"),
+        call("/api/teams"),
       ]);
       const failures: string[] = [];
       if (scheduleResult.status === "fulfilled") {
@@ -390,6 +398,7 @@ function CollabPlannerContent({
           `streaming calendars: ${failureMessage(calendarResult.reason)}`,
         );
       }
+      if (teamResult.status === "fulfilled") setTeams(Array.isArray(teamResult.value?.teams) ? teamResult.value.teams : []);
       if (failures.length) {
         const message = `Some account-wide collaboration data could not be loaded: ${failures.join(
           "; ",
@@ -441,7 +450,7 @@ function CollabPlannerContent({
   );
   const availableStreamers = useMemo(() => {
     const query = streamerQuery.trim().toLocaleLowerCase();
-    return people
+    const filtered = people
       .filter((person) => person.id !== me)
       .filter((person) => !form.recipientIds.includes(String(person.id)))
       .filter(
@@ -451,8 +460,17 @@ function CollabPlannerContent({
             value.toLocaleLowerCase().includes(query),
           ),
       )
-      .sort((left, right) => left.name.localeCompare(right.name));
-  }, [form.recipientIds, me, people, streamerQuery]);
+      .filter((person) => teamFilter === "all" || Boolean(person.teamNames?.includes(teams.find((team)=>String(team.id)===teamFilter)?.name || "")));
+    return filtered.sort((left, right) => {
+      const teamName = teams.find((team)=>String(team.id)===teamFilter)?.name;
+      if (teamName) {
+        const leftIn = left.teamNames?.includes(teamName) ? 0 : 1;
+        const rightIn = right.teamNames?.includes(teamName) ? 0 : 1;
+        if (leftIn !== rightIn) return leftIn-rightIn;
+      }
+      return left.name.localeCompare(right.name);
+    });
+  }, [form.recipientIds, me, people, streamerQuery, teamFilter, teams]);
   const selectedStreamers = useMemo(
     () =>
       form.recipientIds
@@ -620,6 +638,14 @@ function CollabPlannerContent({
       notify((error as Error).message);
     }
   };
+  const manageParticipant = async (action:"add_participant"|"remove_participant", userId:number) => {
+    if (!managing) return;
+    try {
+      await call(`/api/collab/requests/${managing.id}`, {method:"PATCH",headers:jsonHeaders,body:JSON.stringify({action,userId})});
+      notify(action === "add_participant" ? "Streamer added to collaboration" : "Streamer removed from collaboration");
+      setManaging(null);setManageQuery("");await load();
+    } catch(error){notify((error as Error).message)}
+  };
   return (
     <div className="collab-planner">
       <header className="collab-hero">
@@ -761,6 +787,7 @@ function CollabPlannerContent({
               currentUserId={me}
               openReschedule={openReschedule}
               respondReschedule={respondReschedule}
+              onManage={setManaging}
             />
           ))}
           {!incoming.length && <p>No incoming requests.</p>}
@@ -776,6 +803,7 @@ function CollabPlannerContent({
               currentUserId={me}
               openReschedule={openReschedule}
               respondReschedule={respondReschedule}
+              onManage={setManaging}
             />
           ))}
           {!outgoing.length && <p>No sent requests.</p>}
@@ -798,6 +826,12 @@ function CollabPlannerContent({
             {modal === "request" && (
               <fieldset className="collab-picker-fieldset">
                 <legend>Invited streamers</legend>
+                {teams.length > 0 && <label className="collab-team-filter">Find by team
+                  <select value={teamFilter} onChange={(event)=>setTeamFilter(event.target.value)}>
+                    <option value="all">All streamers</option>
+                    {teams.map((team)=><option key={team.id} value={team.id}>{team.name} · {team.memberCount} members</option>)}
+                  </select>
+                </label>}
                 {selectedStreamers.length > 0 && (
                   <div
                     className="collab-selected-streamers"
@@ -899,7 +933,7 @@ function CollabPlannerContent({
                           </span>
                           <span>
                             {p.name}
-                            <small>{p.timezone}</small>
+                            <small>{p.timezone}{p.teamNames?.length ? ` · ${p.teamNames.join(", ")}` : ""}</small>
                           </span>
                         </button>
                       ))}
@@ -1002,6 +1036,7 @@ function CollabPlannerContent({
           </div>
         </div>
       )}
+      {managing && <div className="modal-backdrop"><div className="modal calendar-modal"><button className="modal-close" onClick={()=>setManaging(null)}>×</button><h2>Manage collaboration</h2><p>Add or remove invited streamers. Existing accepted participants keep their own calendar copy until removed.</p><div className="collab-manage-list">{managing.participants.map((participant)=><div key={participant.userId}><span className="avatar">{participant.avatar?<img src={participant.avatar} alt=""/>:participant.name.slice(0,1)}</span><span><b>{participant.name}</b><small>{participant.status}</small></span><button className="danger subtle" onClick={()=>void manageParticipant("remove_participant",participant.userId)}>Remove</button></div>)}</div><label>Add streamer<input value={manageQuery} onChange={e=>setManageQuery(e.target.value)} placeholder="Search people…"/></label><div className="team-person-options static">{people.filter(person=>person.id!==me&&!managing.participants.some(p=>p.userId===person.id)&&(`${person.name} ${person.email}`).toLowerCase().includes(manageQuery.toLowerCase())).slice(0,8).map(person=><button key={person.id} onClick={()=>void manageParticipant("add_participant",person.id)}><span className="avatar">{person.avatar?<img src={person.avatar} alt=""/>:person.name.slice(0,1)}</span>{person.name}<small>Add</small></button>)}</div></div></div>}
     </div>
   );
 }
@@ -1016,6 +1051,7 @@ function RequestCard({
   currentUserId,
   openReschedule,
   respondReschedule,
+  onManage,
 }: {
   item: CollabRequest;
   incoming?: boolean;
@@ -1033,6 +1069,7 @@ function RequestCard({
     item: CollabRequest,
     action: "accept" | "decline",
   ) => Promise<void>;
+  onManage: (item: CollabRequest) => void;
 }) {
   const open = ["pending", "countered"].includes(item.status);
   const myParticipant = item.participants.find(
@@ -1167,6 +1204,7 @@ function RequestCard({
           >
             Cancel request
           </button>
+          <button className="secondary" onClick={() => onManage(item)}>Manage participants</button>
         </div>
       )}
       {item.status === "accepted" && (
@@ -1182,6 +1220,9 @@ function RequestCard({
             >
               Reschedule collab
             </button>
+          )}
+          {!incoming && (
+            <button className="secondary" onClick={() => onManage(item)}>Manage participants</button>
           )}
           {!incoming && (
             <button

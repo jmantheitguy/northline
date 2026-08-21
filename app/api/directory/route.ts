@@ -20,5 +20,9 @@ export async function GET() {
   FROM users u WHERE u.status='Active' AND u.directory_visible=1 ORDER BY u.name COLLATE NOCASE`,
     )
     .all();
+  for (const user of users as Array<{ id:number; teamNames?:string[] }>) {
+    const memberships = await db.prepare(`SELECT t.name FROM teams t LEFT JOIN team_members tm ON tm.team_id=t.id WHERE t.owner_id=? OR tm.user_id=? ORDER BY t.name COLLATE NOCASE`).all(user.id,user.id) as Array<{name:string}>;
+    user.teamNames = memberships.map((item) => item.name);
+  }
   return NextResponse.json({ users });
 }

@@ -10,6 +10,7 @@ import { TimeCard } from "./time-card";
 import { AdminTime } from "./admin-time";
 import { CalendarHub } from "./calendar-hub";
 import { CollabPlanner } from "./collab-planner";
+import { Teams } from "./teams";
 import { HelpCenter, WelcomeGuide, type HelpDestination } from "./help-center";
 import { apiErrorMessage, resilientFetch } from "./client-fetch";
 
@@ -115,6 +116,7 @@ type WorkspaceUser = {
   discordUsername: string | null;
   publicStreamCalendarCount: number;
   publicStreamCalendarName: string | null;
+  teamNames?: string[];
 };
 type PublicStreamSchedule = {
   owner: { id: number; name: string; avatar: string | null; timezone: string };
@@ -170,6 +172,7 @@ type View =
   | "time"
   | "calendars"
   | "collabs"
+  | "teams"
   | "directory"
   | "reminders"
   | "help"
@@ -471,6 +474,7 @@ export function NorthlineApp() {
   useEffect(() => {
     if (
       view === "directory" ||
+      view === "teams" ||
       modal === "share" ||
       modal === "workspace-manage" ||
       modal === "task-create" ||
@@ -689,6 +693,12 @@ export function NorthlineApp() {
             <span>♢</span>Collab planner
           </button>
           <button
+            className={view === "teams" ? "active" : ""}
+            onClick={() => setView("teams")}
+          >
+            <span>♧</span>Teams
+          </button>
+          <button
             className={view === "directory" ? "active" : ""}
             onClick={() => setView("directory")}
           >
@@ -884,6 +894,7 @@ export function NorthlineApp() {
         {view === "time" && <TimeCard notify={notify} />}
         {view === "calendars" && <CalendarHub notify={notify} />}
         {view === "collabs" && <CollabPlanner notify={notify} />}
+        {view === "teams" && <Teams notify={notify} workspaces={workspaces} people={directoryUsers} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "help" && (
           <HelpCenter
@@ -2211,6 +2222,7 @@ function Directory({ users }: { users: WorkspaceUser[] }) {
                 {p.boards} board{p.boards === 1 ? "" : "s"}
               </small>
             </div>
+            {p.teamNames?.length ? <div className="person-teams"><small>Teams</small><span>{p.teamNames.join(" · ")}</span></div> : null}
             <div className="person-actions">
               <button className="secondary" onClick={() => setContact(p)}>
                 Contact card

@@ -1,15 +1,17 @@
 import db from "./db";
 import type { SessionUser } from "./auth";
+import { workspacePermission } from "./workspaces";
 
 export type BoardPermission="owner"|"editor"|"viewer";
 
 export async function boardPermission(user:SessionUser,boardId:number):Promise<BoardPermission|null> {
-  const board=await db.prepare("SELECT b.owner_id,w.owner_id workspace_owner_id,wm.permission workspace_permission FROM boards b LEFT JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=? WHERE b.id=?").get(user.id,boardId) as {owner_id:number;workspace_owner_id:number|null;workspace_permission:"viewer"|"editor"|null}|undefined;
+  const board=await db.prepare("SELECT b.owner_id,b.workspace_id,w.owner_id workspace_owner_id FROM boards b LEFT JOIN workspaces w ON w.id=b.workspace_id WHERE b.id=?").get(boardId) as {owner_id:number;workspace_id:number;workspace_owner_id:number|null}|undefined;
   if(!board)return null;
   if(board.owner_id===user.id||board.workspace_owner_id===user.id)return "owner";
   const membership=await db.prepare("SELECT permission FROM board_members WHERE board_id=? AND user_id=?").get(boardId,user.id) as {permission:"viewer"|"editor"}|undefined;
-  if(membership?.permission==="editor"||board.workspace_permission==="editor")return "editor";
-  if(membership?.permission==="viewer"||board.workspace_permission==="viewer")return "viewer";
+  const workspaceAccess=await workspacePermission(user,board.workspace_id);
+  if(membership?.permission==="editor"||workspaceAccess==="editor")return "editor";
+  if(membership?.permission==="viewer"||workspaceAccess==="viewer")return "viewer";
   return null;
 }
 

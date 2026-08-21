@@ -56,6 +56,7 @@ const db = process.env.NORTHLINE_DB_DRIVER === "postgres"
 export const createBoardPublicId = implementation.createBoardPublicId;
 export const createColumnKey = implementation.createColumnKey;
 export const createWorkspacePublicId = implementation.createWorkspacePublicId;
+export const createTeamPublicId = implementation.createTeamPublicId;
 export const createCalendarPublicId = implementation.createCalendarPublicId;
 export const createCalendarEventPublicId = implementation.createCalendarEventPublicId;
 export const createCollabRequestPublicId = implementation.createCollabRequestPublicId;

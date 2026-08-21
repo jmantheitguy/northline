@@ -2,7 +2,15 @@
 
 Northline is being built in public as a self-hosted project workspace for small creator teams. Priorities may move as real-world use reveals better sequencing.
 
-## Current — Beta v0.8.2
+## Current — Beta v1.0.0
+
+### Team collaboration foundation
+
+- Reusable teams with owner, manager, and member roles
+- Team-linked shared workspaces with inherited board access and preserved direct shares
+- Team-aware board discovery, assignment eligibility, My Work, search, and notifications
+- Team-scoped streaming calendars and team-first collab recipient filtering with an all-streamers fallback
+- Directory team labels and a dedicated Teams management page
 
 - Team-visible streaming calendars and a combined 90-day streamer schedule
 - Stream and availability metadata with explicit event-level privacy and busy-only disclosure

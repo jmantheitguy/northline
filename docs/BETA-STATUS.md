@@ -1,8 +1,8 @@
 # Beta validation status
 
-Beta v0.8.2 continues controlled production validation with a small team. This document distinguishes verified release evidence from work that requires an interactive browser or deliberate failure simulation.
+Beta v1.0.0 continues controlled production validation with a small team. This document distinguishes verified release evidence from work that requires an interactive browser or deliberate failure simulation.
 
-## Verified for Beta v0.8.2
+## Verified for Beta v1.0.0
 
 - Production containers report healthy operation for Northline, Authentik, its database and worker, and the mail server.
 - The public Northline route responds successfully through the configured edge tunnel.
@@ -17,6 +17,8 @@ Beta v0.8.2 continues controlled production validation with a small team. This d
 - Collaboration requests use opaque identifiers, accepted events are written to each participant's selected calendar, and private Discord notifications use the existing Task Buddy identity link.
 - Multi-streamer requests maintain independent participant responses and calendars, migrate legacy requests forward, and lock group-time negotiation after the first acceptance.
 - Confirmed collaborations support unanimous reschedule approval, targeted organizer/participant notifications, atomic event updates, and one-row team-schedule presentation over separate private calendar copies.
+- Teams provide reusable member lists, manager permissions, and optional shared-workspace links. Team access is enforced server-side and direct board shares remain independent.
+- Release announcements can be delivered to multiple configured Discord channels with duplicate-safe per-channel markers and no public repository links in the message body.
 - Northline-only local backups are encrypted, verified, and retained for the latest four generations.
 - The latest recorded non-destructive restore drill completed successfully.
 - VM storage has safe operating headroom after unused container-build artifacts were removed.

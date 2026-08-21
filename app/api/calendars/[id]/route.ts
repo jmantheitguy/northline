@@ -25,7 +25,7 @@ export async function GET(
     to = url.searchParams.get("to") || "2999-01-01T00:00:00.000Z";
   const calendar = await db
     .prepare(
-      "SELECT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,c.owner_id ownerId,u.name ownerName FROM calendars c JOIN users u ON u.id=c.owner_id WHERE c.id=?",
+      "SELECT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,c.team_id teamId,c.owner_id ownerId,u.name ownerName FROM calendars c JOIN users u ON u.id=c.owner_id WHERE c.id=?",
     )
     .get(id);
   const events = await db
@@ -90,10 +90,18 @@ export async function PATCH(
       timezone = validTimezone(body.timezone);
     const calendarType = body.calendarType === "streaming" ? "streaming" : "personal";
     const visibility = calendarType === "streaming" && ["team","public"].includes(body.visibility) ? body.visibility : "private";
+    const teamId = body.teamId == null || body.teamId === "" ? null : Number(body.teamId);
+    if (teamId !== null && (!Number.isInteger(teamId) || teamId <= 0)) throw new Error("Choose a valid team");
+    if (teamId !== null && calendarType !== "streaming") throw new Error("Team calendars must be streaming calendars");
+    if (teamId !== null && visibility !== "team") throw new Error("Choose team visibility for a team calendar");
+    if (teamId !== null) {
+      const team = await db.prepare("SELECT owner_id ownerId FROM teams WHERE id=?").get(teamId) as {ownerId:number}|undefined;
+      if (!team || team.ownerId !== user.id) throw new Error("Only the team leader can assign a team calendar");
+    }
     if (!name || name.length > 80 || !color)
       throw new Error("Enter a valid name and color");
     await db.prepare(
-      "UPDATE calendars SET name=?,color=?,description=?,timezone=?,calendar_type=?,visibility=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+      "UPDATE calendars SET name=?,color=?,description=?,timezone=?,calendar_type=?,visibility=?,team_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
     ).run(
       name,
       color,
@@ -103,6 +111,7 @@ export async function PATCH(
       timezone,
       calendarType,
       visibility,
+      teamId,
       id,
     );
     await recordCalendarActivity(

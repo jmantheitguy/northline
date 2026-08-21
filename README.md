@@ -1,6 +1,6 @@
 # Northline
 
-Current release: **Beta v0.9.8 — Deployment-safe saves**
+Current release: **Beta v1.0.0 — Team collaboration foundation**
 
 Northline is a self-hosted project-management platform for creator teams, Discord communities, and other collaborative groups. Its goal is to provide a polished Monday.com-style workspace while keeping accounts, tasks, permissions, and operational data under the workspace owner's control.
 
@@ -34,6 +34,7 @@ The application combines visual task boards, private collaboration, user adminis
 
 - Kanban boards with fully customizable per-board workflow columns: add, rename, recolor, reorder, or safely remove stages
 - Automatic personal workspaces plus owner-managed shared workspaces whose members inherit access to every contained board
+- Reusable teams with a leader, optional managers, searchable membership, and team-linked shared workspaces
 - A personal My Work dashboard with urgency grouping, cross-board filters, and permission-aware quick edits
 - Drag-and-drop task movement
 - Task creation, priorities, categories, due dates, multiple authorized assignees, and comments
@@ -64,6 +65,7 @@ The application combines visual task boards, private collaboration, user adminis
 ### Stream schedules and collabs
 
 - Explicit streaming calendars with private, Northline-team, or public-ready visibility; personal calendars remain private by default
+- Team-scoped streaming calendars that appear only to members of the selected team, while public-ready schedules remain discoverable to all signed-in users
 - Stream, availability, and confirmed-collab entries with platform, game/category, destination link, local-time rendering, and per-entry detail controls
 - A combined 90-day team schedule that exposes only eligible streaming entries and can reduce an entry to a generic busy window
 - Collaboration requests for up to 20 invited streamers, with proposed times, private messages, accept, decline, counterproposal, and cancellation states
@@ -76,6 +78,7 @@ The application combines visual task boards, private collaboration, user adminis
 ### Members and access
 
 - Searchable workspace member directory
+- Team directory with member roles, team-aware collab discovery, and contact cards that show team membership
 - Local email-and-password authentication
 - Password hashing with bcrypt
 - Random server-side sessions stored as SHA-256 token digests

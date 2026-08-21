@@ -25,9 +25,12 @@ export async function validateAssigneeIds(boardId: number, ids: number[]) {
        JOIN workspaces w ON w.id=b.workspace_id
        LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id
        LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id
+       LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id
+       LEFT JOIN teams team ON team.id=tw.team_id
+       LEFT JOIN team_members tm ON tm.team_id=tw.team_id AND tm.user_id=u.id
        WHERE u.status='Active'
          AND u.id IN (${ids.map(() => "?").join(",")})
-         AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL)`,
+         AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL OR team.owner_id=u.id OR tm.user_id IS NOT NULL)`,
     )
     .all(boardId, ...ids) as Array<{ id: number }>;
   const allowed = new Set(rows.map((row) => row.id));

@@ -1,5 +1,15 @@
 # Northline release history
 
+## Beta v1.0.0 — Team collaboration foundation
+
+- Add reusable teams with a leader, manager role, member roster, audit records, and server-enforced management permissions.
+- Link team memberships to shared workspaces so boards, assignments, search, My Work, and notifications inherit access without weakening direct-share rules.
+- Add team-scoped streaming calendars and team-aware collab discovery while retaining an all-streamers search option.
+- Add a Teams page for membership and workspace management and show team membership in People contact profiles.
+- Add additive SQLite/PostgreSQL schema support for teams, team members, team-workspace links, and calendar team ownership.
+- Allow organizers to add or remove streamers from an existing collaboration without changing the collaboration's authorization boundary.
+- Send deployment release announcements to every configured Discord server channel with per-destination retry protection.
+
 ## Beta v0.9.8 — Deployment-safe saves
 
 - Retry mutating requests when a rolling deployment briefly returns a gateway or service-unavailable response.

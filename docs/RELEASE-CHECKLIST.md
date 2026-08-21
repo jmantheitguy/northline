@@ -15,7 +15,7 @@
 
 ## After deployment
 
-- Confirm `ops/release/deploy-production.sh` reported both a healthy deployment and a successful Task Buddy release announcement. A retry of the same commit must not post a duplicate.
+- Confirm `ops/release/deploy-production.sh` reported both a healthy deployment and a successful Task Buddy release announcement in every configured Discord channel. A retry of the same commit must not post a duplicate in any destination.
 - Verify the public Northline sign-in page through its configured public route.
 - Create, duplicate, update, and delete a test task.
 - Search for that task from another board and inspect the board activity feed.

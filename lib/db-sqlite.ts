@@ -13,6 +13,8 @@ export const createBoardPublicId = () =>
 export const createColumnKey = () => `col_${randomBytes(8).toString("hex")}`;
 export const createWorkspacePublicId = () =>
   `wsp_${randomBytes(16).toString("hex")}`;
+export const createTeamPublicId = () =>
+  `tem_${randomBytes(16).toString("hex")}`;
 export const createCalendarPublicId = () =>
   `cal_${randomBytes(16).toString("hex")}`;
 export const createCalendarEventPublicId = () =>
@@ -151,6 +153,31 @@ db.exec(`
     permission TEXT NOT NULL CHECK(permission IN ('viewer','editor')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(workspace_id,user_id)
+  );
+  CREATE TABLE IF NOT EXISTS teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT '#7c6ce7',
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS team_members (
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK(role IN ('manager','member')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(team_id,user_id)
+  );
+  CREATE TABLE IF NOT EXISTS team_workspaces (
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL CHECK(permission IN ('viewer','editor')),
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(team_id,workspace_id)
   );
   CREATE TABLE IF NOT EXISTS boards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -299,6 +326,8 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS board_members_user_idx ON board_members(user_id);
   CREATE INDEX IF NOT EXISTS workspace_members_user_idx ON workspace_members(user_id);
+  CREATE INDEX IF NOT EXISTS team_members_user_idx ON team_members(user_id,team_id);
+  CREATE INDEX IF NOT EXISTS team_workspaces_workspace_idx ON team_workspaces(workspace_id,team_id);
   CREATE INDEX IF NOT EXISTS tasks_board_idx ON tasks(board_id,status);
   CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks(assignee_id,due_date);
   CREATE INDEX IF NOT EXISTS comments_task_idx ON comments(task_id);
@@ -351,6 +380,7 @@ addCalendarColumn(
   "calendar_type TEXT NOT NULL DEFAULT 'personal'",
 );
 addCalendarColumn("visibility", "visibility TEXT NOT NULL DEFAULT 'private'");
+addCalendarColumn("team_id", "team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL");
 const calendarEventColumns = db
   .prepare("PRAGMA table_info(calendar_events)")
   .all() as Array<{ name: string }>;
@@ -775,6 +805,7 @@ const migrations: [number, string][] = [
   [22, "management identity directory visibility"],
   [23, "directory Discord contact profiles"],
   [24, "multi-assignee tasks and pauseable time entries"],
+  [25, "reusable teams and team-linked workspaces"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

@@ -45,12 +45,42 @@ docker builder prune --all --force >/dev/null || echo "Warning: unable to prune 
 
 mkdir -p runtime-status
 marker="runtime-status/last-announced-deploy"
-announced="$(cat "$marker" 2>/dev/null || true)"
-if [ "$announced" = "$commit" ]; then
-  echo "Deployment $commit is already announced; skipping Discord notification"
-  exit 0
+channels="$(docker exec northline node -e 'process.stdout.write(process.env.NORTHLINE_RELEASE_CHANNEL_IDS || process.env.NORTHLINE_RELEASE_CHANNEL_ID || "")')"
+if [ -z "$channels" ]; then
+  echo "Discord release announcements are not configured" >&2
+  exit 1
 fi
 
-docker exec northline node /app/ops/release/announce-discord.mjs "$version" "$commit" "$summary"
+# Keep a marker for each destination. If Discord accepts one message and then
+# rejects another, a retry only sends the missing destination instead of
+# duplicating the already-delivered announcement.
+legacy_announced="$(cat "$marker" 2>/dev/null || true)"
+first_channel=""
+announcement_failed=0
+for channel in $(printf '%s' "$channels" | tr ',' ' '); do
+  case "$channel" in
+    ''|*[!0-9]*) echo "Invalid Discord release channel configuration" >&2; exit 1 ;;
+  esac
+  if [ -z "$first_channel" ]; then first_channel="$channel"; fi
+  channel_hash="$(printf '%s' "$channel" | sha256sum | cut -c1-16)"
+  channel_marker="runtime-status/last-announced-deploy-${channel_hash}"
+  announced="$(cat "$channel_marker" 2>/dev/null || true)"
+  if [ "$announced" = "$commit" ]; then continue; fi
+  # Migrate the old single-destination marker without reposting to its first
+  # configured channel. New destinations still receive this deployment.
+  if [ "$channel" = "$first_channel" ] && [ "$legacy_announced" = "$commit" ]; then
+    printf '%s\n' "$commit" > "$channel_marker"
+    continue
+  fi
+  if docker exec -e "NORTHLINE_RELEASE_CHANNEL_ID=$channel" -e NORTHLINE_RELEASE_CHANNEL_IDS= northline node /app/ops/release/announce-discord.mjs "$version" "$commit" "$summary"; then
+    printf '%s\n' "$commit" > "$channel_marker"
+  else
+    announcement_failed=1
+    echo "Release announcement failed for one Discord destination" >&2
+  fi
+done
+if [ "$announcement_failed" -ne 0 ]; then
+  exit 1
+fi
 printf '%s\n' "$commit" > "$marker"
-echo "Deployed and announced $version ($commit)"
+echo "Deployed and announced $version ($commit) to all configured Discord destinations"
