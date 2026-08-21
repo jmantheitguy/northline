@@ -313,6 +313,7 @@ function CollabPlannerContent({
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState<string | null>(null),
     [showPastCollabs, setShowPastCollabs] = useState(false),
+    [hideCancelledCollabs, setHideCancelledCollabs] = useState(false),
     [now, setNow] = useState(() => Date.now());
   const [modal, setModal] = useState<
       "request" | "availability" | "reschedule" | null
@@ -418,6 +419,7 @@ function CollabPlannerContent({
     void load();
   }, [showPastCollabs]);
   const visibleRequests = requests.filter((request) => {
+    if (hideCancelledCollabs && request.status === "cancelled") return false;
     const end = new Date(request.endAt).getTime();
     return showPastCollabs || !Number.isFinite(end) || end >= now;
   });
@@ -666,6 +668,16 @@ function CollabPlannerContent({
               onChange={(event) => setShowPastCollabs(event.target.checked)}
             />
             Show past collabs
+          </label>
+          <label className="collab-past-toggle">
+            <input
+              type="checkbox"
+              checked={hideCancelledCollabs}
+              onChange={(event) =>
+                setHideCancelledCollabs(event.target.checked)
+              }
+            />
+            Hide cancelled collabs
           </label>
           <button className="secondary" onClick={() => void load()}>
             Refresh
