@@ -69,6 +69,10 @@ type Member = {
   avatar: string | null;
   permission: "viewer" | "editor";
 };
+type BoardAccess = Omit<Member, "permission"> & {
+  permission: "owner" | "viewer" | "editor";
+  source: string;
+};
 type BoardDetail = {
   board: {
     id: number;
@@ -81,6 +85,8 @@ type BoardDetail = {
   };
   tasks: Task[];
   members: Member[];
+  boardOwner: BoardAccess;
+  sharedWith: BoardAccess[];
   assignees: Array<{
     id: number;
     name: string;
@@ -647,8 +653,7 @@ export function NorthlineApp() {
               >
                 ＋ New shared workspace
               </button>
-              {activeWorkspace?.kind === "shared" &&
-                activeWorkspace.permission === "owner" && (
+              {activeWorkspace?.permission === "owner" && (
                   <button
                     onClick={() => {
                       setModal("workspace-manage");
@@ -892,8 +897,8 @@ export function NorthlineApp() {
           />
         )}
         {view === "time" && <TimeCard notify={notify} />}
-        {view === "calendars" && <CalendarHub notify={notify} />}
-        {view === "collabs" && <CollabPlanner notify={notify} />}
+        {view === "calendars" && <CalendarHub notify={notify} userTimezone={authUser.timezone} />}
+        {view === "collabs" && <CollabPlanner notify={notify} userTimezone={authUser.timezone} />}
         {view === "teams" && <Teams notify={notify} workspaces={workspaces} people={directoryUsers} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "help" && (
@@ -1581,7 +1586,7 @@ function BoardView({
         </div>
         <div className="head-actions">
           <div className="avatar-stack">
-            {data.members.slice(0, 4).map((m: Member) => (
+            {(data.sharedWith || data.members).slice(0, 4).map((m: BoardAccess | Member) => (
               <Avatar
                 key={m.id}
                 name={m.name}
@@ -1589,6 +1594,9 @@ function BoardView({
                 color="#2f9dde"
               />
             ))}
+            {(data.sharedWith || data.members).length > 4 && (
+              <span className="avatar-more">+{(data.sharedWith || data.members).length - 4}</span>
+            )}
           </div>
           {data.canShare && (
             <button className="secondary" onClick={() => openModal("share")}>
@@ -3657,6 +3665,7 @@ function NorthlineModal({
   });
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspaceDetail, setWorkspaceDetail] = useState<any>(null);
+  const [workspaceEditName, setWorkspaceEditName] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
   const [permission, setPermission] = useState("editor");
   const [comments, setComments] = useState<any[]>([]);
@@ -3683,7 +3692,10 @@ function NorthlineModal({
   useEffect(() => {
     if (type === "workspace-manage" && activeWorkspace)
       jsonFetch(`/api/workspaces/${activeWorkspace.id}`)
-        .then(setWorkspaceDetail)
+        .then((detail) => {
+          setWorkspaceDetail(detail);
+          setWorkspaceEditName(detail.workspace.name);
+        })
         .catch((error) => notify(error.message));
   }, [type, activeWorkspace?.id]);
   const [notificationSettings, setNotificationSettings] = useState({
@@ -4278,6 +4290,50 @@ function NorthlineModal({
               Workspace members automatically receive access to every board kept
               here.
             </p>
+            <label>
+              Workspace name
+              <input
+                maxLength={80}
+                value={workspaceEditName}
+                onChange={(event) => setWorkspaceEditName(event.target.value)}
+              />
+            </label>
+            <div className="modal-actions workspace-actions">
+              <button
+                className="secondary"
+                disabled={busy || !workspaceEditName.trim() || workspaceEditName.trim() === workspaceDetail.workspace.name}
+                onClick={() => run(async () => {
+                  await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: workspaceEditName }),
+                  });
+                  await refresh();
+                  setWorkspaceDetail(await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`));
+                  notify("Workspace renamed");
+                })}
+              >
+                Save name
+              </button>
+              <button
+                className="danger"
+                disabled={busy || workspaceDetail.workspace.kind === "personal"}
+                title={workspaceDetail.workspace.kind === "personal" ? "Personal workspaces cannot be deleted" : "Delete this empty shared workspace"}
+                onClick={() => run(async () => {
+                  if (!window.confirm("Delete this workspace? It must be empty first.")) return;
+                  await jsonFetch(`/api/workspaces/${workspaceDetail.workspace.id}`, { method: "DELETE" });
+                  const personal = (workspaces as Workspace[]).find((item) => item.kind === "personal");
+                  if (personal) setActiveWorkspaceId(personal.id);
+                  await refresh();
+                  close();
+                  notify("Workspace deleted");
+                })}
+              >
+                Delete workspace
+              </button>
+            </div>
+            {workspaceDetail.workspace.kind === "shared" ? (
+              <>
             <div className="modal-row">
               <label>
                 Member
@@ -4378,6 +4434,13 @@ function NorthlineModal({
                 </div>
               ))}
             </div>
+              </>
+            ) : (
+              <div className="settings-callout">
+                <b>Personal workspace</b>
+                <span>Personal workspaces are private to you. Share individual boards when you want to collaborate.</span>
+              </div>
+            )}
           </>
         )}
         {type === "activity" && (
@@ -4473,14 +4536,10 @@ function NorthlineModal({
           <>
             <h2>Board settings</h2>
             <p>Update this board or permanently remove it.</p>
-            <label>
-              Board ID
-              <input value={board.board.boardKey} readOnly />
-              <small>
-                Permanent random reference; creator ownership is stored
-                privately.
-              </small>
-            </label>
+            <div className="settings-callout">
+              <b>Board reference</b>
+              <span>{board.board.boardKey} · permanent and managed by Northline</span>
+            </div>
             <label>
               Name
               <input
@@ -4631,20 +4690,23 @@ function NorthlineModal({
               Grant access
             </button>
             <div className="shared-list">
-              {board.members.map((m: Member) => (
+              {(board.sharedWith || []).map((m: BoardAccess) => (
                 <div className="share-person" key={m.id}>
                   <Avatar name={m.name} avatar={m.avatar} />
                   <span>
                     <b>{m.name}</b>
                     <small>{m.email}</small>
                   </span>
-                  <em>{m.permission}</em>
-                  <button
-                    className="icon-button"
-                    onClick={() => removeMember(m.id)}
-                  >
-                    ×
-                  </button>
+                  <em>{m.permission} · {m.source}</em>
+                  {board.members.some((member: Member) => member.id === m.id) && (
+                    <button
+                      className="icon-button"
+                      aria-label={`Remove ${m.name}`}
+                      onClick={() => removeMember(m.id)}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

@@ -58,3 +58,24 @@ export function zonedDateTimeToUtc(
   }
   return new Date(instant);
 }
+
+/**
+ * Parse a date-time received from a datetime-local control.  Such controls
+ * intentionally have no offset, so interpreting them with `new Date(value)`
+ * silently uses the server's time zone.  Northline stores instants in UTC and
+ * therefore must resolve offset-less values in the user's persisted zone.
+ * Explicit ISO timestamps remain supported for older clients and integrations.
+ */
+export function parseDateTimeInZone(value: unknown, timezone: string) {
+  const raw = String(value || "").trim();
+  if (!raw) throw new Error("Enter a date and time");
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(raw)) {
+    const instant = new Date(raw);
+    if (Number.isNaN(instant.valueOf())) throw new Error("Enter a valid date and time");
+    return instant;
+  }
+  const normalized = raw.replace(" ", "T");
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)$/.exec(normalized);
+  if (!match) throw new Error("Enter a valid date and time");
+  return zonedDateTimeToUtc(match[1], match[2], timezone);
+}

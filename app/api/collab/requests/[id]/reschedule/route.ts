@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import db, { createCollabReschedulePublicId } from "@/lib/db";
 import { validTimezone } from "@/lib/calendars";
+import { parseDateTimeInZone } from "@/lib/timezones";
 
 export async function POST(
   request: Request,
@@ -38,9 +39,9 @@ export async function POST(
     );
   try {
     const body = await request.json(),
-      start = new Date(body.startAt),
-      end = new Date(body.endAt),
       timezone = validTimezone(body.timezone),
+      start = parseDateTimeInZone(body.startAt, timezone),
+      end = parseDateTimeInZone(body.endAt, timezone),
       message = String(body.message || "")
         .trim()
         .slice(0, 1000);

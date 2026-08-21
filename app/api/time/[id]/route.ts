@@ -9,6 +9,7 @@ import {
   validateClockIn,
   validateAssociation,
 } from "@/lib/time-entries";
+import { parseDateTimeInZone } from "@/lib/timezones";
 
 export async function PATCH(
   request: Request,
@@ -61,12 +62,38 @@ export async function PATCH(
       if (entry.ended_at) return NextResponse.json({ error: "Edit finished entries from your time card" }, { status: 409 });
       const reason = String(body.reason || "").trim();
       if (reason.length < 3) throw new Error("Enter a reason for changing time in");
-      const startedAt = validateClockIn(new Date(body.startedAt).toISOString());
+      const startedAt = validateClockIn(parseDateTimeInZone(body.startedAt, user.timezone).toISOString());
       if (entry.paused_at && Date.parse(startedAt) > Date.parse(String(entry.paused_at)))
         throw new Error("Time in must be before the current pause");
       await ensureNoOverlap(user.id, startedAt, new Date().toISOString(), id);
       await db.prepare("UPDATE time_entries SET started_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(startedAt, id);
       auditTimeEntry(id, user.id, "EDIT_CLOCK_IN", entry, { startedAt }, reason.slice(0, 300));
+      return NextResponse.json({ ok: true });
+    }
+    if (body.action === "edit-clock-out") {
+      if (entry.ended_at)
+        return NextResponse.json({ error: "This timer is already stopped" }, { status: 409 });
+      const reason = String(body.reason || "").trim();
+      if (reason.length < 3) throw new Error("Enter a reason for changing time out");
+      const endedAt = parseDateTimeInZone(body.endedAt, user.timezone).toISOString();
+      const endedMillis = Date.parse(endedAt), nowMillis = Date.now();
+      if (!Number.isFinite(endedMillis) || endedMillis > nowMillis)
+        throw new Error("Time out must be a valid time that is not in the future");
+      if (endedMillis <= Date.parse(String(entry.started_at)))
+        throw new Error("Time out must be after time in");
+      if (entry.paused_at && endedMillis < Date.parse(String(entry.paused_at)))
+        throw new Error("Time out must be after the current pause");
+      let pausedSeconds = Number(entry.paused_seconds || 0);
+      if (entry.paused_at)
+        pausedSeconds += Math.max(0, Math.floor((endedMillis - Date.parse(String(entry.paused_at))) / 1000));
+      const duration = elapsedSeconds(String(entry.started_at), endedAt, pausedSeconds);
+      if (duration <= 0 || duration > 7 * 24 * 60 * 60)
+        throw new Error("Time entries must contain between one second and seven days of active work");
+      await ensureNoOverlap(user.id, String(entry.started_at), endedAt, id);
+      await db.prepare(
+        "UPDATE time_entries SET ended_at=?,duration_seconds=?,paused_at=NULL,paused_seconds=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+      ).run(endedAt, duration, pausedSeconds, id);
+      auditTimeEntry(id, user.id, "EDIT_CLOCK_OUT", entry, { endedAt, duration, pausedSeconds }, reason.slice(0, 300));
       return NextResponse.json({ ok: true });
     }
     if (body.action === "clock-out") {
@@ -90,8 +117,8 @@ export async function PATCH(
       const reason = String(body.reason || "").trim();
       if (reason.length < 3)
         throw new Error("Enter a reason for the correction");
-      const startedAt = new Date(body.startedAt).toISOString(),
-        endedAt = new Date(body.endedAt).toISOString();
+      const startedAt = parseDateTimeInZone(body.startedAt, user.timezone).toISOString(),
+        endedAt = parseDateTimeInZone(body.endedAt, user.timezone).toISOString();
       const duration = secondsBetween(startedAt, endedAt);
       await ensureNoOverlap(user.id, startedAt, endedAt, id);
       const association = await validateAssociation(user, body.boardId, body.taskId),

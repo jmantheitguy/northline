@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { apiErrorMessage, resilientFetch } from "./client-fetch";
+import { browserTimezone, localInput, shiftEndWithStartChange } from "./date-time";
 
 type Calendar = {
   id: string;
@@ -230,12 +231,8 @@ const normalizeRequest = (value: unknown): CollabRequest | null => {
         : null,
   };
 };
-const localInput = (date: Date) =>
-  new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
-const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-const blank = () => {
+const zone = browserTimezone;
+const blank = (timezone = zone) => {
   const start = new Date(Date.now() + 86400000);
   start.setMinutes(0, 0, 0);
   const end = new Date(start.getTime() + 7200000);
@@ -245,12 +242,12 @@ const blank = () => {
     sourceEventId: "",
     title: "Collaboration stream",
     message: "",
-    startAt: localInput(start),
-    endAt: localInput(end),
+    startAt: localInput(start, timezone),
+    endAt: localInput(end, timezone),
   };
 };
 
-type CollabPlannerProps = { notify: (message: string) => void };
+type CollabPlannerProps = { notify: (message: string) => void; userTimezone?: string };
 
 type CollabPlannerBoundaryState = {
   error: Error | null;
@@ -303,7 +300,9 @@ export function CollabPlanner(props: CollabPlannerProps) {
 
 function CollabPlannerContent({
   notify,
+  userTimezone = zone,
 }: CollabPlannerProps) {
+  const viewerTimezone = userTimezone || zone;
   const [events, setEvents] = useState<ScheduleEvent[]>([]),
     [people, setPeople] = useState<Person[]>([]),
     [teams, setTeams] = useState<Team[]>([]),
@@ -318,7 +317,7 @@ function CollabPlannerContent({
   const [modal, setModal] = useState<
       "request" | "availability" | "reschedule" | null
     >(null),
-    [form, setForm] = useState(blank()),
+    [form, setForm] = useState(blank(viewerTimezone)),
     [streamerQuery, setStreamerQuery] = useState(""),
     [streamerPickerOpen, setStreamerPickerOpen] = useState(false),
     [teamFilter, setTeamFilter] = useState("all"),
@@ -440,6 +439,7 @@ function CollabPlannerContent({
       Object.entries(
         visibleEvents.reduce<Record<string, ScheduleEvent[]>>((all, event) => {
           const key = new Date(event.startAt).toLocaleDateString([], {
+            timeZone: viewerTimezone,
             weekday: "long",
             month: "long",
             day: "numeric",
@@ -448,7 +448,7 @@ function CollabPlannerContent({
           return all;
         }, {}),
       ),
-    [visibleEvents],
+    [visibleEvents, viewerTimezone],
   );
   const availableStreamers = useMemo(() => {
     const query = streamerQuery.trim().toLocaleLowerCase();
@@ -481,13 +481,13 @@ function CollabPlannerContent({
     [form.recipientIds, people],
   );
   const openRequest = (event?: ScheduleEvent) => {
-    const next = blank();
+    const next = blank(viewerTimezone);
     if (event) {
       next.recipientIds = [String(event.ownerId)];
       next.sourceEventId = event.id;
       next.title = `Collab with ${event.ownerName}`;
-      next.startAt = localInput(new Date(event.startAt));
-      next.endAt = localInput(new Date(event.endAt));
+      next.startAt = localInput(new Date(event.startAt), viewerTimezone);
+      next.endAt = localInput(new Date(event.endAt), viewerTimezone);
     }
     next.calendarId = ownedStreaming[0]?.id || "";
     setForm(next);
@@ -503,9 +503,9 @@ function CollabPlannerContent({
         body: JSON.stringify({
           ...form,
           recipientIds: form.recipientIds.map(Number),
-          startAt: new Date(form.startAt).toISOString(),
-          endAt: new Date(form.endAt).toISOString(),
-          timezone: zone,
+          startAt: form.startAt,
+          endAt: form.endAt,
+          timezone: viewerTimezone,
         }),
       });
       setModal(null);
@@ -523,9 +523,9 @@ function CollabPlannerContent({
         body: JSON.stringify({
           title: form.title || "Available for collabs",
           description: form.message,
-          startAt: new Date(form.startAt).toISOString(),
-          endAt: new Date(form.endAt).toISOString(),
-          timezone: zone,
+          startAt: form.startAt,
+          endAt: form.endAt,
+          timezone: viewerTimezone,
           kind: "availability",
           visibility: "team",
           collabEnabled: true,
@@ -565,16 +565,16 @@ function CollabPlannerContent({
       if (action === "counter") {
         const start = window.prompt(
           "New start (YYYY-MM-DD HH:MM)",
-          localInput(new Date(item.startAt)).replace("T", " "),
+          localInput(new Date(item.startAt), viewerTimezone).replace("T", " "),
         );
         const end = window.prompt(
           "New end (YYYY-MM-DD HH:MM)",
-          localInput(new Date(item.endAt)).replace("T", " "),
+          localInput(new Date(item.endAt), viewerTimezone).replace("T", " "),
         );
         if (!start || !end) return;
-        body.startAt = new Date(start).toISOString();
-        body.endAt = new Date(end).toISOString();
-        body.timezone = zone;
+        body.startAt = start.replace(" ", "T");
+        body.endAt = end.replace(" ", "T");
+        body.timezone = viewerTimezone;
       }
       await call(`/api/collab/requests/${item.id}`, {
         method: "PATCH",
@@ -594,10 +594,10 @@ function CollabPlannerContent({
     }
   };
   const openReschedule = (item: CollabRequest) => {
-    const next = blank();
+    const next = blank(viewerTimezone);
     next.title = `Reschedule ${item.title}`;
-    next.startAt = localInput(new Date(item.startAt));
-    next.endAt = localInput(new Date(item.endAt));
+    next.startAt = localInput(new Date(item.startAt), viewerTimezone);
+    next.endAt = localInput(new Date(item.endAt), viewerTimezone);
     setForm(next);
     setRescheduling(item);
     setModal("reschedule");
@@ -609,9 +609,9 @@ function CollabPlannerContent({
         method: "POST",
         headers: jsonHeaders,
         body: JSON.stringify({
-          startAt: new Date(form.startAt).toISOString(),
-          endAt: new Date(form.endAt).toISOString(),
-          timezone: zone,
+          startAt: form.startAt,
+          endAt: form.endAt,
+          timezone: viewerTimezone,
           message: form.message,
         }),
       });
@@ -685,7 +685,7 @@ function CollabPlannerContent({
           <button
             className="secondary"
             onClick={() => {
-              const next = blank();
+              const next = blank(viewerTimezone);
               next.calendarId = ownedStreaming[0]?.id || "";
               next.title = "Available for collabs";
               setForm(next);
@@ -740,11 +740,13 @@ function CollabPlannerContent({
                       <small>
                         {event.ownerName} ·{" "}
                         {new Date(event.startAt).toLocaleTimeString([], {
+                          timeZone: viewerTimezone,
                           hour: "numeric",
                           minute: "2-digit",
                         })}
                         –
                         {new Date(event.endAt).toLocaleTimeString([], {
+                          timeZone: viewerTimezone,
                           hour: "numeric",
                           minute: "2-digit",
                         })}
@@ -800,6 +802,7 @@ function CollabPlannerContent({
               openReschedule={openReschedule}
               respondReschedule={respondReschedule}
               onManage={setManaging}
+              timezone={viewerTimezone}
             />
           ))}
           {!incoming.length && <p>No incoming requests.</p>}
@@ -816,6 +819,7 @@ function CollabPlannerContent({
               openReschedule={openReschedule}
               respondReschedule={respondReschedule}
               onManage={setManaging}
+              timezone={viewerTimezone}
             />
           ))}
           {!outgoing.length && <p>No sent requests.</p>}
@@ -834,7 +838,7 @@ function CollabPlannerContent({
                   ? "Propose a new collab time"
                   : "Request a collaboration"}
             </h2>
-            <p>Times are shown in {zone} and stored in UTC.</p>
+            <p>Times are shown in {viewerTimezone} and stored in UTC.</p>
             {modal === "request" && (
               <fieldset className="collab-picker-fieldset">
                 <legend>Invited streamers</legend>
@@ -995,7 +999,15 @@ function CollabPlannerContent({
                   type="datetime-local"
                   value={form.startAt}
                   onChange={(e) =>
-                    setForm({ ...form, startAt: e.target.value })
+                    setForm({
+                      ...form,
+                      startAt: e.target.value,
+                      endAt: shiftEndWithStartChange(
+                        form.startAt,
+                        form.endAt,
+                        e.target.value,
+                      ),
+                    })
                   }
                 />
               </label>
@@ -1064,6 +1076,7 @@ function RequestCard({
   openReschedule,
   respondReschedule,
   onManage,
+  timezone = zone,
 }: {
   item: CollabRequest;
   incoming?: boolean;
@@ -1082,6 +1095,7 @@ function RequestCard({
     action: "accept" | "decline",
   ) => Promise<void>;
   onManage: (item: CollabRequest) => void;
+  timezone?: string;
 }) {
   const open = ["pending", "countered"].includes(item.status);
   const myParticipant = item.participants.find(
@@ -1099,6 +1113,7 @@ function RequestCard({
           : `${item.participants.length} invited streamer${item.participants.length === 1 ? "" : "s"}`}{" "}
         ·{" "}
         {new Date(item.startAt).toLocaleString([], {
+          timeZone: timezone,
           month: "short",
           day: "numeric",
           hour: "numeric",
@@ -1122,6 +1137,7 @@ function RequestCard({
           <b>New time proposed by {item.reschedule.proposedByName}</b>
           <small>
             {new Date(item.reschedule.startAt).toLocaleString([], {
+              timeZone: timezone,
               month: "short",
               day: "numeric",
               hour: "numeric",
@@ -1129,6 +1145,7 @@ function RequestCard({
             })}
             –
             {new Date(item.reschedule.endAt).toLocaleTimeString([], {
+              timeZone: timezone,
               hour: "numeric",
               minute: "2-digit",
             })}

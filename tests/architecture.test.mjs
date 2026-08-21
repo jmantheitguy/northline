@@ -486,6 +486,32 @@ test("user time zones are device-synchronized and UTC-safe", async () => {
   assert.match(ui, /Device synchronized/);
 });
 
+test("time edits preserve wall-clock duration and workspace/board identity boundaries", async () => {
+  const [dateTime, timeRoute, timeEntryRoute, calendar, collab, workspace, board, ui] = await Promise.all([
+    read("app/date-time.ts"),
+    read("app/api/time/route.ts"),
+    read("app/api/time/[id]/route.ts"),
+    read("app/calendar-hub.tsx"),
+    read("app/collab-planner.tsx"),
+    read("app/api/workspaces/[id]/route.ts"),
+    read("app/api/boards/[id]/route.ts"),
+    read("app/northline-app.tsx"),
+  ]);
+  assert.match(dateTime, /shiftEndWithStartChange/);
+  assert.match(dateTime, /oldEnd - oldStart/);
+  assert.match(timeRoute, /parseDateTimeInZone\(body\.startedAt, user\.timezone\)/);
+  assert.match(timeEntryRoute, /edit-clock-out/);
+  assert.match(timeEntryRoute, /parseDateTimeInZone\(body\.endedAt, user\.timezone\)/);
+  assert.match(calendar, /shiftEndWithStartChange/);
+  assert.match(collab, /shiftEndWithStartChange/);
+  assert.match(workspace, /WORKSPACE\.RENAME/);
+  assert.match(workspace, /WORKSPACE\.DELETE/);
+  assert.match(board, /Board IDs are permanent and cannot be changed/);
+  assert.match(board, /sharedWith/);
+  assert.match(ui, /Workspace name/);
+  assert.match(ui, /Board reference/);
+});
+
 test("authorization matrix is enforced at every board capability", async () => {
   const routes = await Promise.all(
     [

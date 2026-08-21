@@ -8,6 +8,7 @@ import {
   recordCalendarActivity,
   validTimezone,
 } from "@/lib/calendars";
+import { parseDateTimeInZone } from "@/lib/timezones";
 
 type User = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
@@ -39,9 +40,9 @@ export async function PATCH(
   try {
     const body = await request.json();
     const title = String(body.title || "").trim();
-    const start = new Date(body.startAt);
-    const end = new Date(body.endAt);
     const timezone = validTimezone(body.timezone);
+    const start = parseDateTimeInZone(body.startAt, timezone);
+    const end = parseDateTimeInZone(body.endAt, timezone);
     const status = ["tentative", "confirmed", "cancelled"].includes(body.status)
       ? body.status
       : "confirmed";

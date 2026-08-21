@@ -7,6 +7,7 @@ import {
   canEditCalendar,
   validTimezone,
 } from "@/lib/calendars";
+import { parseDateTimeInZone } from "@/lib/timezones";
 
 type Row = {
   id: number;
@@ -134,9 +135,9 @@ export async function PATCH(
         throw new Error(
           "A participant has already accepted; ask the organizer to create a new request for a different time",
         );
-      const start = new Date(body.startAt),
-        end = new Date(body.endAt),
-        timezone = validTimezone(body.timezone),
+      const timezone = validTimezone(body.timezone),
+        start = parseDateTimeInZone(body.startAt, timezone),
+        end = parseDateTimeInZone(body.endAt, timezone),
         calendarId = await editableCalendar(user, body.calendarId);
       if (
         Number.isNaN(start.valueOf()) ||

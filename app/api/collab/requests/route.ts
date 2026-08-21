@@ -7,6 +7,7 @@ import {
   calendarPermission,
   validTimezone,
 } from "@/lib/calendars";
+import { parseDateTimeInZone } from "@/lib/timezones";
 
 export async function GET() {
   const user = await currentUser();
@@ -112,15 +113,15 @@ export async function POST(request: Request) {
       ),
     ] as number[];
     const calendarId = await calendarIdByKey(String(body.calendarId || ""));
-    const start = new Date(body.startAt),
-      end = new Date(body.endAt),
+    const timezone = validTimezone(body.timezone),
+      start = parseDateTimeInZone(body.startAt, timezone),
+      end = parseDateTimeInZone(body.endAt, timezone),
       title = String(body.title || "")
         .trim()
         .slice(0, 160),
       message = String(body.message || "")
         .trim()
-        .slice(0, 2000),
-      timezone = validTimezone(body.timezone);
+        .slice(0, 2000);
     if (!calendarId || !canEditCalendar(await calendarPermission(user, calendarId)))
       throw new Error("Choose a calendar you can edit");
     if (!recipientIds.length || recipientIds.length > 20)

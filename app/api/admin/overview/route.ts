@@ -15,6 +15,8 @@ const actionLabels: Record<string, string> = {
   "BOARD.SHARE": "Changed board access",
   "BOARD.NOTIFICATIONS.UPDATE": "Updated board notifications",
   "WORKSPACE.CREATE": "Created workspace",
+  "WORKSPACE.RENAME": "Renamed workspace",
+  "WORKSPACE.DELETE": "Deleted workspace",
   "WORKSPACE.SHARE": "Changed workspace access",
   "REMINDER.CREATE": "Scheduled reminder",
   "REMINDER.UPDATE": "Updated reminder",

@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatDuration } from "./time-clock";
 import { apiErrorMessage, resilientFetch } from "./client-fetch";
+import { browserTimezone, localInput, shiftEndWithStartChange } from "./date-time";
 
 type Entry = {
   id: number;
@@ -28,19 +29,10 @@ const request = async (url: string, options?: RequestInit) => {
   if (!response.ok) throw new Error(apiErrorMessage(response, data, "Time card request failed"));
   return data;
 };
-const localValue = (iso?: string | null) =>
-  iso
-    ? new Date(
-        new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000,
-      )
-        .toISOString()
-        .slice(0, 16)
-    : "";
-const localNow = (offsetMinutes = 0) => {
-  const date = new Date(Date.now() + offsetMinutes * 60000);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
+const localValue = (iso?: string | null, timezone = browserTimezone) =>
+  iso ? localInput(new Date(iso), timezone) : "";
+const localNow = (offsetMinutes = 0, timezone = browserTimezone) => {
+  return localInput(new Date(Date.now() + offsetMinutes * 60000), timezone);
 };
 function TimePicker({
   label,
@@ -120,6 +112,7 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
   const [entries, setEntries] = useState<Entry[]>([]),
     [deleted, setDeleted] = useState<Entry[]>([]),
     [options, setOptions] = useState<Options>({ boards: [], tasks: [] }),
+    [timezone, setTimezone] = useState(browserTimezone),
     [manual, setManual] = useState(false),
     [editing, setEditing] = useState<Entry | null>(null),
     [form, setForm] = useState(initialForm),
@@ -133,6 +126,7 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
   const load = () =>
     request(`/api/time?${filterQuery()}`)
       .then((data) => {
+        setTimezone(data.timezone || browserTimezone);
         setEntries(data.entries);
         setDeleted(data.deleted || []);
         setOptions(data.options);
@@ -166,8 +160,8 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
     setEditing(entry);
     setManual(true);
     setForm({
-      startedAt: localValue(entry.startedAt),
-      endedAt: localValue(entry.endedAt),
+      startedAt: localValue(entry.startedAt, timezone),
+      endedAt: localValue(entry.endedAt, timezone),
       boardId: String(entry.boardId || ""),
       taskId: String(entry.taskId || ""),
       note: entry.note,
@@ -210,8 +204,8 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
       const body = {
         action: editing ? "correct" : "manual",
         ...form,
-        startedAt: new Date(form.startedAt).toISOString(),
-        endedAt: new Date(form.endedAt).toISOString(),
+        startedAt: form.startedAt,
+        endedAt: form.endedAt,
         boardId: form.boardId || null,
         taskId: form.taskId || null,
       };
@@ -236,11 +230,7 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
     setForm((current) => {
       let endedAt = current.endedAt;
       if (current.startedAt && current.endedAt) {
-        const previousStart = new Date(current.startedAt).getTime();
-        const previousEnd = new Date(current.endedAt).getTime();
-        const duration = previousEnd - previousStart;
-        if (Number.isFinite(duration) && duration > 0)
-          endedAt = localValue(new Date(new Date(value).getTime() + duration).toISOString());
+        endedAt = shiftEndWithStartChange(current.startedAt, current.endedAt, value);
       }
       return { ...current, startedAt: value, endedAt };
     });
@@ -261,8 +251,8 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
             setEditing(null);
             setForm({
               ...initialForm,
-              startedAt: localNow(),
-              endedAt: localNow(60),
+              startedAt: localNow(0, timezone),
+              endedAt: localNow(60, timezone),
             });
             setManual(true);
           }}
@@ -312,11 +302,12 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
             className={`time-card-row ${!entry.endedAt ? "active" : ""}`}
             key={entry.id}
           >
-            <span>{new Date(entry.startedAt).toLocaleDateString()}</span>
+            <span>{new Date(entry.startedAt).toLocaleDateString([], { timeZone: timezone })}</span>
             <span>
               {new Date(entry.startedAt).toLocaleTimeString([], {
                 hour: "numeric",
                 minute: "2-digit",
+                timeZone: timezone,
               })}
             </span>
             <span>
@@ -324,6 +315,7 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
                 ? new Date(entry.endedAt).toLocaleTimeString([], {
                     hour: "numeric",
                     minute: "2-digit",
+                    timeZone: timezone,
                   })
                 : "Running"}
             </span>
@@ -368,7 +360,7 @@ export function TimeCard({ notify }: { notify: (message: string) => void }) {
           <p>Deleted entries remain recoverable here for 30 days.</p>
           {deleted.map((entry) => (
             <div key={entry.id}>
-              <span>{new Date(entry.startedAt).toLocaleString()} · {entry.taskTitle || entry.boardName || "General work"}</span>
+              <span>{new Date(entry.startedAt).toLocaleString([], { timeZone: timezone })} · {entry.taskTitle || entry.boardName || "General work"}</span>
               <button className="secondary" onClick={() => void restore(entry)}>Restore</button>
             </div>
           ))}

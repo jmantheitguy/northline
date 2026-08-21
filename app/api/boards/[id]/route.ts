@@ -18,9 +18,23 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const board = await db
     .prepare(
-      "SELECT id,public_id AS \"boardKey\",name,description,owner_id AS \"ownerId\",created_by AS \"createdBy\",workspace_id AS \"workspaceId\" FROM boards WHERE id=?",
+      `SELECT b.id,b.public_id AS "boardKey",b.name,b.description,b.owner_id AS "ownerId",b.created_by AS "createdBy",b.workspace_id AS "workspaceId",
+        u.name AS "ownerName",u.email AS "ownerEmail",u.avatar AS "ownerAvatar",w.kind AS "workspaceKind"
+       FROM boards b JOIN users u ON u.id=b.owner_id JOIN workspaces w ON w.id=b.workspace_id WHERE b.id=?`,
     )
-    .get(id) as { id: number; workspaceId: number };
+    .get(id) as {
+      id: number;
+      boardKey: string;
+      name: string;
+      description: string;
+      ownerId: number;
+      createdBy: number;
+      workspaceId: number;
+      ownerName: string;
+      ownerEmail: string;
+      ownerAvatar: string | null;
+      workspaceKind: "personal" | "shared";
+    };
   const taskRows = await db
     .prepare(
       `SELECT t.id,t.title,t.description,t.status,t.priority,t.tag,t.due_date AS "due",u.id AS "ownerId",u.name AS "ownerName",u.avatar AS "ownerAvatar",
@@ -39,6 +53,45 @@ export async function GET(
       "SELECT u.id,u.name,u.email,u.avatar,bm.permission FROM board_members bm JOIN users u ON u.id=bm.user_id WHERE bm.board_id=? ORDER BY u.name",
     )
     .all(id);
+  const sharedWith = new Map<number, {
+    id: number;
+    name: string;
+    email: string;
+    avatar: string | null;
+    permission: "owner" | "viewer" | "editor";
+    source: string;
+  }>();
+  sharedWith.set(board.ownerId, {
+    id: board.ownerId,
+    name: board.ownerName,
+    email: board.ownerEmail,
+    avatar: board.ownerAvatar,
+    permission: "owner",
+    source: "board owner",
+  });
+  type AccessRow = { id: number; name: string; email: string; avatar: string | null; permission?: string };
+  const addAccess = (row: AccessRow, source: string) => {
+    if (!row?.id || Number(row.id) === board.ownerId) return;
+    const nextPermission = row.permission === "editor" ? "editor" : "viewer";
+    const current = sharedWith.get(Number(row.id));
+    const rank = (value: string) => value === "editor" ? 2 : value === "viewer" ? 1 : 0;
+    if (!current || rank(nextPermission) > rank(current.permission))
+      sharedWith.set(Number(row.id), { ...row, id: Number(row.id), permission: nextPermission, source });
+  };
+  for (const row of members as AccessRow[]) addAccess(row, "direct board share");
+  if (board.workspaceKind === "shared") {
+    const inherited = await db.prepare(`
+      SELECT DISTINCT u.id,u.name,u.email,u.avatar,access.permission FROM users u
+      JOIN (
+        SELECT w.owner_id user_id,'editor' permission FROM workspaces w WHERE w.id=?
+        UNION ALL SELECT wm.user_id,wm.permission FROM workspace_members wm WHERE wm.workspace_id=?
+        UNION ALL SELECT tm.user_id,tw.permission FROM team_workspaces tw JOIN team_members tm ON tm.team_id=tw.team_id WHERE tw.workspace_id=?
+        UNION ALL SELECT t.owner_id,tw.permission FROM team_workspaces tw JOIN teams t ON t.id=tw.team_id WHERE tw.workspace_id=?
+      ) access ON access.user_id=u.id
+      WHERE u.status='Active'
+      ORDER BY LOWER(u.name),u.id`).all(board.workspaceId, board.workspaceId, board.workspaceId, board.workspaceId) as AccessRow[];
+    for (const row of inherited) addAccess(row, "shared workspace");
+  }
   const workspaceMembers = await db
     .prepare(
       `SELECT DISTINCT u.id,u.name,u.email,u.avatar,CASE WHEN w.owner_id=u.id THEN 'owner' ELSE COALESCE(wm.permission,tw.permission,'viewer') END permission
@@ -100,6 +153,8 @@ export async function GET(
     board,
     tasks,
     members,
+    boardOwner: sharedWith.get(board.ownerId),
+    sharedWith: [...sharedWith.values()].sort((a, b) => a.name.localeCompare(b.name)),
     workspaceMembers,
     assignees,
     columns,
@@ -142,7 +197,10 @@ export async function PATCH(
     | undefined;
   if (!currentBoard)
     return NextResponse.json({ error: "Board not found" }, { status: 404 });
-  const { name, description, workspaceId } = await request.json();
+  const body = await request.json();
+  if (body.id !== undefined || body.boardId !== undefined || body.boardKey !== undefined || body.publicId !== undefined)
+    return NextResponse.json({ error: "Board IDs are permanent and cannot be changed" }, { status: 400 });
+  const { name, description, workspaceId } = body;
   const hasWorkspaceChange = workspaceId !== undefined;
   let targetWorkspace: number | undefined;
   let targetWorkspaceName = currentBoard.workspaceName;

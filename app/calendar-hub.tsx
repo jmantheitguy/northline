@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CollabPlanner } from "./collab-planner";
 import { apiErrorMessage, resilientFetch } from "./client-fetch";
+import { browserTimezone, localInput, shiftEndWithStartChange } from "./date-time";
 
 type CalendarSummary = {
   id: string;
@@ -84,15 +85,11 @@ const api = async (url: string, options?: RequestInit) => {
   return body;
 };
 const headers = { "Content-Type": "application/json" };
-const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const timezone = browserTimezone;
 const utcTimestamp = (value: string) =>
   /Z$|[+-]\d{2}:?\d{2}$/.test(value)
     ? value
     : `${value.replace(" ", "T")}Z`;
-const localInput = (date: Date) =>
-  new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
 const initialCalendar = {
   name: "",
   color: "#7c6ce7",
@@ -119,7 +116,7 @@ const initialEvent = {
   collabEnabled: false,
 };
 
-export function CalendarHub({ notify }: { notify: (message: string) => void }) {
+export function CalendarHub({ notify, userTimezone = timezone }: { notify: (message: string) => void; userTimezone?: string }) {
   const [calendars, setCalendars] = useState<CalendarSummary[]>([]),
     [deletedCalendars, setDeletedCalendars] = useState<DeletedCalendar[]>([]),
     [activeId, setActiveId] = useState<string | null>(null),
@@ -252,8 +249,8 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
             title: event.title,
             description: event.description,
             location: event.location,
-            startAt: localInput(new Date(event.startAt)),
-            endAt: localInput(new Date(event.endAt)),
+            startAt: localInput(new Date(event.startAt), event.timezone),
+            endAt: localInput(new Date(event.endAt), event.timezone),
             allDay: event.allDay === 1,
             status: event.status,
             timezone: event.timezone,
@@ -266,9 +263,9 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
           }
         : {
             ...initialEvent,
-            startAt: localInput(start),
-            endAt: localInput(end),
-            timezone: detail?.calendar.timezone || timezone,
+            startAt: localInput(start, detail?.calendar.timezone || userTimezone),
+            endAt: localInput(end, detail?.calendar.timezone || userTimezone),
+            timezone: detail?.calendar.timezone || userTimezone,
           },
     );
     setEventModal(true);
@@ -278,8 +275,8 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
     try {
       const body = {
         ...eventForm,
-        startAt: new Date(eventForm.startAt).toISOString(),
-        endAt: new Date(eventForm.endAt).toISOString(),
+        startAt: eventForm.startAt,
+        endAt: eventForm.endAt,
       };
       await api(
         editing
@@ -471,6 +468,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
                   color={detail.calendar.color}
                   canEdit={canEdit}
                   openEvent={openEvent}
+                  timezone={userTimezone}
                 />
               )}
               {mode === "week" && (
@@ -479,6 +477,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
                   events={events}
                   color={detail.calendar.color}
                   openEvent={openEvent}
+                  timezone={userTimezone}
                 />
               )}
               {mode === "day" && (
@@ -488,6 +487,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
                   color={detail.calendar.color}
                   canEdit={canEdit}
                   openEvent={openEvent}
+                  timezone={userTimezone}
                 />
               )}
               {mode === "agenda" && (
@@ -495,6 +495,7 @@ export function CalendarHub({ notify }: { notify: (message: string) => void }) {
                   events={events}
                   color={detail.calendar.color}
                   openEvent={openEvent}
+                  timezone={userTimezone}
                 />
               )}
               {showActivity && isOwner && (
@@ -551,12 +552,14 @@ function MonthView({
   color,
   canEdit,
   openEvent,
+  timezone,
 }: {
   range: { start: Date; end: Date };
   events: CalendarEvent[];
   color: string;
   canEdit: boolean;
   openEvent: (event?: CalendarEvent, date?: Date) => void;
+  timezone: string;
 }) {
   const days = [];
   for (
@@ -615,6 +618,7 @@ function MonthView({
                     {event.allDay
                       ? "All day"
                       : new Date(event.startAt).toLocaleTimeString([], {
+                          timeZone: timezone,
                           hour: "numeric",
                           minute: "2-digit",
                         })}
@@ -634,11 +638,13 @@ function WeekView({
   events,
   color,
   openEvent,
+  timezone,
 }: {
   range: { start: Date };
   events: CalendarEvent[];
   color: string;
   openEvent: (event: CalendarEvent) => void;
+  timezone: string;
 }) {
   const days = Array.from(
     { length: 7 },
@@ -666,6 +672,7 @@ function WeekView({
                 >
                   <time>
                     {new Date(event.startAt).toLocaleTimeString([], {
+                      timeZone: timezone,
                       hour: "numeric",
                       minute: "2-digit",
                     })}
@@ -684,10 +691,12 @@ function AgendaView({
   events,
   color,
   openEvent,
+  timezone,
 }: {
   events: CalendarEvent[];
   color: string;
   openEvent: (event: CalendarEvent) => void;
+  timezone: string;
 }) {
   const grouped = Object.groupBy(events, (event) =>
     new Date(event.startAt).toDateString(),
@@ -706,12 +715,14 @@ function AgendaView({
               <time>
                 <b>
                   {new Date(event.startAt).toLocaleTimeString([], {
+                    timeZone: timezone,
                     hour: "numeric",
                     minute: "2-digit",
                   })}
                 </b>
                 <small>
                   {new Date(event.endAt).toLocaleTimeString([], {
+                    timeZone: timezone,
                     hour: "numeric",
                     minute: "2-digit",
                   })}
@@ -981,7 +992,7 @@ function EventModal({
         method: "POST",
         headers,
         body: JSON.stringify({
-          remindAt: new Date(remindAt).toISOString(),
+          remindAt,
           message: `Upcoming: ${editing.title}`,
         }),
       });
@@ -1015,7 +1026,15 @@ function EventModal({
               type="datetime-local"
               value={form.startAt}
               onChange={(event) =>
-                setForm({ ...form, startAt: event.target.value })
+                setForm({
+                  ...form,
+                  startAt: event.target.value,
+                  endAt: shiftEndWithStartChange(
+                    form.startAt,
+                    form.endAt,
+                    event.target.value,
+                  ),
+                })
               }
             />
           </label>
@@ -1152,12 +1171,14 @@ function DayView({
   color,
   canEdit,
   openEvent,
+  timezone,
 }: {
   date: Date;
   events: CalendarEvent[];
   color: string;
   canEdit: boolean;
   openEvent: (event?: CalendarEvent, date?: Date) => void;
+  timezone: string;
 }) {
   return (
     <div className="day-calendar">
@@ -1189,11 +1210,13 @@ function DayView({
                   <b>{event.title}</b>
                   <small>
                     {new Date(event.startAt).toLocaleTimeString([], {
+                      timeZone: timezone,
                       hour: "numeric",
                       minute: "2-digit",
                     })}
                     –
                     {new Date(event.endAt).toLocaleTimeString([], {
+                      timeZone: timezone,
                       hour: "numeric",
                       minute: "2-digit",
                     })}

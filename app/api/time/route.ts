@@ -10,7 +10,7 @@ import {
   validateAssociation,
   validateClockIn,
 } from "@/lib/time-entries";
-import { zonedDateTimeToUtc } from "@/lib/timezones";
+import { parseDateTimeInZone, zonedDateTimeToUtc } from "@/lib/timezones";
 
 const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
   const deleted = await db
     .prepare(`${entrySelect} WHERE e.user_id=? AND e.deleted_at IS NOT NULL AND e.deleted_at>=datetime('now','-30 days') ORDER BY e.deleted_at DESC LIMIT 50`)
     .all(user.id);
-  return NextResponse.json({ active, entries, deleted, options: await timeOptions(user) });
+  return NextResponse.json({ timezone: user.timezone, active, entries, deleted, options: await timeOptions(user) });
 }
 
 export async function POST(request: Request) {
@@ -106,8 +106,8 @@ export async function POST(request: Request) {
       );
     }
     if (body.action === "manual") {
-      const startedAt = new Date(body.startedAt).toISOString(),
-        endedAt = new Date(body.endedAt).toISOString();
+      const startedAt = parseDateTimeInZone(body.startedAt, user.timezone).toISOString(),
+        endedAt = parseDateTimeInZone(body.endedAt, user.timezone).toISOString();
       const duration = secondsBetween(startedAt, endedAt);
       await ensureNoOverlap(user.id, startedAt, endedAt);
       const result = await db
