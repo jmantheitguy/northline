@@ -1,7 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  Component,
+  useEffect,
+  useMemo,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 
 type Calendar = {
   id: string;
@@ -101,17 +108,67 @@ const blank = () => {
   };
 };
 
-export function CollabPlanner({
+type CollabPlannerProps = { notify: (message: string) => void };
+
+type CollabPlannerBoundaryState = {
+  error: Error | null;
+  retryKey: number;
+};
+
+class CollabPlannerBoundary extends Component<
+  CollabPlannerProps,
+  CollabPlannerBoundaryState
+> {
+  state: CollabPlannerBoundaryState = { error: null, retryKey: 0 };
+
+  static getDerivedStateFromError(error: Error): CollabPlannerBoundaryState {
+    return { error, retryKey: 0 };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Collab planner failed to render", error, info.componentStack);
+  }
+
+  retry = () => {
+    this.setState((current) => ({
+      error: null,
+      retryKey: current.retryKey + 1,
+    }));
+  };
+
+  render(): ReactNode {
+    if (this.state.error) {
+      return (
+        <section className="collab-error" role="alert">
+          <h2>Collab planner couldn&apos;t load</h2>
+          <p>
+            The planner hit an unexpected error while loading this workspace.
+            Your boards and calendars are unchanged.
+          </p>
+          <button className="primary" onClick={this.retry}>
+            Try again
+          </button>
+        </section>
+      );
+    }
+    return <CollabPlannerContent key={this.state.retryKey} {...this.props} />;
+  }
+}
+
+export function CollabPlanner(props: CollabPlannerProps) {
+  return <CollabPlannerBoundary {...props} />;
+}
+
+function CollabPlannerContent({
   notify,
-}: {
-  notify: (message: string) => void;
-}) {
+}: CollabPlannerProps) {
   const [events, setEvents] = useState<ScheduleEvent[]>([]),
     [people, setPeople] = useState<Person[]>([]),
     [calendars, setCalendars] = useState<Calendar[]>([]),
     [requests, setRequests] = useState<CollabRequest[]>([]),
     [me, setMe] = useState(0),
     [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState<string | null>(null),
     [showPastCollabs, setShowPastCollabs] = useState(false),
     [now, setNow] = useState(() => Date.now());
   const [modal, setModal] = useState<
@@ -129,6 +186,7 @@ export function CollabPlanner({
   );
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     setNow(Date.now());
     try {
       const start = new Date(
@@ -142,13 +200,19 @@ export function CollabPlanner({
         call("/api/collab/requests"),
         call("/api/calendars"),
       ]);
-      setEvents(schedule.events);
-      setPeople(schedule.people);
-      setRequests(requestData.requests);
-      setMe(requestData.currentUserId);
-      setCalendars(calendarData.calendars);
+      setEvents(Array.isArray(schedule?.events) ? schedule.events : []);
+      setPeople(Array.isArray(schedule?.people) ? schedule.people : []);
+      setRequests(
+        Array.isArray(requestData?.requests) ? requestData.requests : [],
+      );
+      setMe(Number(requestData?.currentUserId || 0));
+      setCalendars(
+        Array.isArray(calendarData?.calendars) ? calendarData.calendars : [],
+      );
     } catch (error) {
-      notify((error as Error).message);
+      const message = (error as Error).message || "Unable to load collabs";
+      setLoadError(message);
+      notify(message);
     } finally {
       setLoading(false);
     }
@@ -415,6 +479,15 @@ export function CollabPlanner({
             In Calendar settings, choose “Streaming schedule” and Team
             visibility. Your personal calendars stay private.
           </span>
+        </div>
+      )}
+      {loadError && !loading && (
+        <div className="collab-callout collab-load-error" role="alert">
+          <b>We couldn&apos;t load the latest collaboration data.</b>
+          <span>{loadError}. Your existing data is safe.</span>
+          <button className="secondary" onClick={() => void load()}>
+            Try again
+          </button>
         </div>
       )}
       <section className="collab-grid">

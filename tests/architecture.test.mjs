@@ -884,6 +884,9 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(ui, /Show past collabs/);
   assert.match(ui, /visibleRequests/);
   assert.match(ui, /visibleEvents/);
+  assert.match(ui, /CollabPlannerBoundary/);
+  assert.ok(ui.includes("Array.isArray(schedule?.events)"));
+  assert.ok(ui.toLowerCase().includes("collab planner couldn&apos;t load"));
   assert.match(ui, /collabRequestId/);
   assert.match(ui, /Ask to collab/);
   assert.match(ui, /Reschedule collab/);
@@ -897,6 +900,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(styles, /\.collab-grid/);
   assert.match(styles, /\.collab-picker-search/);
   assert.match(styles, /\.collab-selected-streamers/);
+  assert.match(styles, /\.collab-error/);
 });
 
 test("directory profiles expose only explicitly public stream schedules", async () => {
