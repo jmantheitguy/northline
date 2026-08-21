@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.deployment.sha }}
+          fetch-depth: 2
 
       - name: Check for a semver major-version change
         id: major
@@ -38,7 +39,7 @@ jobs:
           previous_version="$(git show "${DEPLOY_SHA}^:lib/version.ts" 2>/dev/null | sed -n 's/^export const NORTHLINE_VERSION = "\([^"]*\)";$/\1/p' || true)"
           current_major="$(printf '%s\n' "$current_version" | sed -nE 's/.*v([0-9]+)\..*/\1/p')"
           previous_major="$(printf '%s\n' "$previous_version" | sed -nE 's/.*v([0-9]+)\..*/\1/p')"
-          if [ -n "$current_major" ] && [ "$current_major" != "$previous_major" ]; then
+          if [ -n "$current_major" ] && [ -n "$previous_major" ] && [ "$current_major" != "$previous_major" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"

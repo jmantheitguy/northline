@@ -651,6 +651,8 @@ test("release announcements follow successful deployments without duplicates", a
   assert.match(deploy, /Discord announcement skipped because the semver major version did not change/);
   assert.match(deploy, /announce-discord\.mjs/);
   assert.match(workflow, /Check for a semver major-version change/);
+  assert.match(workflow, /fetch-depth: 2/);
+  assert.match(workflow, /-n "\$previous_major"/);
   assert.match(workflow, /steps\.major\.outputs\.changed == 'true'/);
   assert.match(announce, /NORTHLINE_RELEASE_CHANNEL_IDS/);
   assert.match(announce, /Promise\.all/);

@@ -54,7 +54,7 @@ if [ -z "$current_major" ]; then
   echo "Unable to determine the semver major version" >&2
   exit 1
 fi
-if [ "$current_major" = "$previous_major" ]; then
+if [ -z "$previous_major" ] || [ "$current_major" = "$previous_major" ]; then
   echo "Deployed $version ($commit); Discord announcement skipped because the semver major version did not change"
   exit 0
 fi
