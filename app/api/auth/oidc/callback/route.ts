@@ -5,7 +5,7 @@ import { createSession } from "@/lib/auth";
 import { oidcConfig } from "@/lib/oidc";
 import { syncAuthentikDirectory } from "@/lib/authentik-directory";
 
-type UserInfo={sub:string;email?:string;name?:string;preferred_username?:string;picture?:string;groups?:string[]};
+type UserInfo={sub:string;email?:string;name?:string;preferred_username?:string;picture?:string;groups?:string[]|string};
 
 type IdentityUser={id:number;oidcSubject:string|null;directoryId:string|null};
 
@@ -50,10 +50,15 @@ export async function GET(request:NextRequest) {
   const userResponse=await fetch(`${config.origin}/application/o/userinfo/`,{headers:{Authorization:`Bearer ${token.access_token}`}});
   if(!userResponse.ok) return authErrorRedirect(config.publicUrl,"userinfo");
   const profile=await userResponse.json() as UserInfo;
-  const groups=Array.isArray(profile.groups)?profile.groups:[];
+  const groups=(Array.isArray(profile.groups)?profile.groups:typeof profile.groups==="string"?[profile.groups]:[])
+    .map((group)=>String(group).trim())
+    .filter(Boolean);
   const isAdmin=groups.includes("Northline Admins");
-  const hasAccess=isAdmin || groups.includes("Northline Users");
-  if(!hasAccess) return authErrorRedirect(config.publicUrl,"access_denied");
+  const isMember=groups.includes("Northline Users");
+  if(!isAdmin && !isMember){
+    console.warn("OIDC access denied: expected Northline group",{groupClaimType:typeof profile.groups,groupCount:groups.length,adminMatch:isAdmin,memberMatch:isMember});
+    return authErrorRedirect(config.publicUrl,"access_denied");
+  }
   const email=(profile.email || profile.preferred_username)?.trim().toLowerCase();
   if(!email || !profile.sub) return authErrorRedirect(config.publicUrl,"incomplete_profile");
   const name=profile.name || profile.preferred_username || email;
