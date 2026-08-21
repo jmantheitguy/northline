@@ -66,8 +66,11 @@ export async function GET(request:NextRequest) {
   let userId:number;
   try{userId=await resolveIdentity({sub:profile.sub,email,name,avatar:profile.picture||null,role});}
   catch(error){console.error("OIDC identity resolution failed",error instanceof Error?error.message:"unknown error");jar.delete("northline_oidc_state");jar.delete("northline_oidc_verifier");return authErrorRedirect(config.publicUrl,"identity_conflict");}
-  try{await syncAuthentikDirectory(true);}catch(error){console.error("Post-login Authentik directory sync failed",error);}
   await createSession(userId);
   jar.delete("northline_oidc_state"); jar.delete("northline_oidc_verifier");
+  // Directory/profile synchronization is enrichment, not an authentication
+  // prerequisite. Run it after the session is established so a slow or
+  // temporarily unavailable Authentik API cannot hold the login callback open.
+  void syncAuthentikDirectory(true).catch(error=>console.error("Post-login Authentik directory sync failed",error));
   return NextResponse.redirect(config.publicUrl);
 }
