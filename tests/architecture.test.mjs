@@ -120,13 +120,24 @@ test("PostgreSQL list queries order DISTINCT rows by selected or outer fields", 
 });
 
 test("board navigation normalizes database identifiers and keeps populated workspaces selected", async () => {
-  const ui = await read("app/northline-app.tsx");
+  const [ui, boards, styles] = await Promise.all([
+    read("app/northline-app.tsx"),
+    read("app/api/boards/route.ts"),
+    read("app/globals.css"),
+  ]);
   assert.match(ui, /const normalizedBoards = \(d\.boards \|\| \[\]\)\.map/);
   assert.match(ui, /id: Number\(board\.id\)/);
   assert.match(ui, /const boardWorkspaceIds = new Set/);
-  assert.match(ui, /boardWorkspaceIds\.has\(current\)/);
+  assert.doesNotMatch(ui, /boardWorkspaceIds\.has\(current\)/);
   assert.match(ui, /Number\(board\.navigationWorkspaceId \?\? board\.workspaceId\)/);
   assert.match(ui, /const visibleBoards = workspaceBoards/);
+  assert.match(ui, /const sharedBoards = Array\.from/);
+  assert.match(ui, /workspace-menu-list/);
+  assert.match(ui, /board\.ownerName/);
+  assert.match(ui, /board\.workspaceName/);
+  assert.match(boards, /w\.name AS "workspaceName"/);
+  assert.match(styles, /\.workspace-menu-list[\s\S]*overflow-y: auto/);
+  assert.match(styles, /\.sidebar \.boards[\s\S]*overflow-y: auto/);
 });
 
 test("Task Buddy automatic notifications are creator-routed and preference aware", async () => {

@@ -8,7 +8,7 @@ export async function GET(){
   const personal=await ensurePersonalWorkspace(user.id,user.name);
   const personalBoardCount=(await db.prepare("SELECT COUNT(*) count FROM boards WHERE workspace_id=?").get(personal.id) as {count:number}).count;
   if(!personalBoardCount){const result=await db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id,personal.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();await db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);await createDefaultBoardColumns(id)}
-  const boards=await db.prepare(`SELECT DISTINCT b.id,b.public_id AS "boardKey",b.name,b.description,b.owner_id AS "ownerId",u.name AS "ownerName",b.workspace_id AS "workspaceId",b.updated_at AS "updatedAt",
+  const boards=await db.prepare(`SELECT DISTINCT b.id,b.public_id AS "boardKey",b.name,b.description,b.owner_id AS "ownerId",u.name AS "ownerName",b.workspace_id AS "workspaceId",w.name AS "workspaceName",b.updated_at AS "updatedAt",
     CASE WHEN b.owner_id=? OR w.owner_id=? OR wm.user_id IS NOT NULL OR team.owner_id=? OR tm.user_id IS NOT NULL THEN b.workspace_id ELSE 0 END AS "navigationWorkspaceId",
     CASE WHEN b.owner_id=? OR w.owner_id=? THEN 'owner' WHEN bm.permission='editor' OR wm.permission='editor' OR tw.permission='editor' THEN 'editor' ELSE 'viewer' END AS permission,
     (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id AND t.archived_at IS NULL) AS "taskCount"

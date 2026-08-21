@@ -1094,7 +1094,15 @@ button {
   display: grid;
   gap: 3px;
 }
-.workspace-menu > button {
+.workspace-menu-list {
+  max-height: min(46vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 3px;
+  padding-right: 2px;
+}
+.workspace-menu-list > button {
   border: 0;
   background: transparent;
   color: #c9c8d3;
@@ -1106,17 +1114,17 @@ button {
   text-align: left;
   gap: 7px;
 }
-.workspace-menu > button.active,
-.workspace-menu > button:hover {
+.workspace-menu-list > button.active,
+.workspace-menu-list > button:hover {
   background: #343142;
   color: #fff;
 }
-.workspace-menu > button b {
+.workspace-menu-list > button b {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.workspace-menu > button small {
+.workspace-menu-list > button small {
   font-size: 9px;
   color: #918e9c;
   text-transform: capitalize;
@@ -1187,6 +1195,25 @@ button {
 .sidebar-bottom > button span {
   width: 16px;
   text-align: center;
+}
+.sidebar .boards {
+  max-height: min(24vh, 250px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+.nav-board-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.nav-board-copy small {
+  color: #858391;
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sidebar nav em {
   margin-left: auto;

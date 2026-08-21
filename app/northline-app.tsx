@@ -49,6 +49,7 @@ type BoardSummary = {
   permission: "owner" | "editor" | "viewer";
   taskCount: number;
   workspaceId: number;
+  workspaceName: string;
   navigationWorkspaceId: number;
 };
 type Workspace = {
@@ -61,6 +62,7 @@ type Workspace = {
   permission: "owner" | "editor" | "viewer";
   boardCount: number;
   memberCount: number;
+  virtual?: boolean;
 };
 type Member = {
   id: number;
@@ -327,15 +329,17 @@ export function NorthlineApp() {
         ),
         taskCount: Number(board.taskCount || 0),
       }));
-      const normalizedWorkspaces = (d.workspaces || []).map(
-        (workspace: Workspace) => ({
+      // Direct shares remain permission-filtered by the API, but are shown in
+      // a global Shared with me section rather than as a selectable workspace.
+      const normalizedWorkspaces = (d.workspaces || [])
+        .filter((workspace: Workspace) => !workspace.virtual)
+        .map((workspace: Workspace) => ({
           ...workspace,
           id: Number(workspace.id),
           ownerId: Number(workspace.ownerId),
           boardCount: Number(workspace.boardCount || 0),
           memberCount: Number(workspace.memberCount || 0),
-        }),
-      );
+        }));
       setBoards(normalizedBoards);
       setWorkspaces(normalizedWorkspaces);
       const requested = new URLSearchParams(window.location.search).get(
@@ -351,9 +355,13 @@ export function NorthlineApp() {
               board.navigationWorkspaceId ?? board.workspaceId,
           ),
         ),
-        requestedWorkspaceId = requestedBoard
-          ? (requestedBoard.navigationWorkspaceId ?? requestedBoard.workspaceId)
-          : null,
+        requestedWorkspaceId =
+          requestedBoard &&
+          (requestedBoard.navigationWorkspaceId ?? requestedBoard.workspaceId) !==
+            0
+            ? (requestedBoard.navigationWorkspaceId ??
+              requestedBoard.workspaceId)
+            : null,
         fallbackWorkspaceId =
           normalizedWorkspaces.find((workspace: Workspace) =>
             boardWorkspaceIds.has(workspace.id),
@@ -364,8 +372,7 @@ export function NorthlineApp() {
           (current &&
           normalizedWorkspaces.some(
             (workspace: Workspace) => workspace.id === current,
-          ) &&
-          (normalizedBoards.length === 0 || boardWorkspaceIds.has(current))
+          )
             ? current
             : fallbackWorkspaceId),
       );
@@ -542,6 +549,18 @@ export function NorthlineApp() {
       Number(board.navigationWorkspaceId ?? board.workspaceId) ===
       Number(activeWorkspace?.id),
   );
+  const sharedBoards = Array.from(
+    new Map(
+      [
+        ...workspaceBoards.filter((board) => board.permission !== "owner"),
+        ...boards.filter(
+          (board) =>
+            board.navigationWorkspaceId === 0 &&
+            (board.permission === "editor" || board.permission === "viewer"),
+        ),
+      ].map((board) => [board.id, board]),
+    ).values(),
+  );
   // The API is the authorization boundary, while the selected workspace
   // controls navigation. Never mix boards from another workspace into this
   // view when a workspace has no boards of its own.
@@ -624,27 +643,29 @@ export function NorthlineApp() {
         </button>
         {workspaceMenu && (
           <div className="workspace-menu">
-            {workspaces.map((workspace) => (
-              <button
-                className={workspace.id === activeWorkspace?.id ? "active" : ""}
-                key={workspace.id}
-                onClick={() => {
-                  setActiveWorkspaceId(workspace.id);
-                  const first = boards.find(
-                    (board) =>
-                      (board.navigationWorkspaceId ?? board.workspaceId) ===
-                      workspace.id,
-                  );
-                  setActiveBoardId(first?.id || null);
-                  setView("board");
-                  setWorkspaceMenu(false);
-                }}
-              >
-                <span>{workspace.kind === "personal" ? "♙" : "♜"}</span>
-                <b>{workspace.name}</b>
-                <small>{workspace.permission}</small>
-              </button>
-            ))}
+            <div className="workspace-menu-list">
+              {workspaces.map((workspace) => (
+                <button
+                  className={workspace.id === activeWorkspace?.id ? "active" : ""}
+                  key={workspace.id}
+                  onClick={() => {
+                    setActiveWorkspaceId(workspace.id);
+                    const first = boards.find(
+                      (board) =>
+                        (board.navigationWorkspaceId ?? board.workspaceId) ===
+                        workspace.id,
+                    );
+                    setActiveBoardId(first?.id || null);
+                    setView("board");
+                    setWorkspaceMenu(false);
+                  }}
+                >
+                  <span>{workspace.kind === "personal" ? "♙" : "♜"}</span>
+                  <b>{workspace.name}</b>
+                  <small>{workspace.permission}</small>
+                </button>
+              ))}
+            </div>
             <div>
               <button
                 onClick={() => {
@@ -742,11 +763,7 @@ export function NorthlineApp() {
           <span>SHARED WITH ME</span>
         </div>
         <nav className="boards">
-          {visibleBoards
-            .filter(
-              (b) => b.permission === "editor" || b.permission === "viewer",
-            )
-            .map((b) => (
+          {sharedBoards.map((b) => (
               <BoardNav
                 key={b.id}
                 board={b}
@@ -758,9 +775,7 @@ export function NorthlineApp() {
                 }}
               />
             ))}
-          {!boards.some(
-            (b) => b.permission === "editor" || b.permission === "viewer",
-          ) && <span className="nav-empty">No shared boards</span>}
+          {!sharedBoards.length && <span className="nav-empty">No shared boards</span>}
         </nav>
         <div className="sidebar-bottom">
           {isAdmin && (
@@ -1147,7 +1162,15 @@ function BoardNav({
   return (
     <button className={active ? "active" : ""} onClick={open}>
       <i className={`dot ${shared ? "cyan" : "purple"}`} />
-      <span className="nav-board-name">{board.name}</span>
+      <span className="nav-board-copy">
+        <span className="nav-board-name">{board.name}</span>
+        {shared && (
+          <small>
+            {board.ownerName}
+            {board.workspaceName ? ` · ${board.workspaceName}` : ""}
+          </small>
+        )}
+      </span>
       <em>{board.taskCount}</em>
     </button>
   );
@@ -3764,6 +3787,14 @@ function NorthlineModal({
       statusName: string;
     }>
   >([]);
+  useEffect(() => {
+    if (type === "board-create" && activeWorkspace?.id) {
+      setBoardForm((current) => ({
+        ...current,
+        workspaceId: String(activeWorkspace.id),
+      }));
+    }
+  }, [type, activeWorkspace?.id]);
   useEffect(() => {
     if (type === "workspace-manage" && activeWorkspace)
       jsonFetch(`/api/workspaces/${activeWorkspace.id}`)

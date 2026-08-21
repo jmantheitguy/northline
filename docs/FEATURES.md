@@ -14,7 +14,7 @@ Every account receives one personal workspace. Its boards are private by default
 
 Global search returns tasks only from boards the signed-in user can access. Direct task links contain the opaque board ID and task ID, but the server still checks authorization.
 
-Directly shared boards from another member's private workspace appear in a virtual **Shared with me** workspace. This navigation group exposes only boards explicitly shared with the current member and never reveals the owner's other private boards.
+Directly shared boards from another member's private workspace appear in a global **Shared with me** section beneath the selected workspace. They remain available while browsing any workspace, but only for boards the signed-in member can access. Each entry is labeled with the sharing owner's name and originating workspace to distinguish duplicate board names; the owner's other private boards are never revealed.
 
 ## Teams
 
