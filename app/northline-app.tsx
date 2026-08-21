@@ -4676,8 +4676,9 @@ function NorthlineModal({
             <div className="settings-callout">
               <b>Private Task Buddy delivery</b>
               <span>
-                Enabled notifications are sent by DM to the assigned people.
-                Unassigned tasks are sent to the person who created them.
+                Assignment and due-date notices go to assignees. Other task
+                updates follow the task creator. Remind me sends a private DM
+                to every assignee, or the creator when no one is assigned.
               </span>
             </div>
             <div className="notification-options">

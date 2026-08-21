@@ -123,7 +123,7 @@ The application combines visual task boards, private collaboration, user adminis
 - Direct links from Discord messages to the related Northline task
 - Duplicate suppression plus shared delivery history and retry controls
 
-Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the shared server, and rebuild the container. Automatic task notifications privately DM the current assignees. A task-specific manual reminder privately DMs every assignee, or the task creator when there are no assignees; board-wide manual reminders privately DM every active member with board access. Every recipient must have linked Discord through Authentik. Northline disables everyone, role, and arbitrary mentions and reports failed private delivery in the Reminder center.
+Set `NORTHLINE_DISCORD_BOT_TOKEN` and `NORTHLINE_DISCORD_GUILD_ID` in the VM's private `.env`, invite the bot to the shared server, and rebuild the container. Assignment and due-date notifications privately DM the current assignees; other task updates follow the task creator. A task-specific manual reminder privately DMs every assignee, or the task creator when there are no assignees; board-wide manual reminders privately DM every active member with board access. Every recipient must have linked Discord through Authentik. Northline disables everyone, role, and arbitrary mentions and reports failed private delivery in the Reminder center.
 
 ## Architecture
 

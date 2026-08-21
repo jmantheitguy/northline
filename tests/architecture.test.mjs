@@ -191,7 +191,7 @@ test("manual task reminders target assigned people and format delivery guidance"
   assert.match(route, /recipient_user_id/);
   assert.match(worker, /COALESCE\(r\.recipient_user_id,t\.created_by,r\.created_by\)/);
   assert.match(ui, /Task reminders are sent to the assigned people/);
-  assert.match(ui, /Unassigned tasks are sent to the person who created them/);
+  assert.match(ui, /the creator when no one is assigned/);
   assert.match(ui, /settings-callout/);
 });
 
