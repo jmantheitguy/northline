@@ -67,6 +67,7 @@ test("board references are opaque while creator ownership remains relational", a
     read("lib/boards.ts"),
   ]);
   assert.match(boards, /created_by/);
+  assert.match(boards, /b\.updated_at updatedAt/);
   assert.match(schema, /brd_\$\{randomBytes\(16\)/);
   assert.match(detail, /boardKey/);
   assert.match(worker, /creatorName/);
