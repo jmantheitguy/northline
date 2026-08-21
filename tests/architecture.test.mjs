@@ -379,8 +379,9 @@ test("public documentation covers the deployed platform without private network 
 });
 
 test("teams are a server-authorized access boundary", async () => {
-  const [schema, teamHelper, teamRoute, membersRoute, workspaceRoute, boardList, calendarRoute, collab, ui, teamsUi] = await Promise.all([
+  const [schema, teamHelper, teamRoute, ownerRoute, membersRoute, workspaceRoute, boardList, calendarRoute, collab, ui, teamsUi] = await Promise.all([
     read("lib/db-sqlite.ts"), read("lib/teams.ts"), read("app/api/teams/[id]/route.ts"),
+    read("app/api/teams/[id]/owner/route.ts"),
     read("app/api/teams/[id]/members/route.ts"), read("app/api/teams/[id]/workspaces/route.ts"),
     read("app/api/boards/route.ts"), read("app/api/calendars/route.ts"), read("app/api/collab/schedule/route.ts"),
     read("app/collab-planner.tsx"), read("app/teams.tsx"),
@@ -392,6 +393,10 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(teamHelper, /team_members/);
   assert.match(teamHelper, /team_workspaces/);
   assert.match(teamRoute, /canManageTeam/);
+  assert.match(ownerRoute, /Only the team owner can transfer ownership/);
+  assert.match(ownerRoute, /team_members/);
+  assert.match(ownerRoute, /TEAM\.OWNER_TRANSFER/);
+  assert.match(ownerRoute, /db\.transaction/);
   assert.match(membersRoute, /Only the team owner can appoint managers/);
   assert.match(workspaceRoute, /Only the workspace owner can connect it to a team/);
   assert.match(boardList, /team_workspaces/);
@@ -406,6 +411,7 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(teamRoute, /\) members ORDER BY name COLLATE NOCASE/);
   assert.match(teamsUi, /team-color-preview/);
   assert.match(teamsUi, /normalizeTeamColor/);
+  assert.match(teamsUi, /Transfer ownership/);
 });
 
 test("beta security boundary rejects CSRF and throttles sensitive endpoints", async () => {

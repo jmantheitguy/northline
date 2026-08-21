@@ -18,7 +18,7 @@ Directly shared boards from another member's private workspace appear in a virtu
 
 ## Teams
 
-Teams are reusable lists of active Northline members. The creator is the team leader and can edit team details, add or remove members, appoint managers, and connect shared workspaces. Managers can maintain ordinary membership but cannot appoint or remove managers. Members can see the team and its linked resources; team-linked workspaces grant inherited viewer or editor access to every board inside that workspace. Direct board shares are preserved and remain independently permissioned.
+Teams are reusable lists of active Northline members. The creator is the team leader and can edit team details, add or remove members, appoint managers, transfer ownership to an active team member, and connect shared workspaces. Ownership transfers are atomic: the new owner receives owner controls, while the former owner remains on the team as a normal member. Managers can maintain ordinary membership but cannot appoint or remove managers or transfer ownership. Members can see the team and its linked resources; team-linked workspaces grant inherited viewer or editor access to every board inside that workspace. Direct board shares are preserved and remain independently permissioned.
 
 The Teams page provides member search, role controls, linked-workspace management, and clear empty states. People cards show the teams a person belongs to. The collab planner offers a team filter that puts a member's team roster at hand while retaining an all-streamers search option for cross-team invitations.
 
