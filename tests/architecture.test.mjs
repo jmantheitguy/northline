@@ -24,7 +24,8 @@ test("directory synchronization revokes removed Authentik accounts", async () =>
   const sync = await read("lib/authentik-directory.ts");
   assert.match(sync, /groups\.includes\("Northline Admins"\)/);
   assert.match(sync, /groups\.includes\("Northline Users"\)/);
-  assert.match(sync, /UPDATE users SET status='Suspended'/);
+  assert.match(sync, /remote\.is_active===false\?"Suspended":"Active"/);
+  assert.match(sync, /status='Active',directory_visible=0/);
   assert.match(sync, /DELETE FROM sessions WHERE user_id=/);
   assert.match(sync, /Authentik directory returned no users; refusing destructive reconciliation/);
   assert.match(sync, /Authentik directory returned no accessible Northline users; refusing destructive reconciliation/);

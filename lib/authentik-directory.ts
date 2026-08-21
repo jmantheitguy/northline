@@ -80,7 +80,15 @@ export async function syncAuthentikDirectory(force=false){
       else await db.prepare("INSERT INTO users(name,email,password_hash,role,status,directory_id,discord_user_id,discord_username,auth_source,identity_synced_at,avatar,directory_visible) VALUES(?,?,?,?,?,?,?,?,'oidc',CURRENT_TIMESTAMP,?,1)").run(remote.name||remote.username||email,email,"oidc-managed-account",isAdmin?"Admin":"Member",remote.is_active===false?"Suspended":"Active",directoryId,discordId,discordUsername,avatar);
     }
     const managed=await db.prepare("SELECT id,directory_id directoryId FROM users WHERE auth_source='oidc' AND directory_id IS NOT NULL").all() as Array<{id:number;directoryId:string}>;
-    for(const local of managed)if(!activeDirectoryIds.includes(local.directoryId)){await db.prepare("UPDATE users SET status='Suspended',identity_synced_at=CURRENT_TIMESTAMP WHERE id=?").run(local.id);await db.prepare("DELETE FROM sessions WHERE user_id=?").run(local.id);}
+    // A user who is active in Authentik but no longer assigned to a Northline
+    // group is not a disabled account. Keep the local record active so it does
+    // not look suspended in administration, but hide it from the member
+    // directory and revoke any existing Northline sessions. OIDC callbacks
+    // still require a Northline group before a new session can be created.
+    for(const local of managed)if(!activeDirectoryIds.includes(local.directoryId)){
+      await db.prepare("UPDATE users SET status='Active',directory_visible=0,identity_synced_at=CURRENT_TIMESTAMP WHERE id=?").run(local.id);
+      await db.prepare("DELETE FROM sessions WHERE user_id=?").run(local.id);
+    }
     await db.prepare("INSERT INTO app_meta(key,value) VALUES('authentik_directory_synced_at',CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=CURRENT_TIMESTAMP").run();
   });
   return {configured:true,synced:activeDirectoryIds.length,discordProfilesBackfilled};
