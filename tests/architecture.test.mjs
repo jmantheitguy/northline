@@ -642,11 +642,16 @@ test("moving boards preserves access and is authorized server-side", async () =>
 test("release announcements follow successful deployments without duplicates", async () => {
   const deploy = await read("ops/release/deploy-production.sh");
   const announce = await read("ops/release/announce-discord.mjs");
+  const workflow = await read(".github/workflows/release-announcement.yml");
   assert.match(deploy, /docker compose up -d --build/);
   assert.match(deploy, /health.*healthy/s);
   assert.match(deploy, /last-announced-deploy/);
   assert.match(deploy, /last-announced-deploy-\$\{channel_hash\}/);
+  assert.match(deploy, /previous_version/);
+  assert.match(deploy, /Discord announcement skipped because the semver major version did not change/);
   assert.match(deploy, /announce-discord\.mjs/);
+  assert.match(workflow, /Check for a semver major-version change/);
+  assert.match(workflow, /steps\.major\.outputs\.changed == 'true'/);
   assert.match(announce, /NORTHLINE_RELEASE_CHANNEL_IDS/);
   assert.match(announce, /Promise\.all/);
   assert.match(announce, /description:`\$\{shortCommit\} \$\{version\}: \$\{summary\}`/);

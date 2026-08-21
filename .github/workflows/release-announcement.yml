@@ -27,6 +27,23 @@ jobs:
         with:
           ref: ${{ github.event.deployment.sha }}
 
+      - name: Check for a semver major-version change
+        id: major
+        shell: bash
+        env:
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+        run: |
+          set -euo pipefail
+          current_version="$(sed -n 's/^export const NORTHLINE_VERSION = "\([^"]*\)";$/\1/p' lib/version.ts)"
+          previous_version="$(git show "${DEPLOY_SHA}^:lib/version.ts" 2>/dev/null | sed -n 's/^export const NORTHLINE_VERSION = "\([^"]*\)";$/\1/p' || true)"
+          current_major="$(printf '%s\n' "$current_version" | sed -nE 's/.*v([0-9]+)\..*/\1/p')"
+          previous_major="$(printf '%s\n' "$previous_version" | sed -nE 's/.*v([0-9]+)\..*/\1/p')"
+          if [ -n "$current_major" ] && [ "$current_major" != "$previous_major" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore the per-commit announcement marker
         id: marker
         uses: actions/cache/restore@v4
@@ -35,7 +52,7 @@ jobs:
           key: northline-release-announced-${{ github.event.deployment.sha }}
 
       - name: Announce the completed release
-        if: steps.marker.outputs.cache-hit != 'true'
+        if: steps.major.outputs.changed == 'true' && steps.marker.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -46,7 +63,7 @@ jobs:
           printf '%s\n' "${{ github.event.deployment.sha }}" > .northline-release-announced
 
       - name: Save the announcement marker
-        if: steps.marker.outputs.cache-hit != 'true'
+        if: steps.major.outputs.changed == 'true' && steps.marker.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: .northline-release-announced

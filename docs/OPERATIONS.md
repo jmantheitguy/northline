@@ -16,19 +16,22 @@ announcement are separate actions. A normal local development update is:
 3. Wait for Railway's `northline-staging / production` deployment status to
    report success and for `/health` to return HTTP 200.
 4. Confirm the GitHub **Announce completed Railway releases** workflow reports
-   success. It sends the text-only Task Buddy announcement to every configured
-   release channel after Railway finishes, not merely after a code push.
+   success when the release changes the semver major version. Minor and patch
+   deployments remain silent in Discord; a major release sends the text-only
+   Task Buddy announcement to every configured release channel after Railway
+   finishes, not merely after a code push.
 5. Confirm a recent successful backup and restore test in **Administration >
    Health**. Use the self-hosted procedure below only when intentionally
    deploying the Compose fallback.
 
 For the self-hosted Compose fallback, `sh ops/release/deploy-production.sh`
 runs `git pull --ff-only`, rebuilds and starts the service, waits for Docker's
-`northline` health status, prunes disposable build cache, and then sends one
-GitHub-style Task Buddy announcement to each configured channel. Per-channel
-markers make retries safe, even if one Discord destination was temporarily
-unavailable. `NORTHLINE_RELEASE_CHANNEL_ID` remains supported for a single
-channel. Ordinary GitHub pushes remain silent until that commit is deployed.
+`northline` health status, prunes disposable build cache, and only sends one
+GitHub-style Task Buddy announcement to each configured channel when the
+semver major version changed. Per-channel markers make retries safe, even if
+one Discord destination was temporarily unavailable. `NORTHLINE_RELEASE_CHANNEL_ID`
+remains supported for a single channel. Ordinary GitHub pushes and minor or
+patch deployments remain silent in Discord.
 Application startup performs additive schema initialization for the selected
 database driver.
 

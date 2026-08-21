@@ -16,6 +16,13 @@ if [ -z "$version" ]; then
   exit 1
 fi
 
+# Discord release announcements are reserved for semver major-version changes.
+# Compare against the deployed commit's parent so patch and minor deployments
+# remain silent while a new major release is still announced after health checks.
+previous_version="$(git show "${commit}^:lib/version.ts" 2>/dev/null | sed -n 's/^export const NORTHLINE_VERSION = "\([^\"]*\)";$/\1/p' || true)"
+current_major="$(printf '%s\n' "$version" | sed -nE 's/.*v([0-9]+)\..*/\1/p')"
+previous_major="$(printf '%s\n' "$previous_version" | sed -nE 's/.*v([0-9]+)\..*/\1/p')"
+
 docker compose up -d --build
 
 attempt=0
@@ -42,6 +49,15 @@ fi
 # every successful deployment. This does not remove running images, containers,
 # named volumes, or application data.
 docker builder prune --all --force >/dev/null || echo "Warning: unable to prune Docker build cache" >&2
+
+if [ -z "$current_major" ]; then
+  echo "Unable to determine the semver major version" >&2
+  exit 1
+fi
+if [ "$current_major" = "$previous_major" ]; then
+  echo "Deployed $version ($commit); Discord announcement skipped because the semver major version did not change"
+  exit 0
+fi
 
 mkdir -p runtime-status
 marker="runtime-status/last-announced-deploy"

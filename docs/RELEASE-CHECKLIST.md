@@ -15,7 +15,13 @@
 
 ## After deployment
 
-- Confirm Railway reports a healthy production deployment and the **Announce completed Railway releases** workflow reports a successful Task Buddy announcement in every configured Discord channel. A retry of the same commit must not post a duplicate in any destination. For the self-hosted Compose fallback, confirm `ops/release/deploy-production.sh` reports the same result.
+- Confirm Railway reports a healthy production deployment. For a semver major
+  release, the **Announce completed Railway releases** workflow must report a
+  successful Task Buddy announcement in every configured Discord channel; minor
+  and patch deployments intentionally remain silent. A retry of the same major
+  release must not post a duplicate in any destination. For the self-hosted
+  Compose fallback, confirm `ops/release/deploy-production.sh` reports the same
+  behavior.
 - Verify the public Northline sign-in page through its configured public route.
 - Create, duplicate, update, and delete a test task.
 - Search for that task from another board and inspect the board activity feed.
