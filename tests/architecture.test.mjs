@@ -860,6 +860,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   );
   assert.match(schedule, /c\.calendar_type='streaming'/);
   assert.match(schedule, /c\.visibility IN \('team','public'\)/);
+  assert.match(schedule, /c\.visibility='public' OR u\.status='Active'/);
   assert.match(schedule, /event\.visibility === "busy"/);
   assert.match(schedule, /seen\.has\(requestId\)/);
   assert.match(requests, /canEditCalendar\((?:await\s+)?calendarPermission/);

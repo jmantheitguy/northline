@@ -21,11 +21,12 @@ export async function GET(request: Request) {
     FROM calendar_events e
     JOIN calendars c ON c.id=e.calendar_id
     JOIN users u ON u.id=c.owner_id
-    WHERE e.deleted_at IS NULL AND c.deleted_at IS NULL AND u.status='Active'
+    WHERE e.deleted_at IS NULL AND c.deleted_at IS NULL
       AND e.start_at<? AND e.end_at>?
       AND (c.owner_id=? OR (
         c.calendar_type='streaming' AND c.visibility IN ('team','public')
         AND e.visibility IN ('calendar','team','public','busy')
+        AND (c.visibility='public' OR u.status='Active')
       ))
     ORDER BY e.start_at,CASE WHEN e.collab_request_id IS NOT NULL AND c.owner_id=(SELECT requester_id FROM collab_requests WHERE id=e.collab_request_id) THEN 0 ELSE 1 END,u.name COLLATE NOCASE
   `,
