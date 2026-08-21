@@ -1204,9 +1204,20 @@ button {
 }
 .nav-board-copy {
   min-width: 0;
+  width: auto !important;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   line-height: 1.2;
+  text-align: left !important;
+}
+.sidebar nav button .nav-board-copy .nav-board-name {
+  width: auto;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nav-board-copy small {
   color: #858391;

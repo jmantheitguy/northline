@@ -138,6 +138,7 @@ test("board navigation normalizes database identifiers and keeps populated works
   assert.match(boards, /w\.name AS "workspaceName"/);
   assert.match(styles, /\.workspace-menu-list[\s\S]*overflow-y: auto/);
   assert.match(styles, /\.sidebar \.boards[\s\S]*overflow-y: auto/);
+  assert.match(styles, /\.nav-board-copy[\s\S]*width: auto/);
 });
 
 test("Task Buddy automatic notifications are creator-routed and preference aware", async () => {
