@@ -974,6 +974,9 @@ test("core workflow supports authorized multi-assignees and editable pauseable t
 test("collapsed sidebar releases the main content offset", async () => {
   const styles = await read("app/globals.css");
   assert.match(styles, /\.sidebar\.collapsed \+ \.main\s*\{\s*margin-left:\s*0;/);
+  assert.match(styles, /\.sidebar\s*\{[\s\S]*overflow-y:\s*auto;/);
+  assert.match(styles, /\.sidebar \.boards\s*\{[\s\S]*overflow:\s*visible;/);
+  assert.match(styles, /\.sidebar \.boards > button\s*\{[\s\S]*min-height:\s*42px;/);
 });
 
 test("private calendars use opaque identifiers and explicit per-calendar permissions", async () => {

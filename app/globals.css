@@ -1048,6 +1048,9 @@ button {
   inset: 0 auto 0 0;
   z-index: 5;
   transition: 0.2s;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .sidebar.collapsed {
   transform: translateX(-100%);
@@ -1211,15 +1214,14 @@ button {
   text-align: center;
 }
 .sidebar .boards {
-  max-height: min(24vh, 250px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  max-height: none;
+  overflow: visible;
   padding-right: 2px;
 }
 .sidebar .boards > button {
-  min-height: 45px;
-  padding-top: 7px;
-  padding-bottom: 7px;
+  min-height: 42px;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 .nav-board-copy {
   min-width: 0;
@@ -2399,7 +2401,7 @@ button {
   border-radius: 999px;
   background: var(--subtle);
   color: var(--text);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 .assignee-picker-chip > span:last-child {
@@ -2468,7 +2470,7 @@ button {
 .assignee-picker-option .avatar {
   width: 28px;
   height: 28px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .assignee-picker-check {
   display: grid;
