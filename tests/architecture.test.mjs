@@ -414,13 +414,21 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(ui, /All streamers/);
   assert.match(teamsUi, /Create a team/);
   assert.match(teamRoute, /Forbidden/);
-  assert.match(teamRoute, /FROM \(\s*SELECT u\.id,u\.name,u\.email,u\.avatar,'owner' role/);
-  assert.match(teamRoute, /\) members ORDER BY name COLLATE NOCASE/);
+  assert.match(teamRoute, /SELECT member\.id,member\.name,member\.email,member\.avatar/);
+  assert.match(teamRoute, /EXISTS \(\s*SELECT 1 FROM team_members membership/);
+  assert.match(teamRoute, /CASE WHEN member\.id=t\.owner_id THEN 'owner' ELSE tm\.role END role/);
+  assert.match(teamRoute, /ORDER BY LOWER\(member\.name\),member\.id/);
+  assert.doesNotMatch(teamRoute, /SELECT DISTINCT member\.id/);
+  assert.match(teamRoute, /Only the team owner can delete it/);
+  assert.match(teamRoute, /TEAM\.UPDATE/);
+  assert.match(teamRoute, /TEAM\.DELETE/);
   assert.match(teamsUi, /team-color-preview/);
   assert.match(teamsUi, /normalizeTeamColor/);
   assert.match(teamsUi, /Transfer ownership/);
   assert.match(teamsUi, /Main team/);
   assert.match(teamsUi, /Other teams/);
+  assert.match(teamsUi, /Edit team/);
+  assert.match(teamsUi, /Delete team/);
 });
 
 test("beta security boundary rejects CSRF and throttles sensitive endpoints", async () => {

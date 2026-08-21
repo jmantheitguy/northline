@@ -21,15 +21,24 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const team = await db.prepare(`SELECT t.id,t.public_id teamKey,t.name,t.description,t.color,t.owner_id ownerId,u.name ownerName
     FROM teams t JOIN users u ON u.id=t.owner_id WHERE t.id=?`).get(id);
   if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
-  const members = await db.prepare(`SELECT id,name,email,avatar,role
-    FROM (
-      SELECT u.id,u.name,u.email,u.avatar,'owner' role
-      FROM teams t JOIN users u ON u.id=t.owner_id WHERE t.id=?
-      UNION ALL
-      SELECT member.id,member.name,member.email,member.avatar,tm.role
-      FROM team_members tm JOIN users member ON member.id=tm.user_id
-      WHERE tm.team_id=?
-    ) members ORDER BY name COLLATE NOCASE`).all(id, id);
+  // The owner is not required to have a row in team_members. Build the
+  // complete roster from the owner plus stored memberships while keeping
+  // management authorization separate from read-only roster visibility.
+  // The membership table has a composite primary key, so this join cannot
+  // duplicate a user and does not need PostgreSQL-incompatible DISTINCT
+  // ordering expressions.
+  const members = await db.prepare(`
+    SELECT member.id,member.name,member.email,member.avatar,
+      CASE WHEN member.id=t.owner_id THEN 'owner' ELSE tm.role END role
+    FROM teams t
+    JOIN users member ON member.id=t.owner_id
+      OR EXISTS (
+        SELECT 1 FROM team_members membership
+        WHERE membership.team_id=t.id AND membership.user_id=member.id
+      )
+    LEFT JOIN team_members tm ON tm.team_id=t.id AND tm.user_id=member.id
+    WHERE t.id=?
+    ORDER BY LOWER(member.name),member.id`).all(id);
   const workspaces = role ? await db.prepare(`SELECT w.id,w.public_id workspaceKey,w.name,w.kind,w.owner_id ownerId,
     tw.permission,owner.name ownerName
     FROM team_workspaces tw JOIN workspaces w ON w.id=tw.workspace_id JOIN users owner ON owner.id=w.owner_id

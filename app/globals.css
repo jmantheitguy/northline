@@ -3797,3 +3797,5 @@ html[data-theme="dark"] .my-work-search {
   }
 }
 .admin-team-setting{margin-top:16px}.admin-team-setting header p{max-width:760px;margin:5px 0 0;color:var(--muted)}.admin-team-setting-row{display:flex;align-items:center;gap:10px;margin-top:16px}.admin-team-setting-row select{min-width:260px;max-width:100%}@media(max-width:620px){.admin-team-setting-row{align-items:stretch;flex-direction:column}.admin-team-setting-row select{min-width:0;width:100%}}
+.team-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.team-header-actions .permission-badge{white-space:nowrap}
+@media(max-width:620px){.team-detail>header{align-items:flex-start;flex-direction:column;gap:14px}.team-header-actions{justify-content:flex-start;width:100%}}
