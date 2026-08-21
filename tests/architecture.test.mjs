@@ -406,7 +406,11 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(ownerRoute, /TEAM\.OWNER_TRANSFER/);
   assert.match(ownerRoute, /db\.transaction/);
   assert.match(membersRoute, /Only the team owner can appoint managers/);
+  assert.match(workspaceRoute, /createWorkspacePublicId/);
+  assert.match(workspaceRoute, /db\.transaction/);
+  assert.match(workspaceRoute, /TEAM\.WORKSPACE_CREATE/);
   assert.match(workspaceRoute, /Only the workspace owner can connect it to a team/);
+  assert.match(workspaceRoute, /not linked to this team/);
   assert.match(boardList, /team_workspaces/);
   assert.match(boardList, /team.owner_id/);
   assert.match(calendarRoute, /team_id/);
@@ -429,6 +433,8 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(teamsUi, /normalizeTeamColor/);
   assert.match(teamsUi, /Transfer ownership/);
   assert.match(teamsUi, /Main team/);
+  assert.match(teamsUi, /Create team workspace/);
+  assert.match(teamsUi, /onWorkspacesChanged/);
   assert.match(teamsUi, /Other teams/);
   assert.match(teamsUi, /Edit team/);
   assert.match(teamsUi, /Delete team/);

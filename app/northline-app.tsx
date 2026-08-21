@@ -900,7 +900,7 @@ export function NorthlineApp() {
         {view === "time" && <TimeCard notify={notify} />}
         {view === "calendars" && <CalendarHub notify={notify} userTimezone={authUser.timezone} />}
         {view === "collabs" && <CollabPlanner notify={notify} userTimezone={authUser.timezone} />}
-        {view === "teams" && <Teams notify={notify} workspaces={workspaces} people={directoryUsers} />}
+        {view === "teams" && <Teams notify={notify} workspaces={workspaces} people={directoryUsers} onWorkspacesChanged={loadBoards} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "help" && (
           <HelpCenter
