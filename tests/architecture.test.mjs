@@ -814,6 +814,7 @@ test("calendar stabilization keeps reminders and recovery private", async () => 
 test("stream collaboration discovery preserves private calendar boundaries", async () => {
   const [
     schema,
+    postgresSchema,
     schedule,
     requests,
     response,
@@ -824,6 +825,7 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
     styles,
   ] = await Promise.all([
     read("lib/db-sqlite.ts"),
+    read("lib/db-postgres.ts"),
     read("app/api/collab/schedule/route.ts"),
     read("app/api/collab/requests/route.ts"),
     read("app/api/collab/requests/[id]/route.ts"),
@@ -850,6 +852,12 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
     /CREATE TABLE IF NOT EXISTS collab_reschedule_responses/,
   );
   assert.match(schema, /collaboration reschedule proposals/);
+  assert.match(postgresSchema, /ensureCollabSchema/);
+  assert.match(postgresSchema, /CREATE TABLE IF NOT EXISTS "collab_requests"/);
+  assert.match(
+    postgresSchema,
+    /CREATE TABLE IF NOT EXISTS "collab_request_participants"/,
+  );
   assert.match(schedule, /c\.calendar_type='streaming'/);
   assert.match(schedule, /c\.visibility IN \('team','public'\)/);
   assert.match(schedule, /event\.visibility === "busy"/);
@@ -885,6 +893,11 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(ui, /visibleRequests/);
   assert.match(ui, /visibleEvents/);
   assert.match(ui, /CollabPlannerBoundary/);
+  assert.match(ui, /account-wide/);
+  assert.doesNotMatch(ui, /workspace\. Your boards/);
+  assert.match(ui, /Promise\.allSettled/);
+  assert.match(ui, /normalizeRequest/);
+  assert.match(ui, /normalizeEvent/);
   assert.ok(ui.includes("Array.isArray(schedule?.events)"));
   assert.ok(ui.toLowerCase().includes("collab planner couldn&apos;t load"));
   assert.match(ui, /collabRequestId/);

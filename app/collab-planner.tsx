@@ -85,8 +85,149 @@ const jsonHeaders = { "Content-Type": "application/json" };
 const call = async (url: string, options?: RequestInit) => {
   const response = await fetch(url, options),
     body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "Request failed");
+  if (!response.ok) {
+    const message =
+      typeof body.error === "string" && body.error.trim()
+        ? body.error.trim()
+        : `Request failed (${response.status})`;
+    throw new Error(`${message} · ${url}`);
+  }
   return body;
+};
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+const asString = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value : value == null ? fallback : String(value);
+const asNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+const asNullableString = (value: unknown) =>
+  value == null || value === "" ? null : asString(value);
+const failureMessage = (reason: unknown) =>
+  reason instanceof Error ? reason.message : asString(reason, "Request failed");
+const normalizeCalendar = (value: unknown): Calendar | null => {
+  const row = asRecord(value);
+  if (!row || !asString(row.id)) return null;
+  return {
+    id: asString(row.id),
+    name: asString(row.name, "Calendar"),
+    permission: asString(row.permission, "viewer"),
+    calendarType: asString(row.calendarType, "personal"),
+    visibility: asString(row.visibility, "private"),
+  };
+};
+const normalizePerson = (value: unknown): Person | null => {
+  const row = asRecord(value), id = asNumber(row?.id);
+  if (!row || !id || !asString(row.name)) return null;
+  return {
+    id,
+    name: asString(row.name),
+    email: asString(row.email),
+    avatar: asNullableString(row.avatar),
+    timezone: asString(row.timezone, "UTC"),
+  };
+};
+const normalizeEvent = (value: unknown): ScheduleEvent | null => {
+  const row = asRecord(value);
+  if (!row || !asString(row.id) || !asString(row.startAt) || !asString(row.endAt))
+    return null;
+  return {
+    id: asString(row.id),
+    title: asString(row.title, "Untitled stream"),
+    description: asString(row.description),
+    startAt: asString(row.startAt),
+    endAt: asString(row.endAt),
+    timezone: asString(row.timezone, "UTC"),
+    kind: asString(row.kind, "stream"),
+    visibility: asString(row.visibility, "calendar"),
+    platform: asString(row.platform),
+    game: asString(row.game),
+    streamUrl: asString(row.streamUrl),
+    collabEnabled: asNumber(row.collabEnabled),
+    calendarId: asString(row.calendarId),
+    calendarName: asString(row.calendarName, "Streaming schedule"),
+    color: asString(row.color, "#7c6ce7"),
+    ownerId: asNumber(row.ownerId),
+    ownerName: asString(row.ownerName, "Streamer"),
+    ownerAvatar: asNullableString(row.ownerAvatar),
+    collabRequestId: asNullableString(row.collabRequestId),
+    participantNames: Array.isArray(row.participantNames)
+      ? row.participantNames.map((name) => asString(name)).filter(Boolean)
+      : [],
+  };
+};
+const normalizeParticipant = (value: unknown) => {
+  const row = asRecord(value), userId = asNumber(row?.userId);
+  if (!row || !userId) return null;
+  return {
+    userId,
+    name: asString(row.name, "Streamer"),
+    avatar: asNullableString(row.avatar),
+    status: asString(row.status, "pending"),
+    proposedStartAt: asNullableString(row.proposedStartAt),
+    proposedEndAt: asNullableString(row.proposedEndAt),
+    timezone: asNullableString(row.timezone),
+    responseMessage: asString(row.responseMessage),
+  };
+};
+const normalizeRequest = (value: unknown): CollabRequest | null => {
+  const row = asRecord(value);
+  if (!row || !asString(row.id)) return null;
+  const proposal = asRecord(row.reschedule);
+  const responses = proposal && Array.isArray(proposal.responses)
+    ? proposal.responses
+        .map((item) => {
+          const response = asRecord(item), userId = asNumber(response?.userId);
+          return response && userId
+            ? {
+                userId,
+                name: asString(response.name, "Streamer"),
+                status: asString(response.status, "pending"),
+              }
+            : null;
+        })
+        .filter(
+          (item): item is { userId: number; name: string; status: string } =>
+            Boolean(item),
+        )
+    : [];
+  return {
+    id: asString(row.id),
+    requesterId: asNumber(row.requesterId),
+    requesterName: asString(row.requesterName, "Streamer"),
+    requesterAvatar: asNullableString(row.requesterAvatar),
+    startAt: asString(row.startAt),
+    endAt: asString(row.endAt),
+    timezone: asString(row.timezone, "UTC"),
+    title: asString(row.title, "Collaboration"),
+    message: asString(row.message),
+    status: asString(row.status, "pending"),
+    responseMessage: asString(row.responseMessage),
+    sourceEventId: asNullableString(row.sourceEventId),
+    participants: Array.isArray(row.participants)
+      ? row.participants
+          .map(normalizeParticipant)
+          .filter(
+            (item): item is NonNullable<ReturnType<typeof normalizeParticipant>> =>
+              Boolean(item),
+          )
+      : [],
+    reschedule:
+      proposal && asString(proposal.id)
+        ? {
+            id: asString(proposal.id),
+            proposedBy: asNumber(proposal.proposedBy),
+            proposedByName: asString(proposal.proposedByName, "Streamer"),
+            startAt: asString(proposal.startAt),
+            endAt: asString(proposal.endAt),
+            timezone: asString(proposal.timezone, "UTC"),
+            message: asString(proposal.message),
+            status: asString(proposal.status, "pending"),
+            responses,
+          }
+        : null,
+  };
 };
 const localInput = (date: Date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -142,8 +283,8 @@ class CollabPlannerBoundary extends Component<
         <section className="collab-error" role="alert">
           <h2>Collab planner couldn&apos;t load</h2>
           <p>
-            The planner hit an unexpected error while loading this workspace.
-            Your boards and calendars are unchanged.
+            The planner hit an unexpected error while loading your account-wide
+            collaboration data. Your boards and calendars are unchanged.
           </p>
           <button className="primary" onClick={this.retry}>
             Try again
@@ -193,22 +334,71 @@ function CollabPlannerContent({
           showPastCollabs ? Date.now() - 365 * 86400000 : Date.now(),
         ),
         end = new Date(Date.now() + 90 * 86400000);
-      const [schedule, requestData, calendarData] = await Promise.all([
+      const [scheduleResult, requestResult, calendarResult] =
+        await Promise.allSettled([
         call(
           `/api/collab/schedule?from=${start.toISOString()}&to=${end.toISOString()}`,
         ),
         call("/api/collab/requests"),
         call("/api/calendars"),
       ]);
-      setEvents(Array.isArray(schedule?.events) ? schedule.events : []);
-      setPeople(Array.isArray(schedule?.people) ? schedule.people : []);
-      setRequests(
-        Array.isArray(requestData?.requests) ? requestData.requests : [],
-      );
-      setMe(Number(requestData?.currentUserId || 0));
-      setCalendars(
-        Array.isArray(calendarData?.calendars) ? calendarData.calendars : [],
-      );
+      const failures: string[] = [];
+      if (scheduleResult.status === "fulfilled") {
+        const schedule = scheduleResult.value;
+        setEvents(
+          (Array.isArray(schedule?.events) ? schedule.events : [])
+            .map(normalizeEvent)
+            .filter(
+              (event: ScheduleEvent | null): event is ScheduleEvent =>
+                Boolean(event),
+            ),
+        );
+        setPeople(
+          (Array.isArray(schedule?.people) ? schedule.people : [])
+            .map(normalizePerson)
+            .filter(
+              (person: Person | null): person is Person => Boolean(person),
+            ),
+        );
+      } else {
+        failures.push(`team schedule: ${failureMessage(scheduleResult.reason)}`);
+      }
+      if (requestResult.status === "fulfilled") {
+        const requestData = requestResult.value;
+        setRequests(
+          (Array.isArray(requestData?.requests) ? requestData.requests : [])
+            .map(normalizeRequest)
+            .filter(
+              (request: CollabRequest | null): request is CollabRequest =>
+                Boolean(request),
+            ),
+        );
+        setMe(Number(requestData?.currentUserId || 0));
+      } else {
+        failures.push(`collab inbox: ${failureMessage(requestResult.reason)}`);
+      }
+      if (calendarResult.status === "fulfilled") {
+        const calendarData = calendarResult.value;
+        setCalendars(
+          (Array.isArray(calendarData?.calendars) ? calendarData.calendars : [])
+            .map(normalizeCalendar)
+            .filter(
+              (calendar: Calendar | null): calendar is Calendar =>
+                Boolean(calendar),
+            ),
+        );
+      } else {
+        failures.push(
+          `streaming calendars: ${failureMessage(calendarResult.reason)}`,
+        );
+      }
+      if (failures.length) {
+        const message = `Some account-wide collaboration data could not be loaded: ${failures.join(
+          "; ",
+        )}`;
+        setLoadError(message);
+        notify(message);
+      }
     } catch (error) {
       const message = (error as Error).message || "Unable to load collabs";
       setLoadError(message);
@@ -220,10 +410,10 @@ function CollabPlannerContent({
   useEffect(() => {
     void load();
   }, [showPastCollabs]);
-  const visibleRequests = requests.filter(
-    (request) =>
-      showPastCollabs || new Date(request.endAt).getTime() >= now,
-  );
+  const visibleRequests = requests.filter((request) => {
+    const end = new Date(request.endAt).getTime();
+    return showPastCollabs || !Number.isFinite(end) || end >= now;
+  });
   const incoming = visibleRequests.filter((r) =>
       r.participants.some((p) => p.userId === me),
     ),
@@ -439,7 +629,8 @@ function CollabPlannerContent({
           <span className="eyebrow">STREAMER COLLABORATION</span>
           <h2>Team stream schedule</h2>
           <p>
-            Share only the schedule windows you choose, find open time, and
+            Your account-wide collaboration schedule is available from every
+            workspace. Share only the windows you choose, find open time, and
             coordinate collabs without exposing private calendars.
           </p>
         </div>
