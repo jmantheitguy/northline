@@ -304,32 +304,65 @@ export function NorthlineApp() {
   const loadBoards = async () => {
     try {
       const d = await jsonFetch("/api/boards");
-      setBoards(d.boards);
-      setWorkspaces(d.workspaces || []);
+      const normalizedBoards = (d.boards || []).map((board: BoardSummary) => ({
+        ...board,
+        id: Number(board.id),
+        ownerId: Number(board.ownerId),
+        workspaceId: Number(board.workspaceId),
+        navigationWorkspaceId: Number(
+          board.navigationWorkspaceId ?? board.workspaceId,
+        ),
+        taskCount: Number(board.taskCount || 0),
+      }));
+      const normalizedWorkspaces = (d.workspaces || []).map(
+        (workspace: Workspace) => ({
+          ...workspace,
+          id: Number(workspace.id),
+          ownerId: Number(workspace.ownerId),
+          boardCount: Number(workspace.boardCount || 0),
+          memberCount: Number(workspace.memberCount || 0),
+        }),
+      );
+      setBoards(normalizedBoards);
+      setWorkspaces(normalizedWorkspaces);
       const requested = new URLSearchParams(window.location.search).get(
           "board",
         ),
-        requestedBoard = d.boards.find(
+        requestedBoard = normalizedBoards.find(
           (board: BoardSummary) =>
             board.boardKey === requested || String(board.id) === requested,
         );
+      const boardWorkspaceIds = new Set(
+          normalizedBoards.map(
+            (board: BoardSummary) =>
+              board.navigationWorkspaceId ?? board.workspaceId,
+          ),
+        ),
+        requestedWorkspaceId = requestedBoard
+          ? (requestedBoard.navigationWorkspaceId ?? requestedBoard.workspaceId)
+          : null,
+        fallbackWorkspaceId =
+          normalizedWorkspaces.find((workspace: Workspace) =>
+            boardWorkspaceIds.has(workspace.id),
+          )?.id ?? normalizedWorkspaces[0]?.id ?? null;
       setActiveWorkspaceId(
         (current) =>
-          (requestedBoard?.navigationWorkspaceId ??
-            requestedBoard?.workspaceId) ||
+          requestedWorkspaceId ??
           (current &&
-          (d.workspaces || []).some(
+          normalizedWorkspaces.some(
             (workspace: Workspace) => workspace.id === current,
-          )
+          ) &&
+          (normalizedBoards.length === 0 || boardWorkspaceIds.has(current))
             ? current
-            : (d.workspaces || [])[0]?.id || null),
+            : fallbackWorkspaceId),
       );
       setActiveBoardId(
         (current) =>
           requestedBoard?.id ||
-          (current && d.boards.some((b: BoardSummary) => b.id === current)
+          (current &&
+          normalizedBoards.some((b: BoardSummary) => b.id === current)
             ? current
-            : d.boards[0]?.id || null),
+            : normalizedBoards[0]?.id || null),
       );
     } catch (e) {
       notify((e as Error).message);
@@ -492,8 +525,8 @@ export function NorthlineApp() {
     workspaces[0];
   const visibleBoards = boards.filter(
     (board) =>
-      (board.navigationWorkspaceId ?? board.workspaceId) ===
-      activeWorkspace?.id,
+      Number(board.navigationWorkspaceId ?? board.workspaceId) ===
+      Number(activeWorkspace?.id),
   );
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;

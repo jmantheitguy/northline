@@ -85,6 +85,15 @@ test("PostgreSQL board details keep the assignee query orderable", async () => {
   );
 });
 
+test("board navigation normalizes database identifiers and keeps populated workspaces selected", async () => {
+  const ui = await read("app/northline-app.tsx");
+  assert.match(ui, /const normalizedBoards = \(d\.boards \|\| \[\]\)\.map/);
+  assert.match(ui, /id: Number\(board\.id\)/);
+  assert.match(ui, /const boardWorkspaceIds = new Set/);
+  assert.match(ui, /boardWorkspaceIds\.has\(current\)/);
+  assert.match(ui, /Number\(board\.navigationWorkspaceId \?\? board\.workspaceId\)/);
+});
+
 test("Task Buddy automatic notifications are creator-routed and preference aware", async () => {
   const [automation, boardRoute, preferences, ui] = await Promise.all([
     read("lib/task-notifications.ts"),
