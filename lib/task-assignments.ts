@@ -40,13 +40,19 @@ export async function validateAssigneeIds(boardId: number, ids: number[]) {
 }
 
 export async function taskAssigneeIds(taskId: number) {
-  return (
-    await db
-      .prepare(
-        "SELECT user_id userId FROM task_assignees WHERE task_id=? ORDER BY created_at,user_id",
-      )
-      .all(taskId) as Array<{ userId: number }>
-  ).map((row) => row.userId);
+  const rows = (await db
+    .prepare(
+      "SELECT user_id userId FROM task_assignees WHERE task_id=? ORDER BY created_at,user_id",
+    )
+    .all(taskId)) as Array<{ userId: number }>;
+  if (rows.length) return rows.map((row) => row.userId);
+
+  // Keep older/imported tasks visible when their legacy assignee_id exists
+  // but the additive join-table backfill did not run for that row.
+  const legacy = (await db
+    .prepare("SELECT assignee_id assigneeId FROM tasks WHERE id=?")
+    .get(taskId)) as { assigneeId: number | null } | undefined;
+  return legacy?.assigneeId ? [Number(legacy.assigneeId)] : [];
 }
 
 export async function replaceTaskAssignees(

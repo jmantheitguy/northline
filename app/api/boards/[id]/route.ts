@@ -45,8 +45,15 @@ export async function GET(
     ...task,
     assigneeIds: await taskAssigneeIds(task.id),
     assignees: await db.prepare(
-      "SELECT u.id,u.name,u.avatar FROM task_assignees ta JOIN users u ON u.id=ta.user_id WHERE ta.task_id=? ORDER BY ta.created_at, u.name COLLATE NOCASE",
-    ).all(task.id),
+      `SELECT DISTINCT u.id,u.name,u.avatar
+       FROM users u
+       WHERE u.id IN (
+         SELECT ta.user_id FROM task_assignees ta WHERE ta.task_id=?
+         UNION
+         SELECT t.assignee_id FROM tasks t WHERE t.id=? AND t.assignee_id IS NOT NULL
+       )
+       ORDER BY u.name COLLATE NOCASE, u.id`,
+    ).all(task.id, task.id),
   })));
   const members = await db
     .prepare(

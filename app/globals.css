@@ -1657,6 +1657,19 @@ button {
   color: var(--muted);
   text-align: center;
 }
+.comment > span:not(.avatar) {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.comment > .avatar {
+  display: inline-grid;
+  flex: 0 0 29px;
+  width: 29px;
+  min-width: 29px;
+  height: 29px;
+}
 .add-inline {
   border: 0;
   background: transparent;
