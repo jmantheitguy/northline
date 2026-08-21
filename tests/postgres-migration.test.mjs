@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import Database from "better-sqlite3";
 import fs from "node:fs";
-import { inspectSqlite, normalizeTableSql, orderTables } from "../scripts/migrate-sqlite-to-postgres.mjs";
+import { inspectSqlite, normalizeIndexSql, normalizeTableSql, orderTables } from "../scripts/migrate-sqlite-to-postgres.mjs";
 
 test("normalizes SQLite identity and collation syntax for PostgreSQL", () => {
   const sql = normalizeTableSql(`CREATE TABLE parent (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE COLLATE NOCASE);`);
@@ -41,4 +41,9 @@ test("migration importer carries the v26 integrity hardening forward", () => {
   assert.match(migration, /calendar_events_collab_request_idx/);
   assert.match(migration, /schema hardening and collaboration integrity/);
   assert.match(migration, /calendar_events contains orphaned collaboration references/);
+});
+
+test("migration importer makes snapshot indexes idempotent", () => {
+  const sql = normalizeIndexSql("CREATE UNIQUE INDEX task_assignees_user_idx ON task_assignees(user_id, task_id);");
+  assert.match(sql, /^CREATE UNIQUE INDEX IF NOT EXISTS task_assignees_user_idx/);
 });

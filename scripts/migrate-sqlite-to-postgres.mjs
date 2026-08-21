@@ -44,10 +44,14 @@ export function normalizeTableSql(sql) {
     .concat(";");
 }
 
-function normalizeIndexSql(sql) {
+export function normalizeIndexSql(sql) {
   return sql
     .trim()
     .replace(/\s+COLLATE\s+NOCASE\b/gi, "")
+    // Additive schema steps may already create a compatibility index that
+    // exists in the SQLite snapshot. Keep the import idempotent instead of
+    // failing the whole transaction on that expected overlap.
+    .replace(/^CREATE\s+(UNIQUE\s+)?INDEX\s+(?!IF\s+NOT\s+EXISTS\s+)/i, (_, unique = "") => `CREATE ${unique}INDEX IF NOT EXISTS `)
     .replace(/;\s*$/, "")
     .concat(";");
 }
