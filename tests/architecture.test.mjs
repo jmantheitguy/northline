@@ -202,6 +202,8 @@ test("release health and workflow tools remain permission constrained", async ()
   assert.match(search, /bm\.user_id=\?/);
   assert.match(duplicate, /canEdit\((?:await\s+)?boardPermission/);
   assert.match(activity, /boardPermission/);
+  assert.match(activity, /created_at AS/);
+  assert.match(activity, /actorName/);
   assert.match(backup, /backup\.json/);
   assert.match(restore, /restore\.json/);
 });
