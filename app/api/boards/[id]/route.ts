@@ -52,7 +52,7 @@ export async function GET(
          UNION
          SELECT t.assignee_id FROM tasks t WHERE t.id=? AND t.assignee_id IS NOT NULL
        )
-       ORDER BY u.name COLLATE NOCASE, u.id`,
+       ORDER BY u.name, u.id`,
     ).all(task.id, task.id),
   })));
   const members = await db
