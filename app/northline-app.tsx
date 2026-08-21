@@ -165,6 +165,7 @@ type Modal =
   | "board-create"
   | "board-settings"
   | "share"
+  | "members"
   | "activity"
   | "columns"
   | "workspace-create"
@@ -1598,6 +1599,13 @@ function BoardView({
               <span className="avatar-more">+{(data.sharedWith || data.members).length - 4}</span>
             )}
           </div>
+          <button
+            className="secondary"
+            onClick={() => openModal("members")}
+            aria-label="View board owner and members"
+          >
+            Members
+          </button>
           {data.canShare && (
             <button className="secondary" onClick={() => openModal("share")}>
               ♙ Share
@@ -1623,9 +1631,11 @@ function BoardView({
           >
             ◷ Activity
           </button>
-          <button className="secondary" onClick={() => openModal("archive")}>
-            Archive
-          </button>
+          {data.canEdit && (
+            <button className="secondary" onClick={() => openModal("archive")}>
+              Archive
+            </button>
+          )}
           {data.canEdit && (
             <button
               className="primary"
@@ -3643,6 +3653,12 @@ function NorthlineModal({
   openTaskReminder,
 }: any) {
   const columns = (board?.columns || []) as BoardColumn[];
+  const boardAccess = [
+    ...(board?.boardOwner ? [board.boardOwner] : []),
+    ...(board?.sharedWith || []).filter(
+      (member: BoardAccess) => member.id !== board?.boardOwner?.id,
+    ),
+  ] as BoardAccess[];
   const [taskForm, setTaskForm] = useState(
     task
       ? {
@@ -4646,6 +4662,24 @@ function NorthlineModal({
             </div>
           </>
         )}
+        {type === "members" && (
+          <>
+            <h2>{board.board.name} members</h2>
+            <p>Everyone with access to this board, including the owner.</p>
+            <div className="shared-list">
+              {boardAccess.map((member) => (
+                <div className="share-person" key={member.id}>
+                  <Avatar name={member.name} avatar={member.avatar} />
+                  <span>
+                    <b>{member.name}</b>
+                    <small>{member.email}</small>
+                  </span>
+                  <em>{member.permission} · {member.source}</em>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
         {type === "share" && (
           <>
             <h2>Share {board.board.name}</h2>
@@ -4690,7 +4724,7 @@ function NorthlineModal({
               Grant access
             </button>
             <div className="shared-list">
-              {(board.sharedWith || []).map((m: BoardAccess) => (
+              {boardAccess.map((m: BoardAccess) => (
                 <div className="share-person" key={m.id}>
                   <Avatar name={m.name} avatar={m.avatar} />
                   <span>

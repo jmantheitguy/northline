@@ -512,6 +512,21 @@ test("time edits preserve wall-clock duration and workspace/board identity bound
   assert.match(ui, /Board reference/);
 });
 
+test("shared board viewers can inspect access while archive controls stay edit-only", async () => {
+  const [ui, boardRoute, archiveRoute] = await Promise.all([
+    read("app/northline-app.tsx"),
+    read("app/api/boards/[id]/route.ts"),
+    read("app/api/boards/[id]/archive/route.ts"),
+  ]);
+  assert.match(ui, /openModal\("members"\)/);
+  assert.match(ui, /type === "members"/);
+  assert.match(ui, /data\.canEdit && \([\s\S]*openModal\("archive"\)/);
+  assert.match(ui, /boardAccess\.map/);
+  assert.match(boardRoute, /boardOwner/);
+  assert.match(boardRoute, /sharedWith/);
+  assert.match(archiveRoute, /canRestore:permission!=="viewer"/);
+});
+
 test("authorization matrix is enforced at every board capability", async () => {
   const routes = await Promise.all(
     [
