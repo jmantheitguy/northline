@@ -2,34 +2,35 @@
 
 ## Deploy and update
 
-Northline production runs on the AWS Lightsail host through Docker Compose. Keep
-the live SQLite data on that host's local Docker volume. Encrypted Northline
-backups are retained locally and replicated to separately configured off-host
-storage, currently S3 when its host-only configuration is present. Do not use a
-network share as live SQLite storage.
+Northline production runs on Railway from the protected `main` branch, with its
+production PostgreSQL service and Authentik services in the same Railway
+environment. The Docker Compose path remains available for local development
+and a self-hosted fallback; keep live SQLite data on that host's local Docker
+volume and never use a network share as live SQLite storage.
 
 Code push, production deployment, database migration, and Discord release
 announcement are separate actions. A normal local development update is:
 
 1. Review the diff and run the relevant local validation.
 2. Commit the reviewed change and push the intended commit to `main`.
-3. SSH to the Lightsail host using the existing `lightsail` SSH alias. Change to
-   the existing Northline checkout recorded in the private operator runbook.
-4. Confirm the checkout is on `main`, inspect its status, and confirm a recent
-   successful off-host backup in **Administration > Health** or through the
-   backup service journal.
-5. From that checkout, run `sh ops/release/deploy-production.sh`.
+3. Wait for Railway's `northline-staging / production` deployment status to
+   report success and for `/health` to return HTTP 200.
+4. Confirm the GitHub **Announce completed Railway releases** workflow reports
+   success. It sends the text-only Task Buddy announcement to every configured
+   release channel after Railway finishes, not merely after a code push.
+5. Confirm a recent successful backup and restore test in **Administration >
+   Health**. Use the self-hosted procedure below only when intentionally
+   deploying the Compose fallback.
 
-The deployment script runs `git pull --ff-only` against the checkout's configured
-upstream, rebuilds and starts the Compose service with `docker compose up -d
---build`, waits for Docker's `northline` health status, safely prunes Docker
-build cache, and only then sends one GitHub-style Task Buddy announcement to
-each channel configured in `NORTHLINE_RELEASE_CHANNEL_IDS` for the deployed
-commit. A retry for the same commit does not announce it twice, even if one
-Discord destination was temporarily unavailable. `NORTHLINE_RELEASE_CHANNEL_ID`
-remains supported for a single-channel deployment.
-Ordinary GitHub pushes remain silent until that commit is deployed. Application
-startup performs additive SQLite schema initialization.
+For the self-hosted Compose fallback, `sh ops/release/deploy-production.sh`
+runs `git pull --ff-only`, rebuilds and starts the service, waits for Docker's
+`northline` health status, prunes disposable build cache, and then sends one
+GitHub-style Task Buddy announcement to each configured channel. Per-channel
+markers make retries safe, even if one Discord destination was temporarily
+unavailable. `NORTHLINE_RELEASE_CHANNEL_ID` remains supported for a single
+channel. Ordinary GitHub pushes remain silent until that commit is deployed.
+Application startup performs additive schema initialization for the selected
+database driver.
 
 ### Save protection during rollouts
 
@@ -43,8 +44,8 @@ the page after a visible success confirmation.
 
 ## Health dashboard
 
-Open **Administration > Health**. Healthy production should show SQLite `ok`,
-adequate VM free space, Authentik configured, Task Buddy reachable, no
+Open **Administration > Health**. Healthy production should show the database
+`ok`, adequate Railway or VM storage, Authentik configured, Task Buddy reachable, no
 unexplained failed reminders, a recent backup with verified off-host replication,
 and a recent successful restore test. The Task Buddy test sends a real private
 message to the linked Discord account of the administrator running the check and
