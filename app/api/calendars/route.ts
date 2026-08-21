@@ -14,7 +14,7 @@ export async function GET() {
          SELECT DISTINCT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,c.team_id teamId,team.name teamName,
            c.owner_id ownerId,u.name ownerName,
            CASE WHEN c.owner_id=? THEN 'owner' WHEN cm.permission IS NOT NULL THEN cm.permission WHEN team.owner_id=? THEN 'owner' WHEN tm.role='manager' THEN 'editor' WHEN tm.role='member' THEN 'viewer' END permission,
-           (CASE WHEN c.owner_id=? THEN 0 ELSE 1 END) ownerOrder,
+           (CASE WHEN c.owner_id=? THEN 0 ELSE 1 END) owner_order,
            (SELECT COUNT(*) FROM calendar_events e WHERE e.calendar_id=c.id AND e.end_at>=datetime('now','-31 days')) eventCount
          FROM calendars c JOIN users u ON u.id=c.owner_id
          LEFT JOIN calendar_members cm ON cm.calendar_id=c.id AND cm.user_id=?
@@ -22,7 +22,7 @@ export async function GET() {
          LEFT JOIN team_members tm ON tm.team_id=c.team_id AND tm.user_id=?
          WHERE c.deleted_at IS NULL AND (c.owner_id=? OR cm.user_id=? OR team.owner_id=? OR tm.user_id=?)
        ) AS calendar_rows
-       ORDER BY "ownerOrder",LOWER(name)`,
+       ORDER BY owner_order,LOWER(name)`,
     )
     .all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id);
   const deletedCalendars = await db

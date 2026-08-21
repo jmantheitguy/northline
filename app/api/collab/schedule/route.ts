@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     ORDER BY e.start_at,CASE WHEN e.collab_request_id IS NOT NULL AND c.owner_id=(SELECT requester_id FROM collab_requests WHERE id=e.collab_request_id) THEN 0 ELSE 1 END,u.name COLLATE NOCASE
   `,
     )
-    .all(user.id, user.id, to, from, user.id) as Array<
+    .all(user.id, to, from, user.id, user.id) as Array<
     Record<string, unknown> & { ownerId: number; visibility: string }
   >;
   const safeEvents = events.map((event) => {

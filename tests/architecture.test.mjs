@@ -94,7 +94,8 @@ test("PostgreSQL list queries order DISTINCT rows by selected or outer fields", 
   ]);
   assert.match(boards, /ORDER BY "updatedAt" DESC/);
   assert.match(calendars, /FROM \(\s*SELECT DISTINCT/);
-  assert.match(calendars, /ORDER BY "ownerOrder",LOWER\(name\)/);
+  assert.match(calendars, /ORDER BY owner_order,LOWER\(name\)/);
+  assert.match(await read("app/api/collab/schedule/route.ts"), /\.all\(user\.id, to, from, user\.id, user\.id\)/);
   assert.match(search, /t\.updated_at AS "updatedAt"/);
   assert.match(search, /ORDER BY "updatedAt" DESC/);
 });
