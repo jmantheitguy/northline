@@ -76,6 +76,15 @@ test("board references are opaque while creator ownership remains relational", a
   assert.match(permissions, /owner_id/);
 });
 
+test("PostgreSQL board details keep the assignee query orderable", async () => {
+  const detail = await read("app/api/boards/[id]/route.ts");
+  assert.match(detail, /SELECT u\.id,u\.name,u\.email,u\.avatar FROM users u/);
+  assert.doesNotMatch(
+    detail,
+    /SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar[\s\S]*ORDER BY u\.name COLLATE NOCASE/,
+  );
+});
+
 test("Task Buddy automatic notifications are creator-routed and preference aware", async () => {
   const [automation, boardRoute, preferences, ui] = await Promise.all([
     read("lib/task-notifications.ts"),

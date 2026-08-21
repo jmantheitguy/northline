@@ -46,7 +46,7 @@ export async function GET(
     .all(board.workspaceId, board.workspaceId);
   const assignees = await db
     .prepare(
-      `SELECT DISTINCT u.id,u.name,u.email,u.avatar FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL) ORDER BY u.name COLLATE NOCASE`,
+      `SELECT u.id,u.name,u.email,u.avatar FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=u.id WHERE u.status='Active' AND (u.id=b.owner_id OR u.id=w.owner_id OR bm.user_id IS NOT NULL OR wm.user_id IS NOT NULL) ORDER BY u.name COLLATE NOCASE`,
     )
     .all(id);
   const columns = await db
