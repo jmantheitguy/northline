@@ -20,8 +20,10 @@ export async function GET() {
   FROM users u WHERE u.status='Active' AND u.directory_visible=1 ORDER BY u.name COLLATE NOCASE`,
     )
     .all();
+  const configuredMain = await db.prepare("SELECT value FROM app_meta WHERE key='main_team_id'").get() as { value:string } | undefined;
+  const mainTeamId = Number(configuredMain?.value || "") || -1;
   for (const user of users as Array<{ id:number; teamNames?:string[] }>) {
-    const memberships = await db.prepare(`SELECT t.name FROM teams t LEFT JOIN team_members tm ON tm.team_id=t.id WHERE t.owner_id=? OR tm.user_id=? ORDER BY t.name COLLATE NOCASE`).all(user.id,user.id) as Array<{name:string}>;
+    const memberships = await db.prepare(`SELECT DISTINCT t.id,t.name FROM teams t LEFT JOIN team_members tm ON tm.team_id=t.id AND tm.user_id=? WHERE t.owner_id=? OR tm.user_id=? ORDER BY CASE WHEN t.id=? THEN 0 ELSE 1 END,t.name COLLATE NOCASE`).all(user.id,user.id,user.id,mainTeamId) as Array<{name:string}>;
     user.teamNames = memberships.map((item) => item.name);
   }
   return NextResponse.json({ users });

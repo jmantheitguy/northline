@@ -18,7 +18,6 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const id = await readId(params);
   if (!id) return NextResponse.json({ error: "Invalid team" }, { status: 400 });
   const role = await teamRole(user, id);
-  if (!role) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const team = await db.prepare(`SELECT t.id,t.public_id teamKey,t.name,t.description,t.color,t.owner_id ownerId,u.name ownerName
     FROM teams t JOIN users u ON u.id=t.owner_id WHERE t.id=?`).get(id);
   if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
@@ -31,11 +30,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       FROM team_members tm JOIN users member ON member.id=tm.user_id
       WHERE tm.team_id=?
     ) members ORDER BY name COLLATE NOCASE`).all(id, id);
-  const workspaces = await db.prepare(`SELECT w.id,w.public_id workspaceKey,w.name,w.kind,w.owner_id ownerId,
+  const workspaces = role ? await db.prepare(`SELECT w.id,w.public_id workspaceKey,w.name,w.kind,w.owner_id ownerId,
     tw.permission,owner.name ownerName
     FROM team_workspaces tw JOIN workspaces w ON w.id=tw.workspace_id JOIN users owner ON owner.id=w.owner_id
-    WHERE tw.team_id=? ORDER BY w.name COLLATE NOCASE`).all(id);
-  return NextResponse.json({ team, members, workspaces, role, canManage: canManageTeam(role), canDelete: role === "owner" });
+    WHERE tw.team_id=? ORDER BY w.name COLLATE NOCASE`).all(id) : [];
+  const visibleRole = role || "viewer";
+  return NextResponse.json({ team, members, workspaces, role: visibleRole, canManage: canManageTeam(role), canDelete: role === "owner" });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

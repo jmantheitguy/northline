@@ -6,20 +6,25 @@ import { normalizeTeamColor } from "@/lib/team-colors";
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const configuredMain = await db
+    .prepare("SELECT value FROM app_meta WHERE key='main_team_id'")
+    .get() as { value: string } | undefined;
+  const mainTeamId = Number(configuredMain?.value || "") || -1;
   const teams = await db
     .prepare(
       `SELECT t.id,t.public_id teamKey,t.name,t.description,t.color,t.owner_id ownerId,
         owner.name ownerName,
-        CASE WHEN t.owner_id=? THEN 'owner' ELSE tm.role END role,
+        CASE WHEN t.owner_id=? THEN 'owner' ELSE COALESCE(tm.role,'viewer') END role,
+        CASE WHEN t.id=? THEN 1 ELSE 0 END isMain,
         (SELECT COUNT(*) FROM team_members m WHERE m.team_id=t.id)+1 memberCount,
         (SELECT COUNT(*) FROM team_workspaces tw WHERE tw.team_id=t.id) workspaceCount
        FROM teams t JOIN users owner ON owner.id=t.owner_id
        LEFT JOIN team_members tm ON tm.team_id=t.id AND tm.user_id=?
-       WHERE t.owner_id=? OR tm.user_id=?
-       ORDER BY t.name COLLATE NOCASE`,
+       ORDER BY CASE WHEN t.owner_id=? OR tm.user_id IS NOT NULL THEN 0 WHEN t.id=? THEN 1 ELSE 2 END,
+         t.name COLLATE NOCASE`,
     )
-    .all(user.id, user.id, user.id, user.id);
-  return NextResponse.json({ teams });
+    .all(user.id, mainTeamId, user.id, user.id, mainTeamId);
+  return NextResponse.json({ teams, mainTeamId: mainTeamId > 0 ? mainTeamId : null });
 }
 export async function POST(request: Request) {
   const user = await currentUser();

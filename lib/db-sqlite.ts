@@ -866,6 +866,7 @@ const migrations: [number, string][] = [
   [24, "multi-assignee tasks and pauseable time entries"],
   [25, "reusable teams and team-linked workspaces"],
   [26, "schema hardening and collaboration integrity"],
+  [27, "admin platform settings"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

@@ -379,8 +379,9 @@ test("public documentation covers the deployed platform without private network 
 });
 
 test("teams are a server-authorized access boundary", async () => {
-  const [schema, teamHelper, teamRoute, ownerRoute, membersRoute, workspaceRoute, boardList, calendarRoute, collab, ui, teamsUi] = await Promise.all([
+  const [schema, teamHelper, teamRoute, teamSettings, directory, ownerRoute, membersRoute, workspaceRoute, boardList, calendarRoute, collab, ui, teamsUi] = await Promise.all([
     read("lib/db-sqlite.ts"), read("lib/teams.ts"), read("app/api/teams/[id]/route.ts"),
+    read("app/api/admin/settings/route.ts"), read("app/api/directory/route.ts"),
     read("app/api/teams/[id]/owner/route.ts"),
     read("app/api/teams/[id]/members/route.ts"), read("app/api/teams/[id]/workspaces/route.ts"),
     read("app/api/boards/route.ts"), read("app/api/calendars/route.ts"), read("app/api/collab/schedule/route.ts"),
@@ -390,9 +391,15 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(schema, /CREATE TABLE IF NOT EXISTS team_members/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS team_workspaces/);
   assert.match(schema, /reusable teams and team-linked workspaces/);
+  assert.match(schema, /27, "admin platform settings"/);
   assert.match(teamHelper, /team_members/);
   assert.match(teamHelper, /team_workspaces/);
   assert.match(teamRoute, /canManageTeam/);
+  assert.match(teamRoute, /const visibleRole = role \|\| "viewer"/);
+  assert.match(teamRoute, /role: visibleRole/);
+  assert.match(teamSettings, /TEAM\.MAIN\.UPDATE/);
+  assert.match(teamSettings, /main_team_id/);
+  assert.match(directory, /SELECT DISTINCT t\.id,t\.name/);
   assert.match(ownerRoute, /Only the team owner can transfer ownership/);
   assert.match(ownerRoute, /team_members/);
   assert.match(ownerRoute, /TEAM\.OWNER_TRANSFER/);
@@ -412,6 +419,8 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(teamsUi, /team-color-preview/);
   assert.match(teamsUi, /normalizeTeamColor/);
   assert.match(teamsUi, /Transfer ownership/);
+  assert.match(teamsUi, /Main team/);
+  assert.match(teamsUi, /Other teams/);
 });
 
 test("beta security boundary rejects CSRF and throttles sensitive endpoints", async () => {

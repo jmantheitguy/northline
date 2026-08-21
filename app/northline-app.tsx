@@ -2693,13 +2693,23 @@ function Admin({
   const [overview, setOverview] = useState<any>(null);
   const [health, setHealth] = useState<any>(null);
   const [adminTime, setAdminTime] = useState<any>(null);
+  const [adminTeamSettings, setAdminTeamSettings] = useState<any>(null);
+  const [mainTeamDraft, setMainTeamDraft] = useState("");
   const [healthLive, setHealthLive] = useState(true);
   const loadOverview = () =>
     jsonFetch("/api/admin/overview")
       .then(setOverview)
       .catch((e) => notify(e.message));
+  const loadAdminTeamSettings = () =>
+    jsonFetch("/api/admin/settings")
+      .then((data) => {
+        setAdminTeamSettings(data);
+        setMainTeamDraft(data.mainTeamId ? String(data.mainTeamId) : "");
+      })
+      .catch((e) => notify(e.message));
   useEffect(() => {
     void loadOverview();
+    void loadAdminTeamSettings();
     jsonFetch("/api/admin/health")
       .then(setHealth)
       .catch((e) => notify(e.message));
@@ -2738,6 +2748,15 @@ function Admin({
     await reloadUsers();
     await loadOverview();
     notify("Local recovery user created");
+  };
+  const saveMainTeam = async () => {
+    await jsonFetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mainTeamId: mainTeamDraft || null }),
+    });
+    await loadAdminTeamSettings();
+    notify(mainTeamDraft ? "Main team updated" : "Main team cleared");
   };
   const shown = users.filter((u) =>
     (u.name + u.email + u.role).toLowerCase().includes(query.toLowerCase()),
@@ -2818,6 +2837,7 @@ function Admin({
                   jsonFetch("/api/admin/time")
                     .then(setAdminTime)
                     .catch((e) => notify(e.message));
+                  void loadAdminTeamSettings();
                   notify("Dashboard refreshed");
                 }}
               >
@@ -2878,6 +2898,41 @@ function Admin({
                     : "Loading"
                 }
               />
+            </div>
+            <div className="admin-dashboard-card admin-team-setting">
+              <header>
+                <div>
+                  <small>TEAM DIRECTORY</small>
+                  <h3>Main team</h3>
+                  <p>
+                    Choose the team shown first for everyone. This only changes
+                    directory ordering and does not grant access to boards or
+                    workspaces.
+                  </p>
+                </div>
+              </header>
+              <div className="admin-team-setting-row">
+                <select
+                  aria-label="Main team"
+                  value={mainTeamDraft}
+                  onChange={(event) => setMainTeamDraft(event.target.value)}
+                  disabled={!adminTeamSettings}
+                >
+                  <option value="">No main team</option>
+                  {(adminTeamSettings?.teams || []).map((team: any) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="secondary"
+                  disabled={!adminTeamSettings}
+                  onClick={() => void saveMainTeam()}
+                >
+                  Save main team
+                </button>
+              </div>
             </div>
             <div className="admin-dashboard-columns">
               <div className="admin-dashboard-card">

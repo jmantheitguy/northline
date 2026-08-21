@@ -186,9 +186,9 @@ async function ensureReady() {
     throw new Error("PostgreSQL schema is not initialized; run the guarded migration before starting Northline");
   }
   await runPostgresSchemaMigrations();
-  const latestMigration = await query<{ exists: boolean }>("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=26) AS exists");
+  const latestMigration = await query<{ exists: boolean }>("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=27) AS exists");
   if (!latestMigration.rows[0]?.exists) {
-    throw new Error("PostgreSQL schema is missing the latest Northline hardening migration; rerun the guarded migration");
+    throw new Error("PostgreSQL schema is missing the latest Northline platform-settings migration; rerun the guarded migration");
   }
   const required = await query<{ table_name: string; column_name: string }>(`
     SELECT table_name,column_name
@@ -224,6 +224,15 @@ async function runPostgresSchemaMigrations() {
       await ensureCollabSchema();
       await applySchemaHardening();
       await query("INSERT INTO schema_migrations(version,name) VALUES(26,'schema hardening and collaboration integrity') ON CONFLICT(version) DO NOTHING");
+    }
+    if (!applied.has(27)) {
+      await query(`
+        CREATE TABLE IF NOT EXISTS "app_meta" (
+          "key" TEXT PRIMARY KEY,
+          "value" TEXT NOT NULL
+        )
+      `);
+      await query("INSERT INTO schema_migrations(version,name) VALUES(27,'admin platform settings') ON CONFLICT(version) DO NOTHING");
     }
   });
 }
