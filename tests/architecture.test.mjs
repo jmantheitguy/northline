@@ -760,6 +760,9 @@ test("private calendars use opaque identifiers and explicit per-calendar permiss
   assert.match(events, /canEditCalendar/);
   assert.match(eventRoute, /calendarEventByKey/);
   assert.match(ui, /My calendars/);
+  assert.match(app, /CollabPlanner/);
+  assert.match(app, /Collab planner/);
+  assert.match(app, /view === "collabs"/);
   assert.match(ui, /month.*week.*agenda/s);
   assert.match(ui, /viewer.*editor/s);
   assert.match(app, /CalendarHub/);

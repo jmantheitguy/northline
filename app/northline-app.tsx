@@ -9,6 +9,7 @@ import { TimeClock } from "./time-clock";
 import { TimeCard } from "./time-card";
 import { AdminTime } from "./admin-time";
 import { CalendarHub } from "./calendar-hub";
+import { CollabPlanner } from "./collab-planner";
 import { HelpCenter, WelcomeGuide, type HelpDestination } from "./help-center";
 
 type Status = string;
@@ -167,6 +168,7 @@ type View =
   | "my-work"
   | "time"
   | "calendars"
+  | "collabs"
   | "directory"
   | "reminders"
   | "help"
@@ -418,8 +420,8 @@ export function NorthlineApp() {
     const query = new URLSearchParams(window.location.search),
       task = Number(query.get("task"));
     if (task > 0) setDeepLinkTaskId(task);
-    if (query.get("view") === "calendars" || query.has("collab"))
-      setView("calendars");
+    if (query.has("collab")) setView("collabs");
+    else if (query.get("view") === "calendars") setView("calendars");
   }, []);
   useEffect(() => {
     if (authUser) void loadBoards();
@@ -680,6 +682,12 @@ export function NorthlineApp() {
             <span>▦</span>Calendars
           </button>
           <button
+            className={view === "collabs" ? "active" : ""}
+            onClick={() => setView("collabs")}
+          >
+            <span>♢</span>Collab planner
+          </button>
+          <button
             className={view === "directory" ? "active" : ""}
             onClick={() => setView("directory")}
           >
@@ -874,6 +882,7 @@ export function NorthlineApp() {
         )}
         {view === "time" && <TimeCard notify={notify} />}
         {view === "calendars" && <CalendarHub notify={notify} />}
+        {view === "collabs" && <CollabPlanner notify={notify} />}
         {view === "reminders" && <ReminderCenter notify={notify} />}
         {view === "help" && (
           <HelpCenter
