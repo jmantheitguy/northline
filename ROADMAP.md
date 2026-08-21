@@ -72,6 +72,55 @@ Northline is being built in public as a self-hosted project workspace for small 
 - Clean-install verification by following only public documentation
 - Final known-limitations, support, and release notes
 
+## Remaining work — consolidated feedback backlog
+
+This is the current public checklist after the Beta v1.0.0 team foundation. Items
+marked complete are implemented in the application; the remaining items are
+sequenced behind reliability and access-control work.
+
+### In progress / verify in the browser
+
+- [x] Repair PostgreSQL team creation after a team is inserted (the detail
+  query now sorts a wrapped member result safely on PostgreSQL).
+- [x] Make the team color control show a live swatch and accept `#RGB`,
+  `#RRGGBB`, and `rgb(r, g, b)` values.
+- [x] Keep the collab planner account-wide, with a team filter, a selected
+  streamer list, searchable all-streamers fallback, and visible team labels.
+- [ ] Complete browser verification of team creation, team membership,
+  workspace linking, and team-filtered collab requests against Railway data.
+
+### Product feedback still open
+
+- [ ] Add a first-class vacation planner with a clear multi-day vacation/event
+  workflow and conflict visibility.
+- [ ] Add daily recurring reminders with an explicit end date and safe
+  cancellation/editing of a reminder series.
+- [ ] Expand task labels from one category field to multiple searchable tags,
+  with tag filtering on boards and My Work.
+- [ ] Add custom theme presets and user-selectable accent colors beyond the
+  current light/dark modes.
+- [ ] Add user font-size controls and optional read-aloud/accessibility support.
+- [ ] Add internal sidebar scrolling and remove the unused desktop space when
+  the sidebar is collapsed on smaller screens.
+- [ ] Finish the team management surface for rename/delete, manager controls,
+  team-owned boards/calendars, and clearer team roster/list views in the collab
+  planner.
+- [ ] Complete collab/calendar lifecycle reconciliation so cancellations,
+  reschedules, participant changes, and calendar copies remain consistent in
+  every edge case.
+- [ ] Add larger-directory and larger-board performance coverage, then run the
+  responsive, keyboard, screen-reader, and contrast review for the remaining
+  workflows.
+
+### Release and operations gates
+
+- [ ] Run browser-driven Admin, Member, editor, viewer, suspended-user, and
+  expired-session journeys after each schema or authorization change.
+- [ ] Rehearse the Railway backup/restore and rollback path with a disposable
+  staging database before the next major release.
+- [ ] Keep public release notes, known limitations, upgrade guidance, and the
+  help center synchronized with each production deployment.
+
 ## Beta — Workflow acceleration and production readiness
 
 - Lightweight automation rules for status, due dates, and reminders

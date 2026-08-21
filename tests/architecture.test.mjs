@@ -15,6 +15,8 @@ test("board mutations enforce server-side permissions", async () => {
     /canEdit\((?:await\s+)?boardPermission\(user,\s*task\.(?:board_id|boardId)\)\)/,
   );
   assert.match(memberRoute, /canShare\((?:await\s+)?boardPermission\(user,boardId\)\)/);
+  assert.match(memberRoute, /db\.transaction\(async\(\)=>\{/);
+  assert.match(memberRoute, /Invalid user/);
   assert.match(permissions, /permission==="owner"\|\|permission==="editor"/);
   assert.match(permissions, /canShare=.*permission==="owner"/);
   assert.doesNotMatch(permissions, /permission==="admin"|user\.role==="Admin"/);
@@ -400,6 +402,10 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(ui, /All streamers/);
   assert.match(teamsUi, /Create a team/);
   assert.match(teamRoute, /Forbidden/);
+  assert.match(teamRoute, /FROM \(\s*SELECT u\.id,u\.name,u\.email,u\.avatar,'owner' role/);
+  assert.match(teamRoute, /\) members ORDER BY name COLLATE NOCASE/);
+  assert.match(teamsUi, /team-color-preview/);
+  assert.match(teamsUi, /normalizeTeamColor/);
 });
 
 test("beta security boundary rejects CSRF and throttles sensitive endpoints", async () => {
@@ -956,6 +962,8 @@ test("the PostgreSQL driver preserves camelCase API aliases", async () => {
   const postgres = await read("lib/db-postgres.ts"),
     compatibility = await read("lib/postgres-compat.ts");
   assert.match(postgres, /quoteCamelCaseAliases/);
+  assert.match(postgres, /\(\?=\\s\+RETURNING\\b\|;\|\$\)/);
+  assert.match(postgres, /generated-id RETURNING clause after the compatibility conflict/);
   assert.match(compatibility, /PostgreSQL folds unquoted identifiers/);
   assert.match(compatibility, /AS "\$\{alias\}"/);
   assert.match(compatibility, /withBareAlias/);

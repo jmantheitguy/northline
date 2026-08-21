@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import db from "@/lib/db";
 import { canManageTeam, teamRole } from "@/lib/teams";
+import { normalizeTeamColor } from "@/lib/team-colors";
 
 async function readId(params: Promise<{ id: string }>) {
   const value = (await params).id;
@@ -21,12 +22,15 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const team = await db.prepare(`SELECT t.id,t.public_id teamKey,t.name,t.description,t.color,t.owner_id ownerId,u.name ownerName
     FROM teams t JOIN users u ON u.id=t.owner_id WHERE t.id=?`).get(id);
   if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
-  const members = await db.prepare(`SELECT u.id,u.name,u.email,u.avatar,'owner' role
-    FROM teams t JOIN users u ON u.id=t.owner_id WHERE t.id=?
-    UNION ALL
-    SELECT member.id,member.name,member.email,member.avatar,tm.role
-    FROM team_members tm JOIN users member ON member.id=tm.user_id
-    WHERE tm.team_id=? ORDER BY name COLLATE NOCASE`).all(id, id);
+  const members = await db.prepare(`SELECT id,name,email,avatar,role
+    FROM (
+      SELECT u.id,u.name,u.email,u.avatar,'owner' role
+      FROM teams t JOIN users u ON u.id=t.owner_id WHERE t.id=?
+      UNION ALL
+      SELECT member.id,member.name,member.email,member.avatar,tm.role
+      FROM team_members tm JOIN users member ON member.id=tm.user_id
+      WHERE tm.team_id=?
+    ) members ORDER BY name COLLATE NOCASE`).all(id, id);
   const workspaces = await db.prepare(`SELECT w.id,w.public_id workspaceKey,w.name,w.kind,w.owner_id ownerId,
     tw.permission,owner.name ownerName
     FROM team_workspaces tw JOIN workspaces w ON w.id=tw.workspace_id JOIN users owner ON owner.id=w.owner_id
@@ -44,8 +48,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => ({}));
   const name = String(body.name || "").trim();
   const description = String(body.description || "").trim();
-  const color = String(body.color || "#7c6ce7").trim();
-  if (!name || name.length > 80 || description.length > 500 || !/^#[0-9a-f]{6}$/i.test(color))
+  const color = normalizeTeamColor(body.color || "#7c6ce7");
+  if (!name || name.length > 80 || description.length > 500 || !color)
     return NextResponse.json({ error: "Enter a team name, description, and valid color" }, { status: 400 });
   await db.prepare("UPDATE teams SET name=?,description=?,color=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
     .run(name, description, color, id);

@@ -1,5 +1,15 @@
 node_modules
 .git
+.next
+.worktrees
+.tmp-*
+.agent-*
+.continue
+.railway-*
+.vscode
+CodexExport
+data
+db
 .vinext
 .wrangler
 build

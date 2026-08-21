@@ -64,7 +64,12 @@ function translateSql(input: string) {
     .replace(/([A-Za-z_][A-Za-z0-9_.]*)\s+COLLATE\s+NOCASE\b/gi, "LOWER($1)")
     .replace(/\s+COLLATE\s+NOCASE\b/gi, "")
     .replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, "INSERT INTO");
-  sql = sql.replace(/(INSERT INTO[\s\S]*?\))\s*VALUES\s*([\s\S]*?)(?=;|$)/i, (match, columns, values) => {
+  // Keep a generated-id RETURNING clause after the compatibility conflict
+  // clause. Without stopping the VALUES capture before RETURNING, an insert
+  // such as `VALUES (...) RETURNING id` becomes `RETURNING id ON CONFLICT`,
+  // which PostgreSQL rejects. This affected board sharing because its audit
+  // row is written immediately after the membership row.
+  sql = sql.replace(/(INSERT INTO[\s\S]*?\))\s*VALUES\s*([\s\S]*?)(?=\s+RETURNING\b|;|$)/i, (match, columns, values) => {
     if (/ON\s+CONFLICT/i.test(match)) return match;
     return `${columns} VALUES ${values} ON CONFLICT DO NOTHING`;
   });

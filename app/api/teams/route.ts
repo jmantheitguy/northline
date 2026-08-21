@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import db, { createTeamPublicId } from "@/lib/db";
+import { normalizeTeamColor } from "@/lib/team-colors";
 
 export async function GET() {
   const user = await currentUser();
@@ -26,8 +27,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const name = String(body.name || "").trim();
   const description = String(body.description || "").trim();
-  const color = String(body.color || "#7c6ce7").trim();
-  if (!name || name.length > 80 || description.length > 500 || !/^#[0-9a-f]{6}$/i.test(color))
+  const color = normalizeTeamColor(body.color || "#7c6ce7");
+  if (!name || name.length > 80 || description.length > 500 || !color)
     return NextResponse.json({ error: "Enter a team name, description, and valid color" }, { status: 400 });
   const publicId = createTeamPublicId();
   const result = await db.transaction(async () => {
