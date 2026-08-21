@@ -528,11 +528,10 @@ export function NorthlineApp() {
       Number(board.navigationWorkspaceId ?? board.workspaceId) ===
       Number(activeWorkspace?.id),
   );
-  // The API is the authorization boundary. If a stale workspace selection
-  // cannot be matched to the already-authorized board payload, keep the
-  // navigation usable instead of rendering an empty sidebar.
-  const visibleBoards =
-    workspaceBoards.length > 0 || boards.length === 0 ? workspaceBoards : boards;
+  // The API is the authorization boundary, while the selected workspace
+  // controls navigation. Never mix boards from another workspace into this
+  // view when a workspace has no boards of its own.
+  const visibleBoards = workspaceBoards;
   const mutate = async (action: () => Promise<void>) => {
     if (busy) return;
     setBusy(true);
