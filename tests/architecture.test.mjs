@@ -81,8 +81,22 @@ test("board references are opaque while creator ownership remains relational", a
 
 test("PostgreSQL board details keep the team-aware assignee query orderable", async () => {
   const detail = await read("app/api/boards/[id]/route.ts");
-  assert.match(detail, /SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar FROM users u/);
-  assert.match(detail, /ORDER BY u\.name COLLATE NOCASE/);
+  assert.match(detail, /SELECT id,name,email,avatar\s+FROM \(\s*SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar/);
+  assert.match(detail, /ORDER BY LOWER\(name\),id/);
+  assert.doesNotMatch(detail, /SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar FROM users u[\s\S]*ORDER BY u\.name COLLATE NOCASE/);
+});
+
+test("PostgreSQL list queries order DISTINCT rows by selected or outer fields", async () => {
+  const [boards, calendars, search] = await Promise.all([
+    read("app/api/boards/route.ts"),
+    read("app/api/calendars/route.ts"),
+    read("app/api/search/route.ts"),
+  ]);
+  assert.match(boards, /ORDER BY "updatedAt" DESC/);
+  assert.match(calendars, /FROM \(\s*SELECT DISTINCT/);
+  assert.match(calendars, /ORDER BY "ownerOrder",LOWER\(name\)/);
+  assert.match(search, /t\.updated_at AS "updatedAt"/);
+  assert.match(search, /ORDER BY "updatedAt" DESC/);
 });
 
 test("board navigation normalizes database identifiers and keeps populated workspaces selected", async () => {

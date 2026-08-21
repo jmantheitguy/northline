@@ -18,7 +18,7 @@ export async function GET(){
     LEFT JOIN team_workspaces tw ON tw.workspace_id=w.id
     LEFT JOIN teams team ON team.id=tw.team_id
     LEFT JOIN team_members tm ON tm.team_id=tw.team_id AND tm.user_id=?
-    WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? OR team.owner_id=? OR tm.user_id=? ORDER BY b.updated_at DESC`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id);
+    WHERE b.owner_id=? OR w.owner_id=? OR bm.user_id=? OR wm.user_id=? OR team.owner_id=? OR tm.user_id=? ORDER BY "updatedAt" DESC`).all(user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id,user.id);
   const directShares=(boards as Array<{navigationWorkspaceId:number}>).filter(board=>board.navigationWorkspaceId===0).length;
   const workspaces=await listWorkspaces(user) as Array<Record<string,unknown>>;
   if(directShares)workspaces.push({id:0,workspaceKey:"shared-with-me",name:"Shared with me",kind:"shared",ownerId:0,ownerName:"Northline",permission:"viewer",boardCount:directShares,memberCount:0,virtual:true});

@@ -9,16 +9,22 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const calendars = await db
     .prepare(
-      `SELECT DISTINCT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,c.team_id teamId,team.name teamName,
-    c.owner_id ownerId,u.name ownerName,CASE WHEN c.owner_id=? THEN 'owner' WHEN cm.permission IS NOT NULL THEN cm.permission WHEN team.owner_id=? THEN 'owner' WHEN tm.role='manager' THEN 'editor' WHEN tm.role='member' THEN 'viewer' END permission,
-    (SELECT COUNT(*) FROM calendar_events e WHERE e.calendar_id=c.id AND e.end_at>=datetime('now','-31 days')) eventCount
-    FROM calendars c JOIN users u ON u.id=c.owner_id
-    LEFT JOIN calendar_members cm ON cm.calendar_id=c.id AND cm.user_id=?
-    LEFT JOIN teams team ON team.id=c.team_id
-    LEFT JOIN team_members tm ON tm.team_id=c.team_id AND tm.user_id=?
-    WHERE c.deleted_at IS NULL AND (c.owner_id=? OR cm.user_id=? OR team.owner_id=? OR tm.user_id=?) ORDER BY CASE WHEN c.owner_id=? THEN 0 ELSE 1 END,c.name COLLATE NOCASE`,
+      `SELECT id,name,color,description,timezone,"calendarType",visibility,"teamId","teamName","ownerId","ownerName",permission,eventCount
+       FROM (
+         SELECT DISTINCT c.public_id id,c.name,c.color,c.description,c.timezone,c.calendar_type calendarType,c.visibility,c.team_id teamId,team.name teamName,
+           c.owner_id ownerId,u.name ownerName,
+           CASE WHEN c.owner_id=? THEN 'owner' WHEN cm.permission IS NOT NULL THEN cm.permission WHEN team.owner_id=? THEN 'owner' WHEN tm.role='manager' THEN 'editor' WHEN tm.role='member' THEN 'viewer' END permission,
+           (CASE WHEN c.owner_id=? THEN 0 ELSE 1 END) ownerOrder,
+           (SELECT COUNT(*) FROM calendar_events e WHERE e.calendar_id=c.id AND e.end_at>=datetime('now','-31 days')) eventCount
+         FROM calendars c JOIN users u ON u.id=c.owner_id
+         LEFT JOIN calendar_members cm ON cm.calendar_id=c.id AND cm.user_id=?
+         LEFT JOIN teams team ON team.id=c.team_id
+         LEFT JOIN team_members tm ON tm.team_id=c.team_id AND tm.user_id=?
+         WHERE c.deleted_at IS NULL AND (c.owner_id=? OR cm.user_id=? OR team.owner_id=? OR tm.user_id=?)
+       ) AS calendar_rows
+       ORDER BY "ownerOrder",LOWER(name)`,
     )
-    .all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id);
+    .all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id);
   const deletedCalendars = await db
     .prepare(
       `SELECT public_id id,name,color,deleted_at deletedAt FROM calendars WHERE owner_id=? AND deleted_at IS NOT NULL AND datetime(deleted_at)>=datetime('now','-30 days') ORDER BY deleted_at DESC`,
