@@ -18,13 +18,13 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const board = await db
     .prepare(
-      "SELECT id,public_id boardKey,name,description,owner_id ownerId,created_by createdBy,workspace_id workspaceId FROM boards WHERE id=?",
+      "SELECT id,public_id AS \"boardKey\",name,description,owner_id AS \"ownerId\",created_by AS \"createdBy\",workspace_id AS \"workspaceId\" FROM boards WHERE id=?",
     )
     .get(id) as { id: number; workspaceId: number };
   const taskRows = await db
     .prepare(
-      `SELECT t.id,t.title,t.description,t.status,t.priority,t.tag,t.due_date due,u.id ownerId,u.name ownerName,u.avatar ownerAvatar,
-  (SELECT COUNT(*) FROM comments c WHERE c.task_id=t.id) comments FROM tasks t LEFT JOIN users u ON u.id=t.assignee_id WHERE t.board_id=? AND t.archived_at IS NULL ORDER BY t.created_at`,
+      `SELECT t.id,t.title,t.description,t.status,t.priority,t.tag,t.due_date AS "due",u.id AS "ownerId",u.name AS "ownerName",u.avatar AS "ownerAvatar",
+  (SELECT COUNT(*) FROM comments c WHERE c.task_id=t.id) AS "comments" FROM tasks t LEFT JOIN users u ON u.id=t.assignee_id WHERE t.board_id=? AND t.archived_at IS NULL ORDER BY t.created_at`,
     )
     .all(id) as Array<Record<string, unknown> & { id: number }>;
   const tasks = await Promise.all(taskRows.map(async (task) => ({
@@ -51,12 +51,12 @@ export async function GET(
     .all(id);
   const columns = await db
     .prepare(
-      "SELECT id,column_key key,name,color,position,is_done isDone FROM board_columns WHERE board_id=? ORDER BY position",
+      "SELECT id,column_key AS \"key\",name,color,position,is_done AS \"isDone\" FROM board_columns WHERE board_id=? ORDER BY position",
     )
     .all(id);
   const notifications = await db
     .prepare(
-      "SELECT channel_id channelId,channel_name channelName,assignment_enabled assignmentEnabled,status_enabled statusEnabled,comment_enabled commentEnabled,mention_enabled mentionEnabled,due_enabled dueEnabled,due_warning_hours dueWarningHours FROM board_notification_settings WHERE board_id=?",
+      "SELECT channel_id AS \"channelId\",channel_name AS \"channelName\",assignment_enabled AS \"assignmentEnabled\",status_enabled AS \"statusEnabled\",comment_enabled AS \"commentEnabled\",mention_enabled AS \"mentionEnabled\",due_enabled AS \"dueEnabled\",due_warning_hours AS \"dueWarningHours\" FROM board_notification_settings WHERE board_id=?",
     )
     .get(id) || {
     channelId: "",

@@ -14,10 +14,10 @@ export async function workspacePermission(user:SessionUser,workspaceId:number):P
 
 export async function listWorkspaces(user:SessionUser){
   await ensurePersonalWorkspace(user.id,user.name);
-  return await db.prepare(`SELECT w.id,w.public_id workspaceKey,w.name,w.kind,w.owner_id ownerId,u.name ownerName,
-    CASE WHEN w.owner_id=? THEN 'owner' ELSE wm.permission END permission,
-    (SELECT COUNT(*) FROM boards b WHERE b.workspace_id=w.id) boardCount,
-    (SELECT COUNT(*) FROM workspace_members m WHERE m.workspace_id=w.id) memberCount
+  return await db.prepare(`SELECT w.id,w.public_id AS "workspaceKey",w.name,w.kind,w.owner_id AS "ownerId",u.name AS "ownerName",
+    CASE WHEN w.owner_id=? THEN 'owner' ELSE wm.permission END AS permission,
+    (SELECT COUNT(*) FROM boards b WHERE b.workspace_id=w.id) AS "boardCount",
+    (SELECT COUNT(*) FROM workspace_members m WHERE m.workspace_id=w.id) AS "memberCount"
     FROM workspaces w JOIN users u ON u.id=w.owner_id LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?
     WHERE w.owner_id=? OR wm.user_id=? ORDER BY w.kind='personal' DESC,w.name COLLATE NOCASE`).all(user.id,user.id,user.id,user.id);
 }

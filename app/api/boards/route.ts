@@ -8,10 +8,10 @@ export async function GET(){
   const personal=await ensurePersonalWorkspace(user.id,user.name);
   const personalBoardCount=(await db.prepare("SELECT COUNT(*) count FROM boards WHERE workspace_id=?").get(personal.id) as {count:number}).count;
   if(!personalBoardCount){const result=await db.prepare("INSERT INTO boards(name,description,owner_id,created_by,workspace_id) VALUES(?,?,?,?,?)").run("My first board","Plan your first project and invite collaborators.",user.id,user.id,personal.id),id=Number(result.lastInsertRowid),boardKey=createBoardPublicId();await db.prepare("UPDATE boards SET public_id=? WHERE id=?").run(boardKey,id);await createDefaultBoardColumns(id)}
-  const boards=await db.prepare(`SELECT DISTINCT b.id,b.public_id boardKey,b.name,b.description,b.owner_id ownerId,u.name ownerName,b.workspace_id workspaceId,b.updated_at updatedAt,
-    CASE WHEN b.owner_id=? OR w.owner_id=? OR wm.user_id IS NOT NULL THEN b.workspace_id ELSE 0 END navigationWorkspaceId,
-    CASE WHEN b.owner_id=? OR w.owner_id=? THEN 'owner' WHEN bm.permission='editor' OR wm.permission='editor' THEN 'editor' ELSE 'viewer' END permission,
-    (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id AND t.archived_at IS NULL) taskCount
+  const boards=await db.prepare(`SELECT DISTINCT b.id,b.public_id AS "boardKey",b.name,b.description,b.owner_id AS "ownerId",u.name AS "ownerName",b.workspace_id AS "workspaceId",b.updated_at AS "updatedAt",
+    CASE WHEN b.owner_id=? OR w.owner_id=? OR wm.user_id IS NOT NULL THEN b.workspace_id ELSE 0 END AS "navigationWorkspaceId",
+    CASE WHEN b.owner_id=? OR w.owner_id=? THEN 'owner' WHEN bm.permission='editor' OR wm.permission='editor' THEN 'editor' ELSE 'viewer' END AS permission,
+    (SELECT COUNT(*) FROM tasks t WHERE t.board_id=b.id AND t.archived_at IS NULL) AS "taskCount"
     FROM boards b JOIN users u ON u.id=b.owner_id JOIN workspaces w ON w.id=b.workspace_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=?
     LEFT JOIN workspace_members wm ON wm.workspace_id=w.id AND wm.user_id=?

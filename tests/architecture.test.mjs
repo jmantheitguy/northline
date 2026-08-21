@@ -67,7 +67,7 @@ test("board references are opaque while creator ownership remains relational", a
     read("lib/boards.ts"),
   ]);
   assert.match(boards, /created_by/);
-  assert.match(boards, /b\.updated_at updatedAt/);
+  assert.match(boards, /b\.updated_at AS \"updatedAt\"/);
   assert.match(schema, /brd_\$\{randomBytes\(16\)/);
   assert.match(detail, /boardKey/);
   assert.match(worker, /creatorName/);
@@ -474,7 +474,7 @@ test("board workflow columns are persistent, mutable, and task safe", async () =
   assert.match(item, /destinationId/);
   assert.match(item, /UPDATE tasks SET status=/);
   assert.match(item, /A board must keep at least one column/);
-  assert.match(detail, /column_key key/);
+  assert.match(detail, /column_key\s+AS/);
   assert.match(createTask, /SELECT 1 FROM board_columns/);
   assert.match(updateTask, /SELECT 1 FROM board_columns/);
   assert.match(ui, /function ColumnManager/);
@@ -491,6 +491,7 @@ test("personal and shared workspaces inherit board access safely", async () => {
     permissions,
     boards,
     workspaces,
+    workspaceQueries,
     members,
     search,
     reminders,
@@ -501,6 +502,7 @@ test("personal and shared workspaces inherit board access safely", async () => {
     read("lib/boards.ts"),
     read("app/api/boards/route.ts"),
     read("app/api/workspaces/route.ts"),
+    read("lib/workspaces.ts"),
     read("app/api/workspaces/[id]/members/route.ts"),
     read("app/api/search/route.ts"),
     read("app/api/reminders/route.ts"),
@@ -515,9 +517,13 @@ test("personal and shared workspaces inherit board access safely", async () => {
   assert.match(boards, /workspaceId/);
   assert.match(boards, /workspace_members/);
   assert.match(boards, /navigationWorkspaceId/);
+  assert.match(boards, /AS \"navigationWorkspaceId\"/);
+  assert.match(boards, /AS \"workspaceId\"/);
   assert.match(boards, /Shared with me/);
   assert.match(boards, /navigationWorkspaceId===0/);
   assert.match(workspaces, /kind\).*shared|kind.*shared/s);
+  assert.match(workspaceQueries, /AS \"workspaceKey\"/);
+  assert.match(workspaceQueries, /AS \"boardCount\"/);
   assert.match(members, /WORKSPACE\.SHARE/);
   assert.match(search, /workspace_members/);
   assert.match(reminders, /workspace_members/);
