@@ -63,9 +63,13 @@ export async function syncAuthentikDirectory(force=false){
   if(users.length&&!users.some(user=>Array.isArray(user.groups_obj)))throw new Error("Authentik response did not include expanded group membership");
   const activeDirectoryIds:string[]=[];
   const managedUsers=await db.prepare("SELECT directory_id directoryId FROM users WHERE auth_source='oidc' AND directory_id IS NOT NULL").all() as Array<{directoryId:string}>;
-  if(managedUsers.length&&!activeDirectoryIds.length)throw new Error("Authentik directory returned no accessible Northline users; refusing destructive reconciliation");
+  const accessibleUsers=users.filter(remote=>{
+    const groups=groupNames(remote),hasAccess=groups.includes("Northline Admins")||groups.includes("Northline Users");
+    return hasAccess&&Boolean(remote.uuid||remote.pk)&&Boolean(remote.email||remote.username);
+  });
+  if(managedUsers.length&&!accessibleUsers.length)throw new Error("Authentik directory returned no accessible Northline users; refusing destructive reconciliation");
   await db.transaction(async ()=>{
-    for(const remote of users){
+    for(const remote of accessibleUsers){
       const groups=groupNames(remote),isAdmin=groups.includes("Northline Admins"),hasAccess=isAdmin||groups.includes("Northline Users");
       const directoryId=remote.uuid||String(remote.pk||"");
       const email=remote.email||remote.username;
