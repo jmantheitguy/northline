@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Database from "better-sqlite3";
+import fs from "node:fs";
 import { inspectSqlite, normalizeTableSql, orderTables } from "../scripts/migrate-sqlite-to-postgres.mjs";
 
 test("normalizes SQLite identity and collation syntax for PostgreSQL", () => {
@@ -32,4 +33,12 @@ test("inspects a SQLite schema without opening a PostgreSQL connection", () => {
   assert.equal(plan.tables.find((table) => table.name === "child").rowCount, 1);
   assert.equal(plan.indexes.length, 1);
   source.close();
+});
+
+test("migration importer carries the v26 integrity hardening forward", () => {
+  const migration = fs.readFileSync(new URL("../scripts/migrate-sqlite-to-postgres.mjs", import.meta.url), "utf8");
+  assert.match(migration, /calendar_events_collab_request_id_fkey/);
+  assert.match(migration, /calendar_events_collab_request_idx/);
+  assert.match(migration, /schema hardening and collaboration integrity/);
+  assert.match(migration, /calendar_events contains orphaned collaboration references/);
 });

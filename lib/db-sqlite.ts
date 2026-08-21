@@ -496,6 +496,65 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS collab_notifications_due_idx ON collab_notifications(status,created_at);
 `);
 
+// SQLite cannot add a foreign key or CHECK constraint to an existing table
+// without rebuilding it. Rebuilding production-sized tables is unnecessarily
+// risky, so the v26 hardening migration validates existing rows once and then
+// enforces the same invariants with aborting triggers for future writes.
+const sqliteHardeningChecks = [
+  ["calendars", "calendar_type", "'personal','streaming'"],
+  ["calendars", "visibility", "'private','team','public'"],
+  ["calendar_events", "event_kind", "'event','stream','collab'"],
+  ["calendar_events", "visibility", "'calendar','private','team','public','busy'"],
+  ["calendar_events", "collab_enabled", "0,1"],
+  ["collab_requests", "status", "'pending','countered','accepted','declined','cancelled'"],
+  ["collab_request_participants", "status", "'pending','countered','accepted','declined','cancelled'"],
+  ["collab_reschedule_proposals", "status", "'pending','accepted','declined','cancelled'"],
+  ["collab_reschedule_responses", "status", "'pending','accepted','declined'"],
+  ["collab_notifications", "status", "'pending','sent','failed'"],
+] as const;
+for (const [table, column, allowedValues] of sqliteHardeningChecks) {
+  const invalid = db
+    .prepare(
+      `SELECT COUNT(*) AS count FROM "${table}" WHERE "${column}" IS NULL OR "${column}" NOT IN (${allowedValues})`,
+    )
+    .get() as { count: number };
+  if (Number(invalid.count) > 0) {
+    throw new Error(`Cannot apply schema hardening: ${table}.${column} contains invalid values`);
+  }
+  const triggerBase = `northline_v26_${table}_${column}`;
+  const condition = `NEW."${column}" IS NULL OR NEW."${column}" NOT IN (${allowedValues})`;
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS "${triggerBase}_insert"
+      BEFORE INSERT ON "${table}"
+      WHEN ${condition}
+      BEGIN SELECT RAISE(ABORT, 'invalid ${table}.${column}'); END;
+    CREATE TRIGGER IF NOT EXISTS "${triggerBase}_update"
+      BEFORE UPDATE OF "${column}" ON "${table}"
+      WHEN ${condition}
+      BEGIN SELECT RAISE(ABORT, 'invalid ${table}.${column}'); END;
+  `);
+}
+const orphanedSqliteCollabEvents = db
+  .prepare(
+    `SELECT COUNT(*) AS count FROM calendar_events event LEFT JOIN collab_requests request ON request.id=event.collab_request_id WHERE event.collab_request_id IS NOT NULL AND request.id IS NULL`,
+  )
+  .get() as { count: number };
+if (Number(orphanedSqliteCollabEvents.count) > 0) {
+  throw new Error("Cannot apply schema hardening: calendar_events contains orphaned collaboration references");
+}
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS northline_v26_calendar_events_collab_request_insert
+    BEFORE INSERT ON calendar_events
+    WHEN NEW.collab_request_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM collab_requests WHERE id=NEW.collab_request_id)
+    BEGIN SELECT RAISE(ABORT, 'FOREIGN KEY constraint failed'); END;
+  CREATE TRIGGER IF NOT EXISTS northline_v26_calendar_events_collab_request_update
+    BEFORE UPDATE OF collab_request_id ON calendar_events
+    WHEN NEW.collab_request_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM collab_requests WHERE id=NEW.collab_request_id)
+    BEGIN SELECT RAISE(ABORT, 'FOREIGN KEY constraint failed'); END;
+`);
+
 db.exec(`
   INSERT INTO calendar_reminders
     (calendar_event_id,created_by,recipient_user_id,message,remind_at)
@@ -806,6 +865,7 @@ const migrations: [number, string][] = [
   [23, "directory Discord contact profiles"],
   [24, "multi-assignee tasks and pauseable time entries"],
   [25, "reusable teams and team-linked workspaces"],
+  [26, "schema hardening and collaboration integrity"],
 ];
 const recordMigrations = db.transaction(() => {
   const insert = db.prepare(

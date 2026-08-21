@@ -180,6 +180,11 @@ async function ensureReady() {
   if (!result.rows[0]?.exists) {
     throw new Error("PostgreSQL schema is not initialized; run the guarded migration before starting Northline");
   }
+  await runPostgresSchemaMigrations();
+  const latestMigration = await query<{ exists: boolean }>("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=26) AS exists");
+  if (!latestMigration.rows[0]?.exists) {
+    throw new Error("PostgreSQL schema is missing the latest Northline hardening migration; rerun the guarded migration");
+  }
   const required = await query<{ table_name: string; column_name: string }>(`
     SELECT table_name,column_name
     FROM information_schema.columns
@@ -192,9 +197,30 @@ async function ensureReady() {
   if (!requiredColumns.has("time_entries.paused_at") || !requiredColumns.has("time_entries.paused_seconds") || !requiredColumns.has("task_assignees.task_id") || !requiredColumns.has("task_assignees.user_id")) {
     throw new Error("PostgreSQL schema is missing the latest Northline additive structures; rerun the guarded migration");
   }
-  await ensureCollabSchema();
-  await ensureTeamSchema();
   await query("SELECT 1");
+}
+
+/**
+ * Apply compatibility DDL only when its migration is pending. This keeps
+ * ordinary application startups read-only while still allowing an older
+ * PostgreSQL snapshot to be upgraded in one guarded transaction.
+ */
+async function runPostgresSchemaMigrations() {
+  await db.transaction(async () => {
+    // Serialize startup migrations across multiple application instances.
+    // The lock is transaction-scoped and releases automatically on commit or
+    // rollback, so it cannot persist after a failed boot.
+    await query("SELECT pg_advisory_xact_lock(hashtext('northline.schema.migrations'))");
+    const applied = new Set(
+      (await query<{ version: number }>("SELECT version FROM schema_migrations")).rows.map((row) => Number(row.version)),
+    );
+    if (!applied.has(25)) await ensureTeamSchema();
+    if (!applied.has(26)) {
+      await ensureCollabSchema();
+      await applySchemaHardening();
+      await query("INSERT INTO schema_migrations(version,name) VALUES(26,'schema hardening and collaboration integrity') ON CONFLICT(version) DO NOTHING");
+    }
+  });
 }
 
 async function ensureTeamSchema() {
@@ -338,6 +364,60 @@ async function ensureCollabSchema() {
   await query("CREATE UNIQUE INDEX IF NOT EXISTS collab_reschedule_one_pending_idx ON \"collab_reschedule_proposals\" (\"collab_request_id\") WHERE \"status\"='pending'");
   await query('CREATE INDEX IF NOT EXISTS collab_reschedule_responses_user_idx ON "collab_reschedule_responses" ("user_id","status")');
   await query('CREATE INDEX IF NOT EXISTS collab_notifications_due_idx ON "collab_notifications" ("status","created_at")');
+}
+
+async function applySchemaHardening() {
+  const orphanedEvents = await query<{ count: string }>(`
+    SELECT COUNT(*)::text AS count
+    FROM "calendar_events" event
+    LEFT JOIN "collab_requests" request ON request."id"=event."collab_request_id"
+    WHERE event."collab_request_id" IS NOT NULL AND request."id" IS NULL
+  `);
+  if (Number(orphanedEvents.rows[0]?.count || 0) > 0) {
+    throw new Error("Cannot apply schema hardening: calendar_events contains orphaned collaboration references");
+  }
+  await query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname='calendar_events_collab_request_id_fkey'
+          AND conrelid='public.calendar_events'::regclass
+      ) THEN
+        ALTER TABLE "calendar_events"
+          ADD CONSTRAINT "calendar_events_collab_request_id_fkey"
+          FOREIGN KEY ("collab_request_id") REFERENCES "collab_requests"("id") ON DELETE SET NULL;
+      END IF;
+    END
+    $$;
+  `);
+  const checks = [
+    ["calendars", "calendars_calendar_type_check", `"calendar_type" IN ('personal','streaming')`],
+    ["calendars", "calendars_visibility_check", `"visibility" IN ('private','team','public')`],
+    ["calendar_events", "calendar_events_event_kind_check", `"event_kind" IN ('event','stream','collab')`],
+    ["calendar_events", "calendar_events_visibility_check", `"visibility" IN ('calendar','private','team','public','busy')`],
+    ["calendar_events", "calendar_events_collab_enabled_check", `"collab_enabled" IN (0,1)`],
+    ["collab_requests", "collab_requests_status_check", `"status" IN ('pending','countered','accepted','declined','cancelled')`],
+    ["collab_request_participants", "collab_request_participants_status_check", `"status" IN ('pending','countered','accepted','declined','cancelled')`],
+    ["collab_reschedule_proposals", "collab_reschedule_proposals_status_check", `"status" IN ('pending','accepted','declined','cancelled')`],
+    ["collab_reschedule_responses", "collab_reschedule_responses_status_check", `"status" IN ('pending','accepted','declined')`],
+    ["collab_notifications", "collab_notifications_status_check", `"status" IN ('pending','sent','failed')`],
+  ] as const;
+  for (const [table, name, expression] of checks) {
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname='${name}' AND conrelid='public.${table}'::regclass
+        ) THEN
+          ALTER TABLE "${table}" ADD CONSTRAINT "${name}" CHECK (${expression});
+        END IF;
+      END
+      $$;
+    `);
+  }
+  await query('CREATE INDEX IF NOT EXISTS calendar_events_collab_request_idx ON "calendar_events" ("collab_request_id")');
 }
 
 await ensureReady();

@@ -1029,6 +1029,14 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   );
   assert.match(schema, /collaboration reschedule proposals/);
   assert.match(postgresSchema, /ensureCollabSchema/);
+  assert.match(postgresSchema, /runPostgresSchemaMigrations/);
+  assert.match(postgresSchema, /pg_advisory_xact_lock/);
+  assert.match(postgresSchema, /calendar_events_collab_request_id_fkey/);
+  assert.match(postgresSchema, /calendar_events_collab_request_idx/);
+  assert.match(postgresSchema, /schema hardening and collaboration integrity/);
+  assert.match(schema, /northline_v26_calendar_events_collab_request_insert/);
+  assert.match(schema, /northline_v26_\$\{table\}_\$\{column\}/);
+  assert.match(schema, /schema hardening and collaboration integrity/);
   assert.match(postgresSchema, /CREATE TABLE IF NOT EXISTS "collab_requests"/);
   assert.match(
     postgresSchema,
