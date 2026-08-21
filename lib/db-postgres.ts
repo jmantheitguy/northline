@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes } from "node:crypto";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { quoteCamelCaseAliases } from "./postgres-compat";
 
 export const createBoardPublicId = () =>
   `brd_${randomBytes(16).toString("hex")}`;
@@ -53,7 +54,7 @@ function replaceQuestionMarks(sql: string) {
 }
 
 function translateSql(input: string) {
-  let sql = input
+  let sql = quoteCamelCaseAliases(input)
     // SQLite's NOCASE collation is part of Northline's identity semantics.
     // Preserve it explicitly instead of silently falling back to PostgreSQL's
     // case-sensitive comparison/order behavior.

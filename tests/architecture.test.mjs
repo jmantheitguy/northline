@@ -769,6 +769,15 @@ test("private calendars use opaque identifiers and explicit per-calendar permiss
   assert.match(app, /CalendarHub/);
 });
 
+test("the PostgreSQL driver preserves camelCase API aliases", async () => {
+  const postgres = await read("lib/db-postgres.ts"),
+    compatibility = await read("lib/postgres-compat.ts");
+  assert.match(postgres, /quoteCamelCaseAliases/);
+  assert.match(compatibility, /PostgreSQL folds unquoted identifiers/);
+  assert.match(compatibility, /AS "\$\{alias\}"/);
+  assert.match(compatibility, /withBareAlias/);
+});
+
 test("calendar stabilization keeps reminders and recovery private", async () => {
   const [
     schema,
