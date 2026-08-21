@@ -46,7 +46,7 @@ Time entries are owned by a user and optionally reference a workspace, board, an
 
 ## Notification flow
 
-Task mutations create deduplicated reminder records according to board and task-creator preferences. A server worker polls due records, resolves the task creator's linked Discord ID, opens a private bot conversation, suppresses link embeds, and disables everyone, role, and arbitrary mentions. The worker then updates status and writes a durable delivery snapshot. Manual task reminders use the same creator-DM path; board-wide manual reminders fan out privately to every active board member. The same worker drains a separate collaboration-notification queue so stream invitations and responses never rely on Discord for authorization or transaction completion.
+Task mutations create deduplicated reminder records according to board and task-creator preferences. A server worker polls due records, resolves each reminder recipient's linked Discord ID, opens a private bot conversation, suppresses link embeds, and disables everyone, role, and arbitrary mentions. The worker then updates status and writes a durable delivery snapshot. Manual task reminders target every assigned person, falling back to the task creator when no one is assigned; board-wide manual reminders fan out privately to every active board member. The same worker drains a separate collaboration-notification queue so stream invitations and responses never rely on Discord for authorization or transaction completion.
 
 ## Health and backup flow
 

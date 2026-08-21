@@ -4629,10 +4629,6 @@ function NorthlineModal({
           <>
             <h2>Board settings</h2>
             <p>Update this board or permanently remove it.</p>
-            <div className="settings-callout">
-              <b>Board reference</b>
-              <span>{board.board.boardKey} · permanent and managed by Northline</span>
-            </div>
             <label>
               Name
               <input
@@ -4680,8 +4676,8 @@ function NorthlineModal({
             <div className="settings-callout">
               <b>Private Task Buddy delivery</b>
               <span>
-                Enabled notifications are sent by DM to the person who created
-                each task.
+                Enabled notifications are sent by DM to the assigned people.
+                Unassigned tasks are sent to the person who created them.
               </span>
             </div>
             <div className="notification-options">
@@ -4828,8 +4824,9 @@ function NorthlineModal({
             <span className="modal-icon discord-bg">#</span>
             <h2>Schedule reminder</h2>
             <p>
-              Task reminders are sent to the task creator. Board-wide reminders
-              are privately delivered to every active member with board access.
+              Task reminders are sent to the assigned people. If a task has no
+              assignees, the reminder is sent to the person who created it.
+              Board-wide reminders are privately delivered to every active member with board access.
             </p>
             <label>
               Task (optional)

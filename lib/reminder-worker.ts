@@ -8,7 +8,7 @@ declare global { var northlineReminderWorkerStarted: boolean | undefined; }
 async function deliverDueReminders() {
   if (!discordConfigured()) return;
   const due = await db.prepare(`SELECT r.id,r.created_by createdBy,r.channel_id channelId,r.channel_name channelName,r.message,r.kind,r.event_type eventType,b.id boardId,b.public_id boardKey,b.name boardName,t.id taskId,t.title taskTitle,u.name creatorName,recipient.discord_user_id discordUserId,recipient.name recipientName
-    FROM reminders r JOIN boards b ON b.id=r.board_id LEFT JOIN tasks t ON t.id=r.task_id JOIN users u ON u.id=r.created_by LEFT JOIN users recipient ON recipient.id=COALESCE(t.created_by,r.recipient_user_id,r.created_by)
+    FROM reminders r JOIN boards b ON b.id=r.board_id LEFT JOIN tasks t ON t.id=r.task_id JOIN users u ON u.id=r.created_by LEFT JOIN users recipient ON recipient.id=COALESCE(r.recipient_user_id,t.created_by,r.created_by)
     WHERE r.status='pending' AND datetime(r.remind_at)<=datetime('now') ORDER BY r.remind_at LIMIT 20`).all() as Array<{id:number;createdBy:number;channelId:string;channelName:string;message:string;kind:string;eventType:string|null;boardId:number;boardKey:string;boardName:string;taskId:number|null;taskTitle:string|null;creatorName:string;discordUserId:string|null;recipientName:string|null}>;
   for (const reminder of due) {
     try {

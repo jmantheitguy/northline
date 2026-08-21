@@ -159,7 +159,7 @@ test("Discord reminders are permission checked and secrets stay server-side", as
   assert.doesNotMatch(route, /NORTHLINE_DISCORD_BOT_TOKEN/);
   assert.match(discord, /allowed_mentions/);
   assert.match(discord, /flags:4/);
-  assert.match(worker, /COALESCE\(t\.created_by/);
+  assert.match(worker, /COALESCE\(r\.recipient_user_id,t\.created_by,r\.created_by\)/);
   assert.match(worker, /setInterval/);
   assert.match(compose, /NORTHLINE_DISCORD_BOT_TOKEN/);
 });
@@ -177,6 +177,22 @@ test("board-wide reminders fan out privately to every board member", async () =>
   assert.match(route, /recipients:ids\.length/);
   assert.match(worker, /recipient\.discord_user_id/);
   assert.match(ui, /privately delivered to every active member/);
+});
+
+test("manual task reminders target assigned people and format delivery guidance", async () => {
+  const [route, worker, ui] = await Promise.all([
+    read("app/api/reminders/route.ts"),
+    read("lib/reminder-worker.ts"),
+    read("app/northline-app.tsx"),
+  ]);
+  assert.match(route, /taskAssigneeIds/);
+  assert.match(route, /recipientIds=\[\.\.\.new Set/);
+  assert.match(route, /Every task assignee must link Discord/);
+  assert.match(route, /recipient_user_id/);
+  assert.match(worker, /COALESCE\(r\.recipient_user_id,t\.created_by,r\.created_by\)/);
+  assert.match(ui, /Task reminders are sent to the assigned people/);
+  assert.match(ui, /Unassigned tasks are sent to the person who created them/);
+  assert.match(ui, /settings-callout/);
 });
 
 test("reminder management supports controlled updates, cancellation, and retry", async () => {
@@ -436,7 +452,7 @@ test("directory, login, and Discord identities remain separate", async () => {
   assert.match(discordSource, /"promoted": False/);
   assert.match(discordSource, /selected_sources\.remove/);
   assert.match(worker, /discordUserId/);
-  assert.match(worker, /COALESCE\(t\.created_by/);
+  assert.match(worker, /COALESCE\(r\.recipient_user_id,t\.created_by,r\.created_by\)/);
   assert.match(worker, /sendDiscordDirectMessage/);
 });
 
@@ -511,7 +527,7 @@ test("time edits preserve wall-clock duration and workspace/board identity bound
   assert.match(board, /Board IDs are permanent and cannot be changed/);
   assert.match(board, /sharedWith/);
   assert.match(ui, /Workspace name/);
-  assert.match(ui, /Board reference/);
+  assert.doesNotMatch(ui, /<b>Board reference<\/b>/);
 });
 
 test("shared board viewers can inspect access while archive controls stay edit-only", async () => {

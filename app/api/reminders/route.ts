@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { boardPermission, canEdit } from "@/lib/boards";
 import { discordConfigured } from "@/lib/discord";
+import { taskAssigneeIds } from "@/lib/task-assignments";
 import db from "@/lib/db";
 
 export async function GET() {
@@ -28,12 +29,26 @@ export async function POST(request:Request) {
   const task=taskId?await db.prepare("SELECT id,created_by createdBy FROM tasks WHERE id=? AND board_id=?").get(Number(taskId),Number(boardId)) as {id:number;createdBy:number}|undefined:undefined;
   if(taskId&&!task)return NextResponse.json({error:"Task not found on this board"},{status:400});
   if(task){
-    const recipient=await db.prepare("SELECT discord_user_id discordUserId FROM users WHERE id=?").get(task.createdBy) as {discordUserId:string|null}|undefined;
-    if(!recipient?.discordUserId)return NextResponse.json({error:"The task creator has not linked Discord"},{status:409});
-    const result=await db.prepare("INSERT INTO reminders(board_id,task_id,created_by,recipient_user_id,channel_id,channel_name,message,remind_at) VALUES(?,?,?,?,?,?,?,?)")
-      .run(Number(boardId),Number(taskId),user.id,task.createdBy,"dm","Direct message",String(message).trim(),when.toISOString());
-    await db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(user.id,"REMINDER.CREATE",String(result.lastInsertRowid),"Scheduled private task reminder");
-    return NextResponse.json({id:Number(result.lastInsertRowid),recipients:1},{status:201});
+    const assigneeIds=await taskAssigneeIds(task.id);
+    const recipientIds=[...new Set((assigneeIds.length?assigneeIds:[task.createdBy]).map(Number))];
+    const recipients=await db.prepare(`SELECT id,discord_user_id discordUserId FROM users WHERE id IN (${recipientIds.map(()=>"?").join(",")})`).all(...recipientIds) as Array<{id:number;discordUserId:string|null}>;
+    const recipientById=new Map(recipients.map((recipient)=>[Number(recipient.id),recipient]));
+    const missing=recipientIds.filter((id)=>!recipientById.get(id)?.discordUserId);
+    if(missing.length){
+      const subject=assigneeIds.length?"Every task assignee must link Discord":"The task creator has not linked Discord";
+      return NextResponse.json({error:subject},{status:409});
+    }
+    const ids=await db.transaction(async()=>{
+      const insert=db.prepare("INSERT INTO reminders(board_id,task_id,created_by,recipient_user_id,channel_id,channel_name,message,remind_at) VALUES(?,?,?,?,?,?,?,?)");
+      const created:number[]=[];
+      for(const recipientId of recipientIds){
+        const result=await insert.run(Number(boardId),Number(taskId),user.id,recipientId,"dm","Direct message",String(message).trim(),when.toISOString());
+        created.push(Number(result.lastInsertRowid));
+      }
+      return created;
+    });
+    await db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)").run(user.id,"REMINDER.CREATE",String(ids[0]||task.id),`Scheduled private task reminder for ${recipientIds.length} recipient${recipientIds.length===1?"":"s"}`);
+    return NextResponse.json({ids,recipients:ids.length},{status:201});
   }
   const recipients=await db.prepare(`SELECT DISTINCT u.id FROM users u JOIN boards b ON b.id=? JOIN workspaces w ON w.id=b.workspace_id
     LEFT JOIN board_members bm ON bm.board_id=b.id AND bm.user_id=u.id

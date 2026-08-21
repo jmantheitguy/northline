@@ -1966,6 +1966,25 @@ button {
   max-width: 570px;
   line-height: 1.5;
 }
+.settings-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  line-height: 1.45;
+}
+.settings-callout b {
+  display: block;
+}
+.settings-callout span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
 .discord-button {
   background: #5865f2;
   border-color: #5865f2;
