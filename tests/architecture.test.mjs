@@ -411,6 +411,7 @@ test("teams are a server-authorized access boundary", async () => {
   assert.match(workspaceRoute, /TEAM\.WORKSPACE_CREATE/);
   assert.match(workspaceRoute, /Only the workspace owner can connect it to a team/);
   assert.match(workspaceRoute, /not linked to this team/);
+  assert.match(workspaceRoute, /workspace owner, creator, or team owner/);
   assert.match(boardList, /team_workspaces/);
   assert.match(boardList, /team.owner_id/);
   assert.match(calendarRoute, /team_id/);

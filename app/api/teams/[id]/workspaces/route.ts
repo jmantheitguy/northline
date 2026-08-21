@@ -66,8 +66,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const workspaceId = Number((await request.json().catch(() => ({}))).workspaceId);
   if (!Number.isInteger(workspaceId) || workspaceId <= 0)
     return NextResponse.json({ error: "Choose a workspace" }, { status: 400 });
-  const linked = await db.prepare("SELECT 1 FROM team_workspaces WHERE team_id=? AND workspace_id=?").get(teamId, workspaceId);
+  const linked = await db.prepare(`SELECT tw.created_by createdBy,w.owner_id ownerId
+    FROM team_workspaces tw JOIN workspaces w ON w.id=tw.workspace_id
+    WHERE tw.team_id=? AND tw.workspace_id=?`).get(teamId, workspaceId) as { createdBy:number; ownerId:number } | undefined;
   if (!linked) return NextResponse.json({ error: "That workspace is not linked to this team" }, { status: 404 });
+  if (linked.ownerId !== user.id && linked.createdBy !== user.id && actorRole !== "owner")
+    return NextResponse.json({ error: "Only the workspace owner, creator, or team owner can disconnect it" }, { status: 403 });
   await db.prepare("DELETE FROM team_workspaces WHERE team_id=? AND workspace_id=?").run(teamId, workspaceId);
   await db.prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)")
     .run(user.id, "TEAM.WORKSPACE_UNLINK", `${teamId}:${workspaceId}`, "Disconnected a workspace from a team");
