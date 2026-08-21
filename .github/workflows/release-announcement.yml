@@ -1,0 +1,53 @@
+name: Announce completed Railway releases
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: northline-release-announcement-${{ github.event.deployment.sha }}
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'northline-staging / production'
+    runs-on: ubuntu-latest
+    env:
+      NORTHLINE_DISCORD_BOT_TOKEN: ${{ secrets.NORTHLINE_DISCORD_BOT_TOKEN }}
+      NORTHLINE_RELEASE_CHANNEL_IDS: ${{ vars.NORTHLINE_RELEASE_CHANNEL_IDS }}
+      NORTHLINE_GITHUB_REPOSITORY: ${{ github.repository }}
+      NORTHLINE_GITHUB_BRANCH: main
+    steps:
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Restore the per-commit announcement marker
+        id: marker
+        uses: actions/cache/restore@v4
+        with:
+          path: .northline-release-announced
+          key: northline-release-announced-${{ github.event.deployment.sha }}
+
+      - name: Announce the completed release
+        if: steps.marker.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^export const NORTHLINE_VERSION = "\([^"]*\)";$/\1/p' lib/version.ts)"
+          summary="$(git log -1 --format=%s)"
+          test -n "$version"
+          node ops/release/announce-discord.mjs "$version" "${{ github.event.deployment.sha }}" "$summary"
+          printf '%s\n' "${{ github.event.deployment.sha }}" > .northline-release-announced
+
+      - name: Save the announcement marker
+        if: steps.marker.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .northline-release-announced
+          key: northline-release-announced-${{ github.event.deployment.sha }}
