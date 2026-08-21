@@ -310,6 +310,7 @@ test("directory, login, and Discord identities remain separate", async () => {
   assert.match(callback, /!byEmail\.directoryId/);
   assert.match(callback, /authErrorRedirect\(config\.publicUrl,"identity_conflict"\)/);
   assert.match(callback, /authErrorRedirect\(config\.publicUrl,"access_denied"\)/);
+  assert.match(callback, /userId=await resolveIdentity/);
   assert.doesNotMatch(callback, /auth_error=access_denied[^\n]*request\.url/);
   assert.match(ui, /Northline could not safely match this identity/);
   assert.match(schema, /directory_id TEXT/);
@@ -327,6 +328,13 @@ test("directory, login, and Discord identities remain separate", async () => {
   assert.match(worker, /discordUserId/);
   assert.match(worker, /COALESCE\(t\.created_by/);
   assert.match(worker, /sendDiscordDirectMessage/);
+});
+
+test("Postgres adapter casts migrated text timestamps at comparison boundaries", async () => {
+  const postgres = await read("lib/db-postgres.ts");
+  assert.match(postgres, /timestamp columns at comparison boundaries/);
+  assert.match(postgres, /\$\{column\}::timestamptz/);
+  assert.match(postgres, /CURRENT_TIMESTAMP/);
 });
 
 test("schema upgrades and operational failures are observable", async () => {

@@ -77,6 +77,13 @@ function translateSql(input: string) {
     .replace(/strftime\(\s*'%Y-%m-%dT%H:%M:%fZ'\s*,\s*([^,()]+)\s*,\s*'(-?\d+)\s+minutes?'\s*\)/gi, (_match, value, minutes) =>
       `to_char(${value.trim()}::timestamptz - INTERVAL '${Math.abs(Number(minutes))} minutes','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`,
     );
+  // The migrated schema keeps timestamp values as text for SQLite
+  // compatibility. PostgreSQL will not compare that text directly with
+  // CURRENT_TIMESTAMP, so cast timestamp columns at comparison boundaries.
+  sql = sql.replace(
+    /\b([A-Za-z_][A-Za-z0-9_.]*_at)\s*(<=|>=|<>|=|<|>)\s*(CURRENT_TIMESTAMP(?:\s*(?:\+|-)\s*INTERVAL\s+'[^']+')?)/gi,
+    (_match, column, operator, rightHandSide) => `${column}::timestamptz ${operator} ${rightHandSide}`,
+  );
   return replaceQuestionMarks(sql);
 }
 
