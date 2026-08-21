@@ -544,6 +544,23 @@ test("board sharing keeps the active board mounted during refresh", async () => 
   assert.match(ui, /await refresh\(\);\s*setSelectedUser\(""\);\s*notify\("Board access updated"\)/);
 });
 
+test("moving boards preserves access and is authorized server-side", async () => {
+  const route = await read("app/api/boards/[id]/route.ts");
+  const overview = await read("app/api/admin/overview/route.ts");
+  const ui = await read("app/northline-app.tsx");
+  assert.match(route, /canShare\(permission\)/);
+  assert.match(route, /workspacePermission\(user, targetWorkspace\)/);
+  assert.match(route, /board_members[\s\S]*ON CONFLICT\(board_id,user_id\)/);
+  assert.match(route, /direct shares preserved and inherited access retained/);
+  assert.match(route, /db\.transaction\(async \(\) =>/);
+  assert.match(route, /BOARD\.MOVE/);
+  assert.match(overview, /BOARD\.MOVE/);
+  assert.match(ui, /Move this board to the selected workspace/);
+  assert.match(ui, /Direct board shares stay in place/);
+  assert.match(ui, /notificationsDirty/);
+  assert.match(ui, /Board move.*failed/);
+});
+
 test("release announcements follow successful deployments without duplicates", async () => {
   const deploy = await read("ops/release/deploy-production.sh");
   assert.match(deploy, /docker compose up -d --build/);

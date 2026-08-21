@@ -11,6 +11,7 @@ const actionLabels: Record<string, string> = {
   "TASK.ARCHIVE": "Archived task",
   "TASK.RESTORE": "Restored task",
   "BOARD.CREATE": "Created board",
+  "BOARD.MOVE": "Moved board between workspaces",
   "BOARD.SHARE": "Changed board access",
   "BOARD.NOTIFICATIONS.UPDATE": "Updated board notifications",
   "WORKSPACE.CREATE": "Created workspace",

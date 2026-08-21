@@ -10,7 +10,7 @@ My Work gives each member a private cross-board view of tasks assigned to them. 
 
 ## Workspaces
 
-Every account receives one personal workspace. Its boards are private by default and can still be shared individually. Members can also create shared workspaces, invite viewers or editors, switch between workspaces from the sidebar, and create or move boards within workspaces they can edit. Shared-workspace membership automatically grants the corresponding access to every contained board; removing a member removes that inherited access without altering explicit board shares elsewhere.
+Every account receives one personal workspace. Its boards are private by default and can still be shared individually. Members can also create shared workspaces, invite viewers or editors, switch between workspaces from the sidebar, and create or move boards within workspaces they can edit. Shared-workspace membership automatically grants the corresponding access to every contained board; removing a member removes that inherited access without altering explicit board shares elsewhere. Moving a board preserves direct board shares and materializes the previous shared workspace members as explicit shares so their effective access is not lost.
 
 Global search returns tasks only from boards the signed-in user can access. Direct task links contain the opaque board ID and task ID, but the server still checks authorization.
 

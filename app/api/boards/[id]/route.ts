@@ -89,21 +89,94 @@ export async function PATCH(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = Number((await params).id);
-  if (!canShare(await boardPermission(user, id)))
+  if (!Number.isInteger(id) || id <= 0)
+    return NextResponse.json({ error: "Invalid board" }, { status: 400 });
+  const permission = await boardPermission(user, id);
+  if (!canShare(permission))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const currentBoard = await db
+    .prepare(
+      `SELECT b.id,b.public_id AS "boardKey",b.name,b.owner_id AS "ownerId",b.workspace_id AS "workspaceId",
+        w.name AS "workspaceName",w.owner_id AS "workspaceOwnerId",w.kind AS "workspaceKind"
+       FROM boards b JOIN workspaces w ON w.id=b.workspace_id WHERE b.id=?`,
+    )
+    .get(id) as
+    | {
+        id: number;
+        boardKey: string;
+        name: string;
+        ownerId: number;
+        workspaceId: number;
+        workspaceName: string;
+        workspaceOwnerId: number;
+        workspaceKind: "personal" | "shared";
+      }
+    | undefined;
+  if (!currentBoard)
+    return NextResponse.json({ error: "Board not found" }, { status: 404 });
   const { name, description, workspaceId } = await request.json();
-  let targetWorkspace: null | number = null;
-  if (workspaceId !== undefined) {
+  const hasWorkspaceChange = workspaceId !== undefined;
+  let targetWorkspace: number | undefined;
+  let targetWorkspaceName = currentBoard.workspaceName;
+  if (hasWorkspaceChange) {
     targetWorkspace = Number(workspaceId);
+    if (!Number.isInteger(targetWorkspace) || targetWorkspace <= 0)
+      return NextResponse.json({ error: "Invalid destination workspace" }, { status: 400 });
+    const destination = await db
+      .prepare("SELECT id,name,kind FROM workspaces WHERE id=?")
+      .get(targetWorkspace) as { id: number; name: string; kind: "personal" | "shared" } | undefined;
+    if (!destination)
+      return NextResponse.json({ error: "Destination workspace not found" }, { status: 404 });
     if (!canCreateBoards(await workspacePermission(user, targetWorkspace)))
       return NextResponse.json(
         { error: "You cannot move boards into that workspace" },
         { status: 403 },
       );
+    targetWorkspaceName = destination.name;
   }
-  await db.prepare(
-    "UPDATE boards SET name=COALESCE(?,name),description=COALESCE(?,description),workspace_id=COALESCE(?,workspace_id),updated_at=CURRENT_TIMESTAMP WHERE id=?",
-  ).run(name?.trim() || null, description ?? null, targetWorkspace, id);
+  await db.transaction(async () => {
+    // Direct board shares are untouched. When leaving a shared workspace,
+    // materialize each inherited member as an explicit board share so their
+    // effective permission survives the move (including editor access).
+    if (hasWorkspaceChange && targetWorkspace !== currentBoard.workspaceId) {
+      const inherited = await db
+        .prepare(
+          `SELECT user_id AS "userId",permission FROM workspace_members WHERE workspace_id=?
+           UNION ALL
+           SELECT owner_id AS "userId", 'editor' AS permission FROM workspaces WHERE id=?`,
+        )
+        .all(currentBoard.workspaceId, currentBoard.workspaceId) as Array<{
+        userId: number;
+        permission: "viewer" | "editor";
+      }>;
+      for (const member of inherited) {
+        if (member.userId === currentBoard.ownerId) continue;
+        await db
+          .prepare(
+            `INSERT INTO board_members(board_id,user_id,permission) VALUES(?,?,?)
+             ON CONFLICT(board_id,user_id) DO UPDATE SET permission=
+             CASE WHEN board_members.permission='editor' OR excluded.permission='editor' THEN 'editor' ELSE 'viewer' END`,
+          )
+          .run(id, member.userId, member.permission);
+      }
+    }
+    await db
+      .prepare(
+        `UPDATE boards SET name=COALESCE(?,name),description=COALESCE(?,description),
+          workspace_id=COALESCE(?,workspace_id),updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      )
+      .run(name?.trim() || null, description ?? null, targetWorkspace ?? null, id);
+    if (hasWorkspaceChange && targetWorkspace !== currentBoard.workspaceId) {
+      await db
+        .prepare("INSERT INTO audit_log(actor_id,action,target,detail) VALUES(?,?,?,?)")
+        .run(
+          user.id,
+          "BOARD.MOVE",
+          currentBoard.boardKey,
+          `Moved board “${name?.trim() || currentBoard.name}” from “${currentBoard.workspaceName}” to “${targetWorkspaceName}”; direct shares preserved and inherited access retained`,
+        );
+    }
+  });
   return NextResponse.json({ ok: true });
 }
 export async function DELETE(

@@ -3777,6 +3777,16 @@ function NorthlineModal({
     dueEnabled: board?.notifications?.dueEnabled !== 0,
     dueWarningHours: board?.notifications?.dueWarningHours || 24,
   });
+  const notificationsDirty =
+    JSON.stringify(notificationSettings) !==
+    JSON.stringify({
+      assignmentEnabled: board?.notifications?.assignmentEnabled !== 0,
+      statusEnabled: board?.notifications?.statusEnabled !== 0,
+      commentEnabled: board?.notifications?.commentEnabled !== 0,
+      mentionEnabled: board?.notifications?.mentionEnabled !== 0,
+      dueEnabled: board?.notifications?.dueEnabled !== 0,
+      dueWarningHours: board?.notifications?.dueWarningHours || 24,
+    });
   const [reminder, setReminder] = useState({
     taskId: task?.id ? String(task.id) : "",
     date: "",
@@ -3920,19 +3930,45 @@ function NorthlineModal({
     });
   const saveBoard = () =>
     run(async () => {
-      await jsonFetch(`/api/boards/${board.board.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(boardForm),
-      });
-      await jsonFetch(`/api/boards/${board.board.id}/notifications`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(notificationSettings),
-      });
+      const workspaceChanged =
+        String(board?.board.workspaceId || "") !== boardForm.workspaceId;
+      if (
+        workspaceChanged &&
+        !window.confirm(
+          "Move this board to the selected workspace? Direct shares will remain, and current workspace members will keep their effective access.",
+        )
+      )
+        return;
+      try {
+        await jsonFetch(`/api/boards/${board.board.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(boardForm),
+        });
+      } catch (error) {
+        throw new Error(
+          `${workspaceChanged ? "Board move" : "Board update"} failed: ${(error as Error).message}`,
+        );
+      }
+      if (notificationsDirty) {
+        try {
+          await jsonFetch(`/api/boards/${board.board.id}/notifications`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(notificationSettings),
+          });
+        } catch (error) {
+          await refresh();
+          close();
+          notify(
+            `${workspaceChanged ? "Board moved" : "Board updated"}, but notification settings failed: ${(error as Error).message}`,
+          );
+          return;
+        }
+      }
       await refresh();
       close();
-      notify("Board updated");
+      notify(workspaceChanged ? "Board moved and access preserved" : "Board updated");
     });
   const deleteBoard = () =>
     run(async () => {
@@ -4567,8 +4603,9 @@ function NorthlineModal({
                   ))}
               </select>
               <small>
-                Moving a board into a shared workspace grants access to every
-                workspace member.
+                Direct board shares stay in place. Moving from a shared
+                workspace also preserves the former members&apos; effective
+                access as board shares.
               </small>
             </label>
             <div className="settings-callout">
