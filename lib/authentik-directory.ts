@@ -38,6 +38,9 @@ export async function syncAuthentikDirectory(force=false){
   if(!response.ok)throw new Error(`Authentik directory returned ${response.status}`);
   const payload=await response.json() as {results?:AuthentikUser[]};
   const users=payload.results||[];
+  // An empty or permission-filtered response is not proof that every local
+  // account was removed. Never reconcile against an empty directory snapshot.
+  if(!users.length)throw new Error("Authentik directory returned no users; refusing destructive reconciliation");
   const [sourceResponse,connectionsResponse]=await Promise.all([
     fetch(`${base}/api/v3/sources/oauth/?slug=discord&page_size=10`,{headers:{Authorization:`Bearer ${token}`,Accept:"application/json"},cache:"no-store"}),
     fetch(`${base}/api/v3/sources/user_connections/all/?page_size=100`,{headers:{Authorization:`Bearer ${token}`,Accept:"application/json"},cache:"no-store"}),
@@ -59,6 +62,8 @@ export async function syncAuthentikDirectory(force=false){
   }
   if(users.length&&!users.some(user=>Array.isArray(user.groups_obj)))throw new Error("Authentik response did not include expanded group membership");
   const activeDirectoryIds:string[]=[];
+  const managedUsers=await db.prepare("SELECT directory_id directoryId FROM users WHERE auth_source='oidc' AND directory_id IS NOT NULL").all() as Array<{directoryId:string}>;
+  if(managedUsers.length&&!activeDirectoryIds.length)throw new Error("Authentik directory returned no accessible Northline users; refusing destructive reconciliation");
   await db.transaction(async ()=>{
     for(const remote of users){
       const groups=groupNames(remote),isAdmin=groups.includes("Northline Admins"),hasAccess=isAdmin||groups.includes("Northline Users");

@@ -26,6 +26,8 @@ test("directory synchronization revokes removed Authentik accounts", async () =>
   assert.match(sync, /groups\.includes\("Northline Users"\)/);
   assert.match(sync, /UPDATE users SET status='Suspended'/);
   assert.match(sync, /DELETE FROM sessions WHERE user_id=/);
+  assert.match(sync, /Authentik directory returned no users; refusing destructive reconciliation/);
+  assert.match(sync, /Authentik directory returned no accessible Northline users; refusing destructive reconciliation/);
 });
 
 test("board data is relational and cascade-safe", async () => {
