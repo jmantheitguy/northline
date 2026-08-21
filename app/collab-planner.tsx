@@ -36,6 +36,7 @@ type ScheduleEvent = {
   ownerId: number;
   ownerName: string;
   ownerAvatar: string | null;
+  collabRequestId: string | null;
   participantNames?: string[];
 };
 type CollabRequest = {
@@ -110,7 +111,9 @@ export function CollabPlanner({
     [calendars, setCalendars] = useState<Calendar[]>([]),
     [requests, setRequests] = useState<CollabRequest[]>([]),
     [me, setMe] = useState(0),
-    [loading, setLoading] = useState(true);
+    [loading, setLoading] = useState(true),
+    [showPastCollabs, setShowPastCollabs] = useState(false),
+    [now, setNow] = useState(() => Date.now());
   const [modal, setModal] = useState<
       "request" | "availability" | "reschedule" | null
     >(null),
@@ -126,8 +129,11 @@ export function CollabPlanner({
   );
   const load = async () => {
     setLoading(true);
+    setNow(Date.now());
     try {
-      const start = new Date(),
+      const start = new Date(
+          showPastCollabs ? Date.now() - 365 * 86400000 : Date.now(),
+        ),
         end = new Date(Date.now() + 90 * 86400000);
       const [schedule, requestData, calendarData] = await Promise.all([
         call(
@@ -149,15 +155,27 @@ export function CollabPlanner({
   };
   useEffect(() => {
     void load();
-  }, []);
-  const incoming = requests.filter((r) =>
+  }, [showPastCollabs]);
+  const visibleRequests = requests.filter(
+    (request) =>
+      showPastCollabs || new Date(request.endAt).getTime() >= now,
+  );
+  const incoming = visibleRequests.filter((r) =>
       r.participants.some((p) => p.userId === me),
     ),
-    outgoing = requests.filter((r) => r.requesterId === me);
+    outgoing = visibleRequests.filter((r) => r.requesterId === me);
+  const visibleEvents = useMemo(
+    () =>
+      events.filter((event) => {
+        const past = new Date(event.endAt).getTime() < now;
+        return !past || (showPastCollabs && Boolean(event.collabRequestId));
+      }),
+    [events, now, showPastCollabs],
+  );
   const grouped = useMemo(
     () =>
       Object.entries(
-        events.reduce<Record<string, ScheduleEvent[]>>((all, event) => {
+        visibleEvents.reduce<Record<string, ScheduleEvent[]>>((all, event) => {
           const key = new Date(event.startAt).toLocaleDateString([], {
             weekday: "long",
             month: "long",
@@ -167,7 +185,7 @@ export function CollabPlanner({
           return all;
         }, {}),
       ),
-    [events],
+    [visibleEvents],
   );
   const availableStreamers = useMemo(() => {
     const query = streamerQuery.trim().toLocaleLowerCase();
@@ -362,6 +380,14 @@ export function CollabPlanner({
           </p>
         </div>
         <div>
+          <label className="collab-past-toggle">
+            <input
+              type="checkbox"
+              checked={showPastCollabs}
+              onChange={(event) => setShowPastCollabs(event.target.checked)}
+            />
+            Show past collabs
+          </label>
           <button className="secondary" onClick={() => void load()}>
             Refresh
           </button>
@@ -393,7 +419,7 @@ export function CollabPlanner({
       )}
       <section className="collab-grid">
         <div className="collab-schedule">
-          <h3>Next 90 days</h3>
+          <h3>{showPastCollabs ? "Upcoming and past collabs" : "Next 90 days"}</h3>
           {loading ? (
             <p>Loading schedule…</p>
           ) : grouped.length ? (

@@ -877,6 +877,11 @@ test("stream collaboration discovery preserves private calendar boundaries", asy
   assert.match(worker, /collab_notifications/);
   assert.match(worker, /Northline collab update/);
   assert.match(ui, /Team stream schedule/);
+  assert.match(ui, /showPastCollabs/);
+  assert.match(ui, /Show past collabs/);
+  assert.match(ui, /visibleRequests/);
+  assert.match(ui, /visibleEvents/);
+  assert.match(ui, /collabRequestId/);
   assert.match(ui, /Ask to collab/);
   assert.match(ui, /Reschedule collab/);
   assert.match(ui, /Cancel collab for everyone/);

@@ -15,6 +15,8 @@
 .collab-planner { display:flex; flex-direction:column; gap:18px; }
 .collab-hero { display:flex; justify-content:space-between; gap:24px; padding:22px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(135deg,var(--panel),var(--subtle)); }
 .collab-hero h2 { margin:5px 0; font-size:25px; }.collab-hero p { max-width:720px; margin:0; color:var(--muted); }
+.collab-past-toggle { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; white-space:nowrap; }
+.collab-past-toggle input { accent-color:var(--purple); }
 .collab-callout { display:flex; flex-direction:column; gap:5px; padding:14px 16px; border:1px solid #9278f055; border-radius:11px; background:#7c6ce712; }.collab-callout span { color:var(--muted); font-size:12px; }
 .collab-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,390px); gap:18px; }
 .collab-schedule,.collab-inbox { padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }.collab-schedule>h3,.collab-inbox>h3 { margin:0 0 14px; }
