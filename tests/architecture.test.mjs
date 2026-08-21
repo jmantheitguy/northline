@@ -92,6 +92,7 @@ test("board navigation normalizes database identifiers and keeps populated works
   assert.match(ui, /const boardWorkspaceIds = new Set/);
   assert.match(ui, /boardWorkspaceIds\.has\(current\)/);
   assert.match(ui, /Number\(board\.navigationWorkspaceId \?\? board\.workspaceId\)/);
+  assert.match(ui, /workspaceBoards\.length > 0 \|\| boards\.length === 0 \? workspaceBoards : boards/);
 });
 
 test("Task Buddy automatic notifications are creator-routed and preference aware", async () => {
