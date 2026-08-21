@@ -142,7 +142,7 @@ PostgreSQL uses a transaction-scoped connection pool and forward-only schema
 migrations. The database contains users, sessions, boards, memberships, tasks,
 comments, reminders, notification snapshots, board activity, workspace
 settings, and administrative audit events. Local Docker development stores the
-database in the `northline-postgres-data` named volume; the application volume
+database in the `northline-postgres-data-v18` named volume; the application volume
 at `/app/data` remains for status and compatibility data. Every board, task,
 comment, reminder, search, activity, and sharing API verifies the requesting
 user's permission on the server.
@@ -245,7 +245,7 @@ The repository includes a companion [Authentik deployment](infra/authentik/READM
 ## Data and backups
 
 The runtime PostgreSQL database is stored in Railway's managed PostgreSQL
-service in production and in the local `northline-postgres-data` Docker volume
+service in production and in the local `northline-postgres-data-v18` Docker volume
 for workstation development. Backups should be taken through the provider or
 the documented PostgreSQL backup workflow and stored outside the application
 container. SQLite snapshots are retained only for legacy import and recovery

@@ -188,7 +188,7 @@ test("local development uses an isolated PostgreSQL runtime", async () => {
   ]);
   assert.match(environment, /NORTHLINE_DB_DRIVER=postgres/);
   assert.match(environment, /127\.0\.0\.1:55432\/northline/);
-  assert.match(compose, /image: postgres:16-alpine/);
+  assert.match(compose, /image: postgres:18-alpine/);
   assert.match(compose, /55432:5432/);
   assert.match(compose, /NORTHLINE_DB_DRIVER=postgres/);
   assert.match(compose, /postgres:5432/);

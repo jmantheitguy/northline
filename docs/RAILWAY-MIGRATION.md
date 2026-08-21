@@ -30,7 +30,7 @@ never depend on an ephemeral container filesystem for durable data.
 
 PostgreSQL is now the runtime database in both Railway production and local
 development. Northline has a connection-aware asynchronous PostgreSQL driver
-behind `lib/db.ts`; the local Compose override starts an isolated PostgreSQL 16
+behind `lib/db.ts`; the local Compose override starts an isolated PostgreSQL 18
 container on host port `55432`. The driver preserves the case-insensitive email
 identity rule and uses a transaction-scoped connection pool. SQLite remains
 available only for legacy imports, fixtures, and clean-install migration tests,

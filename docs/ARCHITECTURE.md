@@ -5,7 +5,7 @@
 | Component                       | Responsibility                                                                   | Persistent data                  |
 | ------------------------------- | -------------------------------------------------------------------------------- | -------------------------------- |
 | Next.js 16 / React 19           | UI, server rendering, API routes, authorization, reminder worker                 | None outside mounted paths       |
-| PostgreSQL / `pg`               | Users, sessions, boards, tasks, reminders, time cards, activity, audit, settings | Railway managed PostgreSQL; local `northline-postgres-data` volume |
+| PostgreSQL / `pg`               | Users, sessions, boards, tasks, reminders, time cards, activity, audit, settings | Railway managed PostgreSQL; local `northline-postgres-data-v18` volume |
 | Authentik / PostgreSQL          | Central identity, OIDC, groups, profile sources                                  | Authentik volumes and files      |
 | Task Buddy / Discord API        | Scheduled and automatic private notifications                                    | Delivery state remains in PostgreSQL |
 | Cloudflare Tunnel               | HTTPS publication without direct origin exposure                                 | Cloudflare configuration         |
