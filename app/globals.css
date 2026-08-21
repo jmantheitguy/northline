@@ -1988,9 +1988,15 @@ button {
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .modal {
   width: min(460px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background: #fff;
   border-radius: 14px;
   padding: 28px;

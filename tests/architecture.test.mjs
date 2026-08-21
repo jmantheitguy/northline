@@ -274,6 +274,8 @@ test("dark mode is persistent and application-wide", async () => {
   assert.match(styles, /\.health-card/);
   assert.match(styles, /\.reminder-panel/);
   assert.match(styles, /\.modal/);
+  assert.match(styles, /\.modal-backdrop[\s\S]*overflow: auto/);
+  assert.match(styles, /\.modal \{[\s\S]*max-height: calc\(100dvh - 40px\)[\s\S]*overflow-y: auto/);
 });
 
 test("search controls render as unified accessible fields", async () => {
