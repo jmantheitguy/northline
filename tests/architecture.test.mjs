@@ -79,6 +79,23 @@ test("board references are opaque while creator ownership remains relational", a
   assert.match(permissions, /owner_id/);
 });
 
+test("PostgreSQL admin reporting preserves camelCase API fields", async () => {
+  const [adminTime, overview, health, clock] = await Promise.all([
+    read("app/api/admin/time/route.ts"),
+    read("app/api/admin/overview/route.ts"),
+    read("app/api/admin/health/route.ts"),
+    read("app/time-clock.tsx"),
+  ]);
+  assert.match(adminTime, /AS "totalSeconds"/);
+  assert.match(adminTime, /AS "weekSeconds"/);
+  assert.match(adminTime, /AS "activeSince"/);
+  assert.match(overview, /AS "sharedUsers"/);
+  assert.match(overview, /AS "taskCount"/);
+  assert.match(overview, /GROUP BY b\.id,b\.name,b\.description,b\.updated_at,u\.name/);
+  assert.doesNotMatch(health, /\blinux:/);
+  assert.match(clock, /Number\.isFinite\(numeric\) \? Math\.max/);
+});
+
 test("PostgreSQL board details keep the team-aware assignee query orderable", async () => {
   const detail = await read("app/api/boards/[id]/route.ts");
   assert.match(detail, /SELECT id,name,email,avatar\s+FROM \(\s*SELECT DISTINCT u\.id,u\.name,u\.email,u\.avatar/);
@@ -211,8 +228,7 @@ test("release health and workflow tools remain permission constrained", async ()
   assert.match(health, /requireAdmin\(\)/);
   assert.match(health, /quick_check/);
   assert.match(health, /sendDiscordDirectMessage/);
-  assert.match(health, /cpuUsagePercent/);
-  assert.match(health, /memoryUsedPercent/);
+  assert.doesNotMatch(health, /cpuUsagePercent|memoryUsedPercent|loadAverage/);
   assert.match(search, /b\.owner_id=\?/);
   assert.match(search, /bm\.user_id=\?/);
   assert.match(duplicate, /canEdit\((?:await\s+)?boardPermission/);

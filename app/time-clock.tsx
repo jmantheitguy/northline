@@ -33,7 +33,8 @@ const localValue = (iso?: string | null) =>
         .slice(0, 16)
     : "";
 export const formatDuration = (seconds: number) => {
-  const safe = Math.max(0, Math.floor(seconds)),
+  const numeric = Number(seconds),
+    safe = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0,
     hours = Math.floor(safe / 3600),
     minutes = Math.floor((safe % 3600) / 60),
     secs = safe % 60;

@@ -82,10 +82,10 @@ export async function GET() {
     admins:Number((await db.prepare("SELECT COUNT(*) count FROM users WHERE role='Admin' AND status='Active'").get() as {count:number}).count),
     suspended:Number((await db.prepare("SELECT COUNT(*) count FROM users WHERE status='Suspended'").get() as {count:number}).count),
   };
-  const boards=await db.prepare(`SELECT b.id,b.name,b.description,u.name ownerName,COUNT(DISTINCT bm.user_id) sharedUsers,COUNT(DISTINCT t.id) taskCount
+  const boards=await db.prepare(`SELECT b.id,b.name,b.description,u.name AS "ownerName",COUNT(DISTINCT bm.user_id) AS "sharedUsers",COUNT(DISTINCT t.id) AS "taskCount"
     FROM boards b JOIN users u ON u.id=b.owner_id LEFT JOIN board_members bm ON bm.board_id=b.id LEFT JOIN tasks t ON t.board_id=b.id
-    GROUP BY b.id ORDER BY b.updated_at DESC`).all();
-  const audit=await Promise.all((await db.prepare(`SELECT a.id,a.action,a.target,a.detail,a.created_at createdAt,COALESCE(u.name,'System') actorName
+    GROUP BY b.id,b.name,b.description,b.updated_at,u.name ORDER BY b.updated_at DESC`).all();
+  const audit=await Promise.all((await db.prepare(`SELECT a.id,a.action,a.target,a.detail,a.created_at AS "createdAt",COALESCE(u.name,'System') AS "actorName"
     FROM audit_log a LEFT JOIN users u ON u.id=a.actor_id ORDER BY a.id DESC LIMIT 100`).all() as AuditRecord[]).map((item)=>describeAudit(admin,item)));
   return NextResponse.json({metrics,boards,audit});
 }
